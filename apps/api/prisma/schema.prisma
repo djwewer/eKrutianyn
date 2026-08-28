@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  JUNAK
+  VYKHOVNYK
+  KURINNYI
+  ZVYAZKOVYI
+}
+
+enum KurinGender {
+  MALE
+  FEMALE
+}
+
+enum ProbyProgramVersion {
+  OLD
+  NEW
+}
+
+enum ProgressStatus {
+  NOT_DONE
+  DONE
+}
+
+enum ProgressAction {
+  CONFIRM
+  UNCONFIRM
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalActionType {
+  CHANGE_FULL_NAME
+  CHANGE_BIRTH_DATE
+  CHANGE_EMAIL
+  CHANGE_HURTOK
+  CREATE_JUNAK
+}
+
+model Kurin {
+  id             String      @id @default(uuid())
+  name           String
+  kurinNumber    String
+  gender         KurinGender
+  stanytsia      String
+  probyProgramId String
+  probyProgram   ProbyProgram @relation(fields: [probyProgramId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  hurtky Hurtok[]
+  users  User[]
+}
+
+model Hurtok {
+  id      String  @id @default(uuid())
+  kurinId String
+  kurin   Kurin   @relation(fields: [kurinId], references: [id])
+  name    String
+  number  String?
+
+  junaky               User[]            @relation("JunakHurtok")
+  vykhovnykAssignments VykhovnykHurtok[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  firstName    String
+  lastName     String
+  nickname     String?
+  email        String    @unique
+  passwordHash String?
+  googleId     String?   @unique
+  role         Role
+  birthDate    DateTime?
+  notes        String?
+  phone        String?
+  kurinId      String
+  kurin        Kurin     @relation(fields: [kurinId], references: [id])
+  hurtokId     String?
+  hurtok       Hurtok?   @relation("JunakHurtok", fields: [hurtokId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  vykhovnykAssignments VykhovnykHurtok[]  @relation("VykhovnykAssignments")
+  progressEntries      JunakProgress[]    @relation("JunakProgressEntries")
+  confirmedProgress    JunakProgress[]    @relation("ConfirmedByUser")
+  auditLogEntries      ProgressAuditLog[] @relation("ActorAuditLogs")
+  initiatedRequests    ApprovalRequest[]  @relation("InitiatedRequests")
+  decidedRequests      ApprovalRequest[]  @relation("DecidedRequests")
+}
+
+model VykhovnykHurtok {
+  id          String @id @default(uuid())
+  vykhovnykId String
+  vykhovnyk   User   @relation("VykhovnykAssignments", fields: [vykhovnykId], references: [id])
+  hurtokId    String
+  hurtok      Hurtok @relation(fields: [hurtokId], references: [id])
+
+  @@unique([vykhovnykId, hurtokId])
+}
+
+model ProbyProgram {
+  id      String               @id @default(uuid())
+  version ProbyProgramVersion
+  name    String
+
+  stages ProbyStage[]
+  kuriny Kurin[]
+}
+
+model ProbyStage {
+  id        String       @id @default(uuid())
+  programId String
+  program   ProbyProgram @relation(fields: [programId], references: [id])
+  order     Int
+  name      String
+
+  categories ProbyCategory[]
+}
+
+model ProbyCategory {
+  id      String     @id @default(uuid())
+  stageId String
+  stage   ProbyStage @relation(fields: [stageId], references: [id])
+  name    String
+
+  points ProbyPoint[]
+}
+
+model ProbyPoint {
+  id          String        @id @default(uuid())
+  categoryId  String
+  category    ProbyCategory @relation(fields: [categoryId], references: [id])
+  order       Int
+  description String
+
+  progressEntries    JunakProgress[] @relation("PointProgress")
+  transferredEntries JunakProgress[] @relation("TransferredFromPoint")
+  mappingsAsOld      PointMapping[]  @relation("OldPoint")
+  mappingsAsNew      PointMapping[]  @relation("NewPoint")
+}
+
+model PointMapping {
+  id         String     @id @default(uuid())
+  oldPointId String
+  oldPoint   ProbyPoint @relation("OldPoint", fields: [oldPointId], references: [id])
+  newPointId String
+  newPoint   ProbyPoint @relation("NewPoint", fields: [newPointId], references: [id])
+
+  @@unique([oldPointId, newPointId])
+}
+
+model JunakProgress {
+  id                     String         @id @default(uuid())
+  junakId                String
+  junak                  User           @relation("JunakProgressEntries", fields: [junakId], references: [id])
+  pointId                String
+  point                  ProbyPoint     @relation("PointProgress", fields: [pointId], references: [id])
+  status                 ProgressStatus @default(NOT_DONE)
+  confirmedById          String?
+  confirmedBy            User?          @relation("ConfirmedByUser", fields: [confirmedById], references: [id])
+  confirmedAt            DateTime?
+  transferredFromPointId String?
+  transferredFromPoint   ProbyPoint?    @relation("TransferredFromPoint", fields: [transferredFromPointId], references: [id])
+
+  @@unique([junakId, pointId])
+}
+
+model ProgressAuditLog {
+  id        String         @id @default(uuid())
+  junakId   String
+  pointId   String
+  action    ProgressAction
+  actorId   String
+  actor     User           @relation("ActorAuditLogs", fields: [actorId], references: [id])
+  createdAt DateTime       @default(now())
+}
+
+model ApprovalRequest {
+  id            String             @id @default(uuid())
+  initiatedById String
+  initiatedBy   User               @relation("InitiatedRequests", fields: [initiatedById], references: [id])
+  junakId       String?
+  actionType    ApprovalActionType
+  oldData       Json?
+  newData       Json
+  status        ApprovalStatus     @default(PENDING)
+  approvedById  String?
+  approvedBy    User?              @relation("DecidedRequests", fields: [approvedById], references: [id])
+  decidedAt     DateTime?
+  createdAt     DateTime           @default(now())
+}
