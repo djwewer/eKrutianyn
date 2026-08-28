@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { GoogleTokenVerifierService } from './google-token-verifier.service';
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN ?? '1d' },
     }),
   ],
-  providers: [AuthService, GoogleTokenVerifierService],
+  providers: [AuthService, GoogleTokenVerifierService, JwtStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtModule, PassportModule],
 })
