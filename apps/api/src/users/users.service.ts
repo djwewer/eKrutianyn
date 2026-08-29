@@ -5,18 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
-
-const USER_SELECT = {
-  id: true,
-  firstName: true,
-  lastName: true,
-  nickname: true,
-  email: true,
-  role: true,
-  birthDate: true,
-  kurinId: true,
-  hurtokId: true,
-} as const;
+import { USER_SELECT } from './user-select.const';
 
 @Injectable()
 export class UsersService {
@@ -90,7 +79,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: USER_SELECT,
+      select: { ...USER_SELECT, notes: true, phone: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -133,6 +122,7 @@ export class UsersService {
             hurtokId: filters.hurtokId,
           },
           select: USER_SELECT,
+          orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         });
       }
 
@@ -143,6 +133,7 @@ export class UsersService {
           OR: [{ hurtokId: { in: assignedHurtokIds } }, { hurtokId: null }],
         },
         select: USER_SELECT,
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       });
     }
 
@@ -154,6 +145,7 @@ export class UsersService {
           ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
         },
         select: USER_SELECT,
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       });
     }
 
@@ -165,6 +157,7 @@ export class UsersService {
         ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
       },
       select: USER_SELECT,
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
   }
 
@@ -178,7 +171,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: USER_SELECT,
+      select: { ...USER_SELECT, notes: true, phone: true },
     });
     if (!user || user.kurinId !== actor.kurinId) {
       throw new NotFoundException('User not found');

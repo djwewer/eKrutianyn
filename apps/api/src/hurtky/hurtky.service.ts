@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
+import { USER_SELECT } from '../users/user-select.const';
 
 @Injectable()
 export class HurtkyService {
@@ -32,18 +33,9 @@ export class HurtkyService {
     }
 
     const junaky = await this.prisma.user.findMany({
-      where: { hurtokId, role: Role.JUNAK },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        nickname: true,
-        email: true,
-        role: true,
-        birthDate: true,
-        kurinId: true,
-        hurtokId: true,
-      },
+      where: { hurtokId, role: Role.JUNAK, kurinId: actor.kurinId },
+      select: USER_SELECT,
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
 
     const junakyWithProgress = await Promise.all(

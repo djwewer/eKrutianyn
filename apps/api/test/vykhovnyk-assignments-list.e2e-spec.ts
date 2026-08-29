@@ -77,16 +77,35 @@ describe('GET /vykhovnyk-assignments (e2e)', () => {
     expect(response.body[0].id).toBe(assignment1.id);
   });
 
-  it('forbids a kurinniy and a junak from listing assignments', async () => {
+  it('lets a kurinniy list all assignments in their kurin, same as a zvyazkovyi', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
+    const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
+    const hurtokA = await prisma.hurtok.create({ data: { name: 'HA', kurinId: kurinA.id } });
+    const hurtokB = await prisma.hurtok.create({ data: { name: 'HB', kurinId: kurinB.id } });
+    const vykhovnykA = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinA.id });
+    const vykhovnykB = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinB.id });
+    const assignmentA = await prisma.vykhovnykHurtok.create({
+      data: { vykhovnykId: vykhovnykA.id, hurtokId: hurtokA.id },
+    });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnykB.id, hurtokId: hurtokB.id } });
+
+    const kurinniyA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const token = issueTokenFor(jwtService, kurinniyA);
+
+    const response = await request(app.getHttpServer())
+      .get('/vykhovnyk-assignments')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].id).toBe(assignmentA.id);
+  });
+
+  it('forbids a junak from listing assignments', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinniy = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
-
-    await request(app.getHttpServer())
-      .get('/vykhovnyk-assignments')
-      .set('Authorization', `Bearer ${issueTokenFor(jwtService, kurinniy)}`)
-      .expect(403);
 
     await request(app.getHttpServer())
       .get('/vykhovnyk-assignments')

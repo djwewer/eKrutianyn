@@ -36,7 +36,12 @@ describe('GET /hurtky/:id/board (e2e)', () => {
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
-    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const junak = await createUser(prisma, {
+      role: Role.JUNAK,
+      kurinId: kurin.id,
+      hurtokId: hurtok.id,
+      password: 'x',
+    });
     await prisma.junakProgress.create({
       data: { junakId: junak.id, pointId: points[0].id, status: ProgressStatus.DONE, confirmedById: vykhovnyk.id, confirmedAt: new Date() },
     });

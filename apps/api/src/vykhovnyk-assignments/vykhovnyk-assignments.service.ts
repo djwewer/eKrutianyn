@@ -57,6 +57,7 @@ export class VykhovnykAssignmentsService {
           vykhovnykId: actor.userId,
           ...(hurtokId ? { hurtokId } : {}),
         },
+        orderBy: { id: 'asc' },
       });
     }
 
@@ -65,6 +66,7 @@ export class VykhovnykAssignmentsService {
         hurtok: { kurinId: actor.kurinId },
         ...(hurtokId ? { hurtokId } : {}),
       },
+      orderBy: { id: 'asc' },
     });
   }
 }

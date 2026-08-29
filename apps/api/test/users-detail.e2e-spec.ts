@@ -33,7 +33,7 @@ describe('GET /users/:id (e2e)', () => {
   it('lets a junak fetch their own record but not another user', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, password: 'x' });
     const otherJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
 
@@ -146,6 +146,40 @@ describe('GET /users/:id (e2e)', () => {
       .get(`/users/${kurinnyi2.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  it('lets a zvyazkovyi and a kurinnyi see notes/phone on another user detail', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const vykhovnyk = await prisma.user.create({
+      data: {
+        firstName: 'Test',
+        lastName: 'Vykhovnyk',
+        email: `vykhovnyk-${Date.now()}-${Math.random()}@example.com`,
+        role: Role.VYKHOVNYK,
+        kurinId: kurin.id,
+        notes: 'Allergic to peanuts',
+        phone: '+380501234567',
+      },
+    });
+
+    const zvyazkovyiToken = issueTokenFor(jwtService, zvyazkovyi);
+    const zvyazkovyiResponse = await request(app.getHttpServer())
+      .get(`/users/${vykhovnyk.id}`)
+      .set('Authorization', `Bearer ${zvyazkovyiToken}`)
+      .expect(200);
+    expect(zvyazkovyiResponse.body.notes).toBe('Allergic to peanuts');
+    expect(zvyazkovyiResponse.body.phone).toBe('+380501234567');
+
+    const kurinnyiToken = issueTokenFor(jwtService, kurinnyi);
+    const kurinnyiResponse = await request(app.getHttpServer())
+      .get(`/users/${vykhovnyk.id}`)
+      .set('Authorization', `Bearer ${kurinnyiToken}`)
+      .expect(200);
+    expect(kurinnyiResponse.body.notes).toBe('Allergic to peanuts');
+    expect(kurinnyiResponse.body.phone).toBe('+380501234567');
   });
 
   it('returns 404 for a nonexistent id', async () => {
