@@ -4345,6 +4345,24 @@ describe('Approval requests create (e2e)', () => {
       .expect(400);
   });
 
+  it('returns 400 when junakId is provided for CREATE_JUNAK action', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, kurinnyi);
+
+    await request(app.getHttpServer())
+      .post('/approval-requests')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        junakId: junak.id,
+        newData: { firstName: 'X', lastName: 'Y', email: 'x@example.com' },
+      })
+      .expect(400);
+  });
+
   it('returns 404 when junakId belongs to another kurin', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
@@ -4414,6 +4432,9 @@ export class ApprovalRequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
+    if (dto.actionType === ApprovalActionType.CREATE_JUNAK && dto.junakId) {
+      throw new BadRequestException('junakId must not be provided for CREATE_JUNAK');
+    }
     if (dto.actionType !== ApprovalActionType.CREATE_JUNAK && !dto.junakId) {
       throw new BadRequestException('junakId is required for this action type');
     }
@@ -4531,7 +4552,7 @@ export class AppModule {}
 - [ ] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-create`
-Expected: PASS (5 passed).
+Expected: PASS (6 passed).
 
 - [ ] **Step 4: Commit**
 
@@ -4802,6 +4823,9 @@ export class ApprovalRequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
+    if (dto.actionType === ApprovalActionType.CREATE_JUNAK && dto.junakId) {
+      throw new BadRequestException('junakId must not be provided for CREATE_JUNAK');
+    }
     if (dto.actionType !== ApprovalActionType.CREATE_JUNAK && !dto.junakId) {
       throw new BadRequestException('junakId is required for this action type');
     }
