@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { HurtkyModule } from './hurtky/hurtky.module';
 import { UsersModule } from './users/users.module';
+import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-assignments.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UsersModule } from './users/users.module';
     AdminModule,
     HurtkyModule,
     UsersModule,
+    VykhovnykAssignmentsModule,
   ],
   controllers: [HealthController],
 })
