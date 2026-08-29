@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { AssignVykhovnykDto } from './dto/assign-vykhovnyk.dto';
 
 @Injectable()
@@ -40,5 +41,30 @@ export class VykhovnykAssignmentsService {
     }
     await this.prisma.vykhovnykHurtok.delete({ where: { id } });
     return { success: true };
+  }
+
+  async list(actor: CurrentUserPayload, hurtokId?: string) {
+    if (hurtokId) {
+      const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+      if (!hurtok || hurtok.kurinId !== actor.kurinId) {
+        throw new NotFoundException('Hurtok not found in this kurin');
+      }
+    }
+
+    if (actor.role === Role.VYKHOVNYK) {
+      return this.prisma.vykhovnykHurtok.findMany({
+        where: {
+          vykhovnykId: actor.userId,
+          ...(hurtokId ? { hurtokId } : {}),
+        },
+      });
+    }
+
+    return this.prisma.vykhovnykHurtok.findMany({
+      where: {
+        hurtok: { kurinId: actor.kurinId },
+        ...(hurtokId ? { hurtokId } : {}),
+      },
+    });
   }
 }
