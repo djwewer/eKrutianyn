@@ -4802,8 +4802,68 @@ describe('Approval requests approve/reject (e2e)', () => {
 
     expect(response.body).toHaveLength(1);
   });
+
+  it('fails to create a junak if hurtokId belongs to another kurin', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
+    const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший', kurinId: otherKurin.id } });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: {
+          firstName: 'Новий',
+          lastName: 'Юнак',
+          email: 'should-not-exist@example.com',
+          hurtokId: otherHurtok.id,
+        },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const shouldNotExist = await prisma.user.findUnique({
+      where: { email: 'should-not-exist@example.com' },
+    });
+    expect(shouldNotExist).toBeNull();
+  });
+
+  it('fails to change hurtok if new hurtokId belongs to another kurin', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
+    const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший', kurinId: otherKurin.id } });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        junakId: junak.id,
+        actionType: ApprovalActionType.CHANGE_HURTOK,
+        oldData: { hurtokId: junak.hurtokId },
+        newData: { hurtokId: otherHurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const unchangedJunak = await prisma.user.findUnique({ where: { id: junak.id } });
+    expect(unchangedJunak?.hurtokId).toBe(junak.hurtokId);
+  });
 });
 ```
+
+(`validateHurtokBelongsToKurin` — the tenant-isolation check added to `approve()` — is what these last two tests cover: `hurtokId` supplied via `CREATE_JUNAK`/`CHANGE_HURTOK` must belong to the approving зв'язковий's own kurin, 404 otherwise, and no side effect occurs.)
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-decide`
 Expected: FAIL — `GET /approval-requests`, `POST /approval-requests/:id/approve`, `POST /approval-requests/:id/reject` don't exist yet.
@@ -4861,33 +4921,39 @@ export class ApprovalRequestsService {
   async approve(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
 
-    if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
-      const data = req.newData as {
-        firstName: string;
-        lastName: string;
-        email: string;
-        hurtokId: string;
-        birthDate?: string;
-      };
-      await this.prisma.user.create({
-        data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          role: Role.JUNAK,
-          kurinId: actor.kurinId,
-          hurtokId: data.hurtokId,
-          birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-        },
-      });
-    } else {
-      const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
-      await this.prisma.user.update({ where: { id: req.junakId! }, data: updateData });
-    }
+    return this.prisma.$transaction(async (tx) => {
+      if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+        const data = req.newData as {
+          firstName: string;
+          lastName: string;
+          email: string;
+          hurtokId: string;
+          birthDate?: string;
+        };
+        await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId);
+        await tx.user.create({
+          data: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            role: Role.JUNAK,
+            kurinId: actor.kurinId,
+            hurtokId: data.hurtokId,
+            birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+          },
+        });
+      } else {
+        const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
+        if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
+          await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
+        }
+        await tx.user.update({ where: { id: req.junakId! }, data: updateData });
+      }
 
-    return this.prisma.approvalRequest.update({
-      where: { id: requestId },
-      data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+      return tx.approvalRequest.update({
+        where: { id: requestId },
+        data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+      });
     });
   }
 
@@ -4910,6 +4976,13 @@ export class ApprovalRequestsService {
       throw new BadRequestException('Request already decided');
     }
     return req;
+  }
+
+  private async validateHurtokBelongsToKurin(hurtokId: string, kurinId: string) {
+    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+    if (!hurtok || hurtok.kurinId !== kurinId) {
+      throw new NotFoundException('Hurtok not found in this kurin');
+    }
   }
 
   private buildUpdateData(actionType: ApprovalActionType, newData: Record<string, unknown>) {
@@ -4989,7 +5062,7 @@ export class ApprovalRequestsController {
 - [ ] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-decide`
-Expected: PASS (7 passed).
+Expected: PASS (9 passed).
 
 - [ ] **Step 4: Commit**
 
