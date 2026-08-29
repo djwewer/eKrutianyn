@@ -6,6 +6,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class KurinsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findById(kurinId: string) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    return kurin;
+  }
+
   async changeProbyProgram(kurinId: string, newProgramId: string, actorId: string) {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
     if (!kurin) throw new NotFoundException('Kurin not found');
