@@ -926,6 +926,25 @@ git add apps/api/src/users apps/api/test/users-list.e2e-spec.ts apps/api/test/us
 git commit -m "feat: add GET /users list and GET /users/:id detail endpoints"
 ```
 
+**Post-implementation revision (2026-08-29):** the task review found that this
+task's original `list()` code let ZVYAZKOVYI pass `?role=KURINNYI` and read
+KURINNYI/ZVYAZKOVYI peer records — flagged Critical since the plan's original
+visibility rules never granted that. Raised to the human partner, who used
+this finding to correct the underlying design (not just the code): КУРІННИЙ
+can now *view* (not edit) VYKHOVNYK and ZVYAZKOVYI records, and ZVYAZKOVYI can
+view every role in their kurin, including KURINNYI — see the updated
+"Ролі та доступи" table in `docs/superpowers/specs/2026-08-28-yadro-proby-design.md`
+and the "3. Список користувачів" section of
+`docs/superpowers/specs/2026-08-29-read-api-design.md` for the authoritative
+rules. `list()`'s KURINNYI/ZVYAZKOVYI branches and `isVisibleTo`'s role checks
+were revised accordingly in the fix commit — the code blocks above are no
+longer accurate for those two branches; the spec docs and the git history are
+the record. The `?role=VYKHOVNYK&hurtokId=` combination was confirmed to
+correctly return empty (viховники aren't linked to a hurtok via the `hurtokId`
+column) and left as-is by explicit human decision. The 9-field select
+whitelist, previously duplicated three times in `users.service.ts`, was
+extracted into a shared module-level constant in the same fix.
+
 ---
 
 ## Task 4: Vykhovnyk assignments list endpoint
