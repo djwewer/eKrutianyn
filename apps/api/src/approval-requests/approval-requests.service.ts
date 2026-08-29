@@ -47,33 +47,39 @@ export class ApprovalRequestsService {
   async approve(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
 
-    if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
-      const data = req.newData as {
-        firstName: string;
-        lastName: string;
-        email: string;
-        hurtokId: string;
-        birthDate?: string;
-      };
-      await this.prisma.user.create({
-        data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          role: Role.JUNAK,
-          kurinId: actor.kurinId,
-          hurtokId: data.hurtokId,
-          birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-        },
-      });
-    } else {
-      const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
-      await this.prisma.user.update({ where: { id: req.junakId! }, data: updateData });
-    }
+    return this.prisma.$transaction(async (tx) => {
+      if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+        const data = req.newData as {
+          firstName: string;
+          lastName: string;
+          email: string;
+          hurtokId: string;
+          birthDate?: string;
+        };
+        await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId);
+        await tx.user.create({
+          data: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            role: Role.JUNAK,
+            kurinId: actor.kurinId,
+            hurtokId: data.hurtokId,
+            birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+          },
+        });
+      } else {
+        const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
+        if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
+          await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
+        }
+        await tx.user.update({ where: { id: req.junakId! }, data: updateData });
+      }
 
-    return this.prisma.approvalRequest.update({
-      where: { id: requestId },
-      data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+      return tx.approvalRequest.update({
+        where: { id: requestId },
+        data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+      });
     });
   }
 
@@ -96,6 +102,13 @@ export class ApprovalRequestsService {
       throw new BadRequestException('Request already decided');
     }
     return req;
+  }
+
+  private async validateHurtokBelongsToKurin(hurtokId: string, kurinId: string) {
+    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+    if (!hurtok || hurtok.kurinId !== kurinId) {
+      throw new NotFoundException('Hurtok not found in this kurin');
+    }
   }
 
   private buildUpdateData(actionType: ApprovalActionType, newData: Record<string, unknown>) {

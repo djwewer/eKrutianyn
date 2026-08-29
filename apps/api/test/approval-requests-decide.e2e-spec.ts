@@ -222,4 +222,62 @@ describe('Approval requests approve/reject (e2e)', () => {
 
     expect(response.body).toHaveLength(1);
   });
+
+  it('fails to create a junak if hurtokId belongs to another kurin', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
+    const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший', kurinId: otherKurin.id } });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: {
+          firstName: 'Новий',
+          lastName: 'Юнак',
+          email: 'should-not-exist@example.com',
+          hurtokId: otherHurtok.id,
+        },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const shouldNotExist = await prisma.user.findUnique({
+      where: { email: 'should-not-exist@example.com' },
+    });
+    expect(shouldNotExist).toBeNull();
+  });
+
+  it('fails to change hurtok if new hurtokId belongs to another kurin', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
+    const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший', kurinId: otherKurin.id } });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        junakId: junak.id,
+        actionType: ApprovalActionType.CHANGE_HURTOK,
+        oldData: { hurtokId: junak.hurtokId },
+        newData: { hurtokId: otherHurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const unchangedJunak = await prisma.user.findUnique({ where: { id: junak.id } });
+    expect(unchangedJunak?.hurtokId).toBe(junak.hurtokId);
+  });
 });
