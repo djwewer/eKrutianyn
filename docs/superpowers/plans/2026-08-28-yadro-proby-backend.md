@@ -1751,6 +1751,7 @@ describe('Admin kurins (e2e)', () => {
         .expect(201);
 
       expect(response.body.role).toBe('ZVYAZKOVYI');
+      expect(response.body.passwordHash).toBeUndefined();
 
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
@@ -1784,19 +1785,28 @@ Expected: FAIL — `/admin/kurins*` routes don't exist (404s where 401/201/etc. 
 `apps/api/src/common/guards/admin-key.guard.ts`:
 ```ts
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 
 @Injectable()
 export class AdminKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const key = request.headers['x-admin-key'];
-    if (!key || key !== process.env.ADMIN_API_KEY) {
+    const expected = process.env.ADMIN_API_KEY;
+    if (
+      typeof key !== 'string' ||
+      !expected ||
+      key.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(key), Buffer.from(expected))
+    ) {
       throw new UnauthorizedException('Invalid admin key');
     }
     return true;
   }
 }
 ```
+
+(Plain `===` on a bootstrap-privilege secret is a timing side-channel — the length check must run before `timingSafeEqual`, which throws on mismatched buffer lengths.)
 
 `apps/api/src/admin/dto/create-kurin.dto.ts`:
 ```ts
@@ -1864,10 +1874,22 @@ export class KurinsAdminService {
         role: Role.ZVYAZKOVYI,
         kurinId: dto.kurinId,
       },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        kurinId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 }
 ```
+
+(`select` excludes `passwordHash`/`googleId` from the response — returning the raw created row would leak the argon2 hash in the HTTP body.)
 
 `apps/api/src/admin/kurins-admin.controller.ts`:
 ```ts
