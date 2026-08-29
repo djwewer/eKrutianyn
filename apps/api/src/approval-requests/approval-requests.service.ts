@@ -44,6 +44,18 @@ export class ApprovalRequestsService {
     });
   }
 
+  async findOne(id: string, kurinId: string) {
+    const req = await this.prisma.approvalRequest.findUnique({ where: { id } });
+    if (!req) {
+      throw new NotFoundException('Request not found');
+    }
+    const initiator = await this.prisma.user.findUnique({ where: { id: req.initiatedById } });
+    if (!initiator || initiator.kurinId !== kurinId) {
+      throw new NotFoundException('Request not found');
+    }
+    return req;
+  }
+
   async approve(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
 

@@ -28,6 +28,12 @@ export class ApprovalRequestsController {
   }
 
   @Roles(Role.ZVYAZKOVYI)
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.findOne(id, user.kurinId);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
   @Post(':id/approve')
   approve(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.service.approve(id, user);
