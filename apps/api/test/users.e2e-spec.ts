@@ -75,6 +75,19 @@ describe('Users (e2e)', () => {
         .expect(404);
     });
 
+    it('requires hurtokId for KURINNYI too', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      const kurin = await createKurin(prisma, { probyProgramId: program.id });
+      const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+      const token = issueTokenFor(jwtService, zvyazkovyi);
+
+      await request(app.getHttpServer())
+        .post('/users')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ firstName: 'Кур', lastName: 'Інний', email: 'kurinnyi-nohurtok@example.com', role: Role.KURINNYI })
+        .expect(400);
+    });
+
     it('forbids creating another ZVYAZKOVYI through this endpoint', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
       const kurin = await createKurin(prisma, { probyProgramId: program.id });

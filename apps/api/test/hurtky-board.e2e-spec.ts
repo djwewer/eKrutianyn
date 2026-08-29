@@ -61,6 +61,25 @@ describe('GET /hurtky/:id/board (e2e)', () => {
     expect(response.body.junaky[0].progress[0].point.id).toBe(points[0].id);
   });
 
+  it('includes a kurinnyi among junaky, alongside regular junaky', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
+
+    const token = issueTokenFor(jwtService, vykhovnyk);
+    const response = await request(app.getHttpServer())
+      .get(`/hurtky/${hurtok.id}/board`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const ids = response.body.junaky.map((u: any) => u.id).sort();
+    expect(ids).toEqual([junak.id, kurinnyi.id].sort());
+  });
+
   it('returns 404 for a vykhovnyk not assigned to the hurtok', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });

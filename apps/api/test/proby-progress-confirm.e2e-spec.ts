@@ -111,11 +111,11 @@ describe('Proby progress confirm (e2e)', () => {
       .expect(404);
   });
 
-  it('lets any vykhovnyk in the kurin confirm a point for a hurtokless kurinnyi', async () => {
+  it('lets the assigned vykhovnyk confirm a point for a kurinnyi in their hurtok', async () => {
     const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
     const token = issueTokenFor(jwtService, vykhovnyk);
@@ -126,6 +126,20 @@ describe('Proby progress confirm (e2e)', () => {
       .expect(201);
 
     expect(response.body.status).toBe(ProgressStatus.DONE);
+  });
+
+  it("forbids a vykhovnyk not assigned to the kurinnyi's hurtok from confirming", async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
+    const unassignedVykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, unassignedVykhovnyk);
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${kurinnyi.id}/progress/${points[0].id}/confirm`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
   });
 
   it('forbids a vykhovnyk from another kurin from confirming a point for a kurinnyi', async () => {
