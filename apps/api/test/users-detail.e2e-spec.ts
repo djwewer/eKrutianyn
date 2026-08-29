@@ -91,13 +91,14 @@ describe('GET /users/:id (e2e)', () => {
       .expect(404);
   });
 
-  it('lets a zvyazkovyi fetch a junak or a vykhovnyk in their kurin, and 404s cross-tenant', async () => {
+  it('lets a zvyazkovyi fetch any role in their kurin, and 404s cross-tenant', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
     const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
     const zvyazkovyiA = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinA.id });
     const junakA = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinA.id });
     const vykhovnykA = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinA.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
     const junakB = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinB.id });
     const token = issueTokenFor(jwtService, zvyazkovyiA);
 
@@ -112,7 +113,37 @@ describe('GET /users/:id (e2e)', () => {
       .expect(200);
 
     await request(app.getHttpServer())
+      .get(`/users/${kurinnyi.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
       .get(`/users/${junakB.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
+
+  it('lets a kurinnyi fetch a vykhovnyk or zvyazkovyi but not another kurinnyi', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi2 = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, kurinnyi);
+
+    await request(app.getHttpServer())
+      .get(`/users/${vykhovnyk.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/users/${zvyazkovyi.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/users/${kurinnyi2.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
   });

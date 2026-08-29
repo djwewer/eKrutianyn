@@ -6,6 +6,18 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 
+const USER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  nickname: true,
+  email: true,
+  role: true,
+  birthDate: true,
+  kurinId: true,
+  hurtokId: true,
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -78,17 +90,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        nickname: true,
-        email: true,
-        role: true,
-        birthDate: true,
-        kurinId: true,
-        hurtokId: true,
-      },
+      select: USER_SELECT,
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -100,8 +102,11 @@ export class UsersService {
     if (actor.role === Role.JUNAK) {
       throw new ForbiddenException('Junak cannot list users');
     }
-    if (filters.role === Role.VYKHOVNYK && actor.role !== Role.ZVYAZKOVYI) {
-      throw new ForbiddenException('Only zvyazkovyi can list vykhovnyky');
+    if (actor.role === Role.VYKHOVNYK && filters.role && filters.role !== Role.JUNAK) {
+      throw new ForbiddenException('Vykhovnyk can only list junaky');
+    }
+    if (actor.role === Role.KURINNYI && filters.role === Role.KURINNYI) {
+      throw new ForbiddenException('Kurinnyi cannot list other kurinni');
     }
     if (filters.hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: filters.hurtokId } });
@@ -109,18 +114,6 @@ export class UsersService {
         throw new NotFoundException('Hurtok not found in this kurin');
       }
     }
-
-    const select = {
-      id: true,
-      firstName: true,
-      lastName: true,
-      nickname: true,
-      email: true,
-      role: true,
-      birthDate: true,
-      kurinId: true,
-      hurtokId: true,
-    };
 
     if (actor.role === Role.VYKHOVNYK) {
       const assignments = await this.prisma.vykhovnykHurtok.findMany({
@@ -134,39 +127,48 @@ export class UsersService {
           throw new NotFoundException('Hurtok not found in this kurin');
         }
         return this.prisma.user.findMany({
-          where: { kurinId: actor.kurinId, role: Role.JUNAK, hurtokId: filters.hurtokId },
-          select,
+          where: {
+            id: { not: actor.userId },
+            kurinId: actor.kurinId,
+            role: Role.JUNAK,
+            hurtokId: filters.hurtokId,
+          },
+          select: USER_SELECT,
         });
       }
 
       return this.prisma.user.findMany({
         where: {
+          id: { not: actor.userId },
           kurinId: actor.kurinId,
           role: Role.JUNAK,
           OR: [{ hurtokId: { in: assignedHurtokIds } }, { hurtokId: null }],
         },
-        select,
+        select: USER_SELECT,
       });
     }
 
     if (actor.role === Role.KURINNYI) {
       return this.prisma.user.findMany({
         where: {
+          id: { not: actor.userId },
           kurinId: actor.kurinId,
-          role: Role.JUNAK,
+          role: filters.role ?? Role.JUNAK,
           ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
         },
-        select,
+        select: USER_SELECT,
       });
     }
 
+    // ZVYAZKOVYI — sees every role in their kurin
     return this.prisma.user.findMany({
       where: {
+        id: { not: actor.userId },
         kurinId: actor.kurinId,
-        role: filters.role ?? { in: [Role.JUNAK, Role.VYKHOVNYK] },
+        ...(filters.role ? { role: filters.role } : {}),
         ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
       },
-      select,
+      select: USER_SELECT,
     });
   }
 
@@ -180,17 +182,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        nickname: true,
-        email: true,
-        role: true,
-        birthDate: true,
-        kurinId: true,
-        hurtokId: true,
-      },
+      select: USER_SELECT,
     });
     if (!user || user.kurinId !== actor.kurinId) {
       throw new NotFoundException('User not found');
@@ -208,10 +200,10 @@ export class UsersService {
     target: { role: Role; hurtokId: string | null },
   ): Promise<boolean> {
     if (actor.role === Role.ZVYAZKOVYI) {
-      return target.role === Role.JUNAK || target.role === Role.VYKHOVNYK;
+      return true;
     }
     if (actor.role === Role.KURINNYI) {
-      return target.role === Role.JUNAK;
+      return target.role !== Role.KURINNYI;
     }
     if (actor.role === Role.VYKHOVNYK) {
       if (target.role !== Role.JUNAK) return false;
