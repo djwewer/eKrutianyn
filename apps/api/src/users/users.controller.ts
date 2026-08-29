@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -22,6 +22,20 @@ export class UsersController {
   @Get('me')
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.service.findById(user.userId);
+  }
+
+  @Get()
+  list(
+    @Query('role', new ParseEnumPipe(Role, { optional: true })) role: Role | undefined,
+    @Query('hurtokId') hurtokId: string | undefined,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.list(user, { role, hurtokId });
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.findScoped(id, user);
   }
 
   @Roles(Role.KURINNYI, Role.ZVYAZKOVYI)
