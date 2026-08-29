@@ -1,5 +1,8 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { ProbyProgressService } from './proby-progress.service';
 
@@ -11,5 +14,16 @@ export class ProbyProgressController {
   @Get()
   getProgress(@Param('junakId') junakId: string, @CurrentUser() user: CurrentUserPayload) {
     return this.service.getProgressFor(junakId, user);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.VYKHOVNYK)
+  @Post(':pointId/confirm')
+  confirm(
+    @Param('junakId') junakId: string,
+    @Param('pointId') pointId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.confirm(junakId, pointId, user);
   }
 }

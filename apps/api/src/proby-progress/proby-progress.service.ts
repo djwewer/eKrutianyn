@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 
@@ -34,5 +34,38 @@ export class ProbyProgressService {
       where: { junakId },
       include: { point: true },
     });
+  }
+
+  async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
+    await this.assertAssignedVykhovnyk(junakId, actor);
+    const progress = await this.prisma.junakProgress.upsert({
+      where: { junakId_pointId: { junakId, pointId } },
+      update: { status: ProgressStatus.DONE, confirmedById: actor.userId, confirmedAt: new Date() },
+      create: {
+        junakId,
+        pointId,
+        status: ProgressStatus.DONE,
+        confirmedById: actor.userId,
+        confirmedAt: new Date(),
+      },
+    });
+    await this.prisma.progressAuditLog.create({
+      data: { junakId, pointId, action: ProgressAction.CONFIRM, actorId: actor.userId },
+    });
+    return progress;
+  }
+
+  private async assertAssignedVykhovnyk(junakId: string, actor: CurrentUserPayload) {
+    const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
+      throw new NotFoundException('Junak not found');
+    }
+    const assigned = await this.prisma.vykhovnykHurtok.findFirst({
+      where: { vykhovnykId: actor.userId, hurtokId: junak.hurtokId ?? undefined },
+    });
+    if (!assigned) {
+      throw new ForbiddenException("Not assigned to this junak's hurtok");
+    }
+    return junak;
   }
 }
