@@ -128,7 +128,6 @@ export class UsersService {
         }
         return this.prisma.user.findMany({
           where: {
-            id: { not: actor.userId },
             kurinId: actor.kurinId,
             role: Role.JUNAK,
             hurtokId: filters.hurtokId,
@@ -139,7 +138,6 @@ export class UsersService {
 
       return this.prisma.user.findMany({
         where: {
-          id: { not: actor.userId },
           kurinId: actor.kurinId,
           role: Role.JUNAK,
           OR: [{ hurtokId: { in: assignedHurtokIds } }, { hurtokId: null }],
@@ -151,7 +149,6 @@ export class UsersService {
     if (actor.role === Role.KURINNYI) {
       return this.prisma.user.findMany({
         where: {
-          id: { not: actor.userId },
           kurinId: actor.kurinId,
           role: filters.role ?? Role.JUNAK,
           ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
@@ -163,7 +160,6 @@ export class UsersService {
     // ZVYAZKOVYI — sees every role in their kurin
     return this.prisma.user.findMany({
       where: {
-        id: { not: actor.userId },
         kurinId: actor.kurinId,
         ...(filters.role ? { role: filters.role } : {}),
         ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),

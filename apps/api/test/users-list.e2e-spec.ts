@@ -126,7 +126,7 @@ describe('GET /users (e2e)', () => {
       .get('/users')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(all.body.map((u: any) => u.id).sort()).toEqual([junak.id, vykhovnyk.id, kurinnyi.id].sort());
+    expect(all.body.map((u: any) => u.id).sort()).toEqual([zvyazkovyi.id, junak.id, vykhovnyk.id, kurinnyi.id].sort());
 
     const onlyVykhovnyky = await request(app.getHttpServer())
       .get('/users?role=VYKHOVNYK')
