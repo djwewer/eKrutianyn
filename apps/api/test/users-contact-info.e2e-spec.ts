@@ -45,6 +45,7 @@ describe('Users contact-info update (e2e)', () => {
 
     expect(response.body.notes).toBe('Алергія на горіхи');
     expect(response.body.phone).toBe('+380501234567');
+    expect(response.body.passwordHash).toBeUndefined();
   });
 
   it('lets zvyazkovyi update notes/phone too', async () => {
@@ -54,11 +55,14 @@ describe('Users contact-info update (e2e)', () => {
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .patch(`/users/${junak.id}/contact-info`)
       .set('Authorization', `Bearer ${token}`)
       .send({ phone: '+380501234567' })
       .expect(200);
+
+    expect(response.body.phone).toBe('+380501234567');
+    expect(response.body.passwordHash).toBeUndefined();
   });
 
   it('forbids a vykhovnyk from updating contact info', async () => {
