@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +36,17 @@ export class UsersService {
         kurinId: actorKurinId,
         hurtokId: dto.hurtokId,
       },
+    });
+  }
+
+  async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actorKurinId: string) {
+    const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actorKurinId) {
+      throw new NotFoundException('Junak not found');
+    }
+    return this.prisma.user.update({
+      where: { id: junakId },
+      data: { notes: dto.notes, phone: dto.phone },
     });
   }
 
