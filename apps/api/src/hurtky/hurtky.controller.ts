@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -21,5 +21,11 @@ export class HurtkyController {
   @Get()
   list(@CurrentUser() user: CurrentUserPayload) {
     return this.service.listForKurin(user.kurinId);
+  }
+
+  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
+  @Get(':id/board')
+  board(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.getBoard(id, user);
   }
 }

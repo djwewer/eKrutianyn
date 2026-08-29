@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
 
 @Injectable()
@@ -12,5 +14,51 @@ export class HurtkyService {
 
   listForKurin(kurinId: string) {
     return this.prisma.hurtok.findMany({ where: { kurinId } });
+  }
+
+  async getBoard(hurtokId: string, actor: CurrentUserPayload) {
+    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+    if (!hurtok || hurtok.kurinId !== actor.kurinId) {
+      throw new NotFoundException('Hurtok not found in this kurin');
+    }
+
+    if (actor.role === Role.VYKHOVNYK) {
+      const assigned = await this.prisma.vykhovnykHurtok.findFirst({
+        where: { vykhovnykId: actor.userId, hurtokId },
+      });
+      if (!assigned) {
+        throw new NotFoundException('Hurtok not found in this kurin');
+      }
+    }
+
+    const junaky = await this.prisma.user.findMany({
+      where: { hurtokId, role: Role.JUNAK },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        email: true,
+        role: true,
+        birthDate: true,
+        kurinId: true,
+        hurtokId: true,
+      },
+    });
+
+    const junakyWithProgress = await Promise.all(
+      junaky.map(async (junak) => {
+        const progress = await this.prisma.junakProgress.findMany({
+          where: { junakId: junak.id },
+          include: { point: true },
+        });
+        return { ...junak, progress };
+      }),
+    );
+
+    return {
+      hurtok: { id: hurtok.id, name: hurtok.name, number: hurtok.number },
+      junaky: junakyWithProgress,
+    };
   }
 }
