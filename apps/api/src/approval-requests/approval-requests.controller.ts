@@ -1,5 +1,5 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { ApprovalStatus, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -16,5 +16,23 @@ export class ApprovalRequestsController {
   @Post()
   create(@Body() dto: CreateApprovalRequestDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.create(dto, user);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Get()
+  list(@Query('status') status: ApprovalStatus | undefined, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.list(user.kurinId, status);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Post(':id/approve')
+  approve(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.approve(id, user);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Post(':id/reject')
+  reject(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.reject(id, user);
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ApprovalActionType, ApprovalStatus, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -35,6 +35,82 @@ export class ApprovalRequestsService {
         status: ApprovalStatus.PENDING,
       },
     });
+  }
+
+  list(kurinId: string, status?: ApprovalStatus) {
+    return this.prisma.approvalRequest.findMany({
+      where: { status, initiatedBy: { kurinId } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async approve(requestId: string, actor: CurrentUserPayload) {
+    const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
+
+    if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+      const data = req.newData as {
+        firstName: string;
+        lastName: string;
+        email: string;
+        hurtokId: string;
+        birthDate?: string;
+      };
+      await this.prisma.user.create({
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          role: Role.JUNAK,
+          kurinId: actor.kurinId,
+          hurtokId: data.hurtokId,
+          birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+        },
+      });
+    } else {
+      const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
+      await this.prisma.user.update({ where: { id: req.junakId! }, data: updateData });
+    }
+
+    return this.prisma.approvalRequest.update({
+      where: { id: requestId },
+      data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+    });
+  }
+
+  async reject(requestId: string, actor: CurrentUserPayload) {
+    await this.loadPendingRequestForKurin(requestId, actor.kurinId);
+    return this.prisma.approvalRequest.update({
+      where: { id: requestId },
+      data: { status: ApprovalStatus.REJECTED, approvedById: actor.userId, decidedAt: new Date() },
+    });
+  }
+
+  private async loadPendingRequestForKurin(requestId: string, kurinId: string) {
+    const req = await this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
+    if (!req) throw new NotFoundException('Request not found');
+    const initiator = await this.prisma.user.findUnique({ where: { id: req.initiatedById } });
+    if (!initiator || initiator.kurinId !== kurinId) {
+      throw new ForbiddenException('Cross-tenant access denied');
+    }
+    if (req.status !== ApprovalStatus.PENDING) {
+      throw new BadRequestException('Request already decided');
+    }
+    return req;
+  }
+
+  private buildUpdateData(actionType: ApprovalActionType, newData: Record<string, unknown>) {
+    switch (actionType) {
+      case ApprovalActionType.CHANGE_FULL_NAME:
+        return { firstName: newData.firstName as string, lastName: newData.lastName as string };
+      case ApprovalActionType.CHANGE_BIRTH_DATE:
+        return { birthDate: new Date(newData.birthDate as string) };
+      case ApprovalActionType.CHANGE_EMAIL:
+        return { email: newData.email as string };
+      case ApprovalActionType.CHANGE_HURTOK:
+        return { hurtokId: newData.hurtokId as string };
+      default:
+        throw new BadRequestException('Unsupported action type');
+    }
   }
 
   private extractRelevantFields(actionType: ApprovalActionType, junak: User) {
