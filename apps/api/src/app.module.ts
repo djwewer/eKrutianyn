@@ -10,6 +10,7 @@ import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-as
 import { ProbyProgressModule } from './proby-progress/proby-progress.module';
 import { KurinsModule } from './kurins/kurins.module';
 import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
+import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ApprovalRequestsModule } from './approval-requests/approval-requests.mo
     ProbyProgressModule,
     KurinsModule,
     ApprovalRequestsModule,
+    ProbyCatalogModule,
   ],
   controllers: [HealthController],
 })
