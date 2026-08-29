@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 import { USER_SELECT } from './user-select.const';
@@ -18,8 +19,8 @@ export class UsersService {
     if (dto.role === Role.ZVYAZKOVYI) {
       throw new BadRequestException('Cannot self-service create another zvyazkovyi');
     }
-    if (dto.role === Role.JUNAK && !dto.hurtokId) {
-      throw new BadRequestException('hurtokId is required for JUNAK role');
+    if (PROBY_TRACKING_ROLES.includes(dto.role) && !dto.hurtokId) {
+      throw new BadRequestException('hurtokId is required for this role');
     }
     if (dto.hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });

@@ -28,7 +28,7 @@ export class KurinsService {
 
     const oldProgramId = kurin.probyProgramId;
     const junaky = await this.prisma.user.findMany({
-      where: { kurinId, role: { in: PROBY_TRACKING_ROLES } },
+      where: { kurinId, role: { in: [...PROBY_TRACKING_ROLES] } },
       select: { id: true },
     });
 
