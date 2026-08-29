@@ -8,6 +8,7 @@ import { HurtkyModule } from './hurtky/hurtky.module';
 import { UsersModule } from './users/users.module';
 import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-assignments.module';
 import { ProbyProgressModule } from './proby-progress/proby-progress.module';
+import { KurinsModule } from './kurins/kurins.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProbyProgressModule } from './proby-progress/proby-progress.module';
     UsersModule,
     VykhovnykAssignmentsModule,
     ProbyProgressModule,
+    KurinsModule,
   ],
   controllers: [HealthController],
 })

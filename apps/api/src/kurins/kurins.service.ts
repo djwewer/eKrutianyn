@@ -1,0 +1,66 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { ProgressStatus, Role } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class KurinsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async changeProbyProgram(kurinId: string, newProgramId: string) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    if (!kurin) throw new NotFoundException('Kurin not found');
+
+    const newProgram = await this.prisma.probyProgram.findUnique({ where: { id: newProgramId } });
+    if (!newProgram) throw new NotFoundException('Proby program not found');
+
+    if (kurin.probyProgramId === newProgramId) {
+      return kurin;
+    }
+
+    const oldProgramId = kurin.probyProgramId;
+    const junaky = await this.prisma.user.findMany({
+      where: { kurinId, role: Role.JUNAK },
+      select: { id: true },
+    });
+
+    for (const junak of junaky) {
+      const doneOldEntries = await this.prisma.junakProgress.findMany({
+        where: {
+          junakId: junak.id,
+          status: ProgressStatus.DONE,
+          point: { category: { stage: { programId: oldProgramId } } },
+        },
+      });
+
+      for (const entry of doneOldEntries) {
+        const mapping = await this.prisma.pointMapping.findFirst({
+          where: {
+            OR: [{ oldPointId: entry.pointId }, { newPointId: entry.pointId }],
+          },
+        });
+        if (!mapping) continue;
+
+        const targetPointId =
+          mapping.oldPointId === entry.pointId ? mapping.newPointId : mapping.oldPointId;
+
+        await this.prisma.junakProgress.upsert({
+          where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
+          update: {},
+          create: {
+            junakId: junak.id,
+            pointId: targetPointId,
+            status: ProgressStatus.DONE,
+            confirmedById: entry.confirmedById,
+            confirmedAt: entry.confirmedAt,
+            transferredFromPointId: entry.pointId,
+          },
+        });
+      }
+    }
+
+    return this.prisma.kurin.update({
+      where: { id: kurinId },
+      data: { probyProgramId: newProgramId },
+    });
+  }
+}
