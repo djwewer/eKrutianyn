@@ -55,6 +55,19 @@ export class ProbyProgressService {
     return progress;
   }
 
+  async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
+    await this.assertAssignedVykhovnyk(junakId, actor);
+    const progress = await this.prisma.junakProgress.upsert({
+      where: { junakId_pointId: { junakId, pointId } },
+      update: { status: ProgressStatus.NOT_DONE, confirmedById: null, confirmedAt: null },
+      create: { junakId, pointId, status: ProgressStatus.NOT_DONE },
+    });
+    await this.prisma.progressAuditLog.create({
+      data: { junakId, pointId, action: ProgressAction.UNCONFIRM, actorId: actor.userId },
+    });
+    return progress;
+  }
+
   private async assertAssignedVykhovnyk(junakId: string, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {

@@ -26,4 +26,15 @@ export class ProbyProgressController {
   ) {
     return this.service.confirm(junakId, pointId, user);
   }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.VYKHOVNYK)
+  @Post(':pointId/unconfirm')
+  unconfirm(
+    @Param('junakId') junakId: string,
+    @Param('pointId') pointId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.unconfirm(junakId, pointId, user);
+  }
 }
