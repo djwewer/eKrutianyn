@@ -108,6 +108,7 @@ describe('Admin kurins (e2e)', () => {
         .expect(201);
 
       expect(response.body.role).toBe('ZVYAZKOVYI');
+      expect(response.body.passwordHash).toBeUndefined();
 
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')

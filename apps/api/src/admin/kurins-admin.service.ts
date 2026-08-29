@@ -35,6 +35,16 @@ export class KurinsAdminService {
         role: Role.ZVYAZKOVYI,
         kurinId: dto.kurinId,
       },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        kurinId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 }
