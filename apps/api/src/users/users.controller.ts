@@ -1,0 +1,25 @@
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('users')
+export class UsersController {
+  constructor(private readonly service: UsersService) {}
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Post()
+  create(@Body() dto: CreateUserDto, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.create(dto, user.kurinId);
+  }
+
+  @Get('me')
+  me(@CurrentUser() user: CurrentUserPayload) {
+    return this.service.findById(user.userId);
+  }
+}
