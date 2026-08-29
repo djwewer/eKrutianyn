@@ -128,4 +128,22 @@ describe('Approval requests create (e2e)', () => {
       })
       .expect(403);
   });
+
+  it('returns 400 when junakId is provided for CREATE_JUNAK action', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, kurinnyi);
+
+    await request(app.getHttpServer())
+      .post('/approval-requests')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        junakId: junak.id,
+        newData: { firstName: 'Новий', lastName: 'Юнак', email: 'new@example.com' },
+      })
+      .expect(400);
+  });
 });
