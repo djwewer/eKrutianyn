@@ -110,4 +110,37 @@ describe('Proby progress confirm (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
   });
+
+  it('lets any vykhovnyk in the kurin confirm a point for a hurtokless kurinnyi', async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    const response = await request(app.getHttpServer())
+      .post(`/junaky/${kurinnyi.id}/progress/${points[0].id}/confirm`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+
+    expect(response.body.status).toBe(ProgressStatus.DONE);
+  });
+
+  it('forbids a vykhovnyk from another kurin from confirming a point for a kurinnyi', async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
+    const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
+    const kurinnyiA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const hurtokB = await prisma.hurtok.create({ data: { name: 'B', kurinId: kurinB.id } });
+    const vykhovnykB = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinB.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnykB.id, hurtokId: hurtokB.id } });
+    const token = issueTokenFor(jwtService, vykhovnykB);
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${kurinnyiA.id}/progress/${points[0].id}/confirm`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
 });

@@ -102,6 +102,40 @@ describe('Proby progress GET (e2e)', () => {
       .expect(403);
   });
 
+  it('lets a kurinnyi view their own progress', async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: kurinnyi.id, pointId: points[0].id, status: ProgressStatus.DONE },
+    });
+    const token = issueTokenFor(jwtService, kurinnyi);
+
+    const response = await request(app.getHttpServer())
+      .get(`/junaky/${kurinnyi.id}/progress`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].status).toBe(ProgressStatus.DONE);
+  });
+
+  it("forbids a kurinnyi from viewing another kurinnyi's progress", async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const otherKurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: kurinnyi.id, pointId: points[0].id, status: ProgressStatus.DONE },
+    });
+    const token = issueTokenFor(jwtService, otherKurinnyi);
+
+    await request(app.getHttpServer())
+      .get(`/junaky/${kurinnyi.id}/progress`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
   it('returns 404 for a junak in another kurin', async () => {
     const { junak } = await setup();
     const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);

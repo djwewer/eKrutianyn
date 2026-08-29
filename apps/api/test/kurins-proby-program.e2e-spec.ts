@@ -78,6 +78,33 @@ describe('Kurin proby-program change (e2e)', () => {
     expect(auditEntries[0].actorId).toBe(zvyazkovyi.id);
   });
 
+  it("carries over a kurinnyi's DONE point via the mapping, same as a junak's", async () => {
+    const oldTree = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Вузли (стара)']);
+    const newTree = await createProbyProgramTree(prisma, ProbyProgramVersion.NEW, ['Вузли (нова)']);
+    await prisma.pointMapping.create({
+      data: { oldPointId: oldTree.points[0].id, newPointId: newTree.points[0].id },
+    });
+    const kurin = await createKurin(prisma, { probyProgramId: oldTree.program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: kurinnyi.id, pointId: oldTree.points[0].id, status: ProgressStatus.DONE },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .patch(`/kurins/${kurin.id}/proby-program`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newProgramId: newTree.program.id })
+      .expect(200);
+
+    const newProgress = await prisma.junakProgress.findUnique({
+      where: { junakId_pointId: { junakId: kurinnyi.id, pointId: newTree.points[0].id } },
+    });
+    expect(newProgress?.status).toBe(ProgressStatus.DONE);
+    expect(newProgress?.transferredFromPointId).toBe(oldTree.points[0].id);
+  });
+
   it('leaves an unmapped DONE point untouched with no new row created', async () => {
     const oldTree = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, [
       'Мандрівка (без відповідника)',
