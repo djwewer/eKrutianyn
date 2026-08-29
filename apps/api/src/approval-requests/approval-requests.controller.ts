@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseEnumPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApprovalStatus, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -20,7 +20,10 @@ export class ApprovalRequestsController {
 
   @Roles(Role.ZVYAZKOVYI)
   @Get()
-  list(@Query('status') status: ApprovalStatus | undefined, @CurrentUser() user: CurrentUserPayload) {
+  list(
+    @Query('status', new ParseEnumPipe(ApprovalStatus, { optional: true })) status: ApprovalStatus | undefined,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
     return this.service.list(user.kurinId, status);
   }
 

@@ -38,6 +38,7 @@ export class ProbyProgressService {
 
   async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     await this.assertAssignedVykhovnyk(junakId, actor);
+    await this.assertPointExists(pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
       update: { status: ProgressStatus.DONE, confirmedById: actor.userId, confirmedAt: new Date() },
@@ -57,6 +58,7 @@ export class ProbyProgressService {
 
   async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     await this.assertAssignedVykhovnyk(junakId, actor);
+    await this.assertPointExists(pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
       update: { status: ProgressStatus.NOT_DONE, confirmedById: null, confirmedAt: null },
@@ -66,6 +68,13 @@ export class ProbyProgressService {
       data: { junakId, pointId, action: ProgressAction.UNCONFIRM, actorId: actor.userId },
     });
     return progress;
+  }
+
+  private async assertPointExists(pointId: string) {
+    const point = await this.prisma.probyPoint.findUnique({ where: { id: pointId } });
+    if (!point) {
+      throw new NotFoundException('Point not found');
+    }
   }
 
   private async assertAssignedVykhovnyk(junakId: string, actor: CurrentUserPayload) {

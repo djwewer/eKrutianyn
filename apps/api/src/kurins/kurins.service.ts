@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressStatus, Role } from '@prisma/client';
+import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class KurinsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async changeProbyProgram(kurinId: string, newProgramId: string) {
+  async changeProbyProgram(kurinId: string, newProgramId: string, actorId: string) {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
     if (!kurin) throw new NotFoundException('Kurin not found');
 
@@ -43,6 +43,10 @@ export class KurinsService {
         const targetPointId =
           mapping.oldPointId === entry.pointId ? mapping.newPointId : mapping.oldPointId;
 
+        const existingTarget = await this.prisma.junakProgress.findUnique({
+          where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
+        });
+
         await this.prisma.junakProgress.upsert({
           where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
           update: {},
@@ -55,6 +59,17 @@ export class KurinsService {
             transferredFromPointId: entry.pointId,
           },
         });
+
+        if (!existingTarget) {
+          await this.prisma.progressAuditLog.create({
+            data: {
+              junakId: junak.id,
+              pointId: targetPointId,
+              action: ProgressAction.CONFIRM,
+              actorId,
+            },
+          });
+        }
       }
     }
 

@@ -98,4 +98,16 @@ describe('Proby progress confirm (e2e)', () => {
     const rows = await prisma.junakProgress.findMany({ where: { junakId: junak.id, pointId: points[0].id } });
     expect(rows).toHaveLength(1);
   });
+
+  it('returns 404 when the pointId does not exist', async () => {
+    const { junak, hurtok, kurin } = await setup();
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${junak.id}/progress/00000000-0000-0000-0000-000000000000/confirm`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
 });

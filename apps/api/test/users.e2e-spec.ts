@@ -45,6 +45,7 @@ describe('Users (e2e)', () => {
 
       expect(response.body.role).toBe(Role.VYKHOVNYK);
       expect(response.body.kurinId).toBe(kurin.id);
+      expect(response.body.passwordHash).toBeUndefined();
     });
 
     it('requires hurtokId for JUNAK and rejects a hurtok from another kurin', async () => {

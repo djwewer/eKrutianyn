@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus, ProgressAction } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
@@ -69,6 +69,13 @@ describe('Kurin proby-program change (e2e)', () => {
       where: { junakId_pointId: { junakId: junak.id, pointId: oldTree.points[0].id } },
     });
     expect(oldProgress?.status).toBe(ProgressStatus.DONE);
+
+    const auditEntries = await prisma.progressAuditLog.findMany({
+      where: { junakId: junak.id, pointId: newTree.points[0].id },
+    });
+    expect(auditEntries).toHaveLength(1);
+    expect(auditEntries[0].action).toBe(ProgressAction.CONFIRM);
+    expect(auditEntries[0].actorId).toBe(zvyazkovyi.id);
   });
 
   it('leaves an unmapped DONE point untouched with no new row created', async () => {

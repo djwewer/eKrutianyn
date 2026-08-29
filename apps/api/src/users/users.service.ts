@@ -36,6 +36,17 @@ export class UsersService {
         kurinId: actorKurinId,
         hurtokId: dto.hurtokId,
       },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        email: true,
+        role: true,
+        birthDate: true,
+        kurinId: true,
+        hurtokId: true,
+      },
     });
   }
 

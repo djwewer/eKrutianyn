@@ -223,6 +223,17 @@ describe('Approval requests approve/reject (e2e)', () => {
     expect(response.body).toHaveLength(1);
   });
 
+  it('returns 400 when status query param is not a real ApprovalStatus', async () => {
+    const { zvyazkovyi } = await baseSetup();
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .get('/approval-requests')
+      .query({ status: 'NOT_A_REAL_STATUS' })
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
+
   it('fails to create a junak if hurtokId belongs to another kurin', async () => {
     const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
     const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);

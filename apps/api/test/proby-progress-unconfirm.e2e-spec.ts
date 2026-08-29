@@ -78,4 +78,14 @@ describe('Proby progress unconfirm (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
   });
+
+  it('returns 404 when the pointId does not exist', async () => {
+    const { junak, vykhovnyk } = await setup();
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${junak.id}/progress/00000000-0000-0000-0000-000000000000/unconfirm`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
 });
