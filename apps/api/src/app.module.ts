@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-assignments.module';
 import { ProbyProgressModule } from './proby-progress/proby-progress.module';
 import { KurinsModule } from './kurins/kurins.module';
+import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { KurinsModule } from './kurins/kurins.module';
     VykhovnykAssignmentsModule,
     ProbyProgressModule,
     KurinsModule,
+    ApprovalRequestsModule,
   ],
   controllers: [HealthController],
 })
