@@ -109,15 +109,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <Button
                   onClick={async () => {
-                    await createRequest.mutateAsync({
-                      actionType: 'CHANGE_FULL_NAME',
-                      junakId: user.id,
-                      newData: {
-                        firstName: newFirstName || user.firstName,
-                        lastName: newLastName || user.lastName,
-                      },
-                    });
-                    setNameRequestSent(true);
+                    try {
+                      await createRequest.mutateAsync({
+                        actionType: 'CHANGE_FULL_NAME',
+                        junakId: user.id,
+                        newData: {
+                          firstName: newFirstName || user.firstName,
+                          lastName: newLastName || user.lastName,
+                        },
+                      });
+                      setNameRequestSent(true);
+                    } catch {
+                      /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                    }
                   }}
                 >
                   Надіслати запит

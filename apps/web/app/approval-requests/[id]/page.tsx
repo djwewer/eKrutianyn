@@ -49,8 +49,12 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
           <div className="flex gap-2">
             <Button
               onClick={async () => {
-                await approve.mutateAsync();
-                router.push('/approval-requests');
+                try {
+                  await approve.mutateAsync();
+                  router.push('/approval-requests');
+                } catch {
+                  /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                }
               }}
             >
               Затвердити
@@ -58,8 +62,12 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
             <Button
               variant="outline"
               onClick={async () => {
-                await reject.mutateAsync();
-                router.push('/approval-requests');
+                try {
+                  await reject.mutateAsync();
+                  router.push('/approval-requests');
+                } catch {
+                  /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                }
               }}
             >
               Відхилити

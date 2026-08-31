@@ -128,11 +128,15 @@ function KurinnyiApprovalRequestForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await createRequest.mutateAsync({
-      actionType: 'CREATE_JUNAK',
-      newData: { firstName, lastName, email, hurtokId },
-    });
-    setSubmitted(true);
+    try {
+      await createRequest.mutateAsync({
+        actionType: 'CREATE_JUNAK',
+        newData: { firstName, lastName, email, hurtokId },
+      });
+      setSubmitted(true);
+    } catch {
+      /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+    }
   }
 
   if (submitted) {
