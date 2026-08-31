@@ -3,6 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { useUser, useUpdateContactInfo } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
+import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +14,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { data: user, isLoading } = useUser(id);
   const { data: session } = useSession();
   const updateContactInfo = useUpdateContactInfo(id);
+  const createRequest = useCreateApprovalRequest();
   const [notes, setNotes] = useState('');
   const [phone, setPhone] = useState('');
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
+  const [nameRequestSent, setNameRequestSent] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -74,6 +79,54 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+      {session?.role === 'KURINNYI' && user.role === 'JUNAK' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Змінити ПІБ (потребує затвердження)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {nameRequestSent ? (
+              <p>Запит надіслано, очікує затвердження зв&apos;язковим.</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="newFirstName">Нове ім&apos;я</Label>
+                  <Input
+                    id="newFirstName"
+                    value={newFirstName}
+                    onChange={(e) => setNewFirstName(e.target.value)}
+                    placeholder={user.firstName}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newLastName">Нове прізвище</Label>
+                  <Input
+                    id="newLastName"
+                    value={newLastName}
+                    onChange={(e) => setNewLastName(e.target.value)}
+                    placeholder={user.lastName}
+                  />
+                </div>
+                <Button
+                  onClick={async () => {
+                    await createRequest.mutateAsync({
+                      actionType: 'CHANGE_FULL_NAME',
+                      junakId: user.id,
+                      newData: {
+                        firstName: newFirstName || user.firstName,
+                        lastName: newLastName || user.lastName,
+                      },
+                    });
+                    setNameRequestSent(true);
+                  }}
+                >
+                  Надіслати запит
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
