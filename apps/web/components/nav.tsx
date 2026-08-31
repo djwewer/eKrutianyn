@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session-client';
 import { Button } from '@/components/ui/button';
 
@@ -24,10 +25,12 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
 
 export function Nav() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
+    queryClient.clear();
     router.push('/login');
     router.refresh();
   }
