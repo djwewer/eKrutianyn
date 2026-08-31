@@ -1,0 +1,12 @@
+node_modules
+apps/*/node_modules
+apps/*/dist
+apps/*/.next
+apps/*/.env
+apps/api/test
+apps/web/e2e
+apps/web/public
+.git
+.superpowers
+docs
+*.md
