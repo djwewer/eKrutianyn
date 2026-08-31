@@ -6,6 +6,7 @@ import { useSession } from '@/lib/session-client';
 import { useUsers } from '@/lib/queries/users';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { accessErrorMessage } from '@/lib/error-message';
 import type { Role } from '@/lib/types';
 
 const FILTERS_BY_ROLE: Record<string, { value: Role | undefined; label: string }[]> = {
@@ -25,15 +26,22 @@ const FILTERS_BY_ROLE: Record<string, { value: Role | undefined; label: string }
 export default function UsersPage() {
   const { data: session } = useSession();
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
-  const { data: users, isLoading } = useUsers({ role: roleFilter });
+  const { data: users, isLoading, isError, error } = useUsers({ role: roleFilter });
 
   if (isLoading) return <p>Завантаження...</p>;
+  if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error)}</p>;
 
   const filters = session ? FILTERS_BY_ROLE[session.role] ?? [] : [];
+  const canCreate = session?.role === 'KURINNYI' || session?.role === 'ZVYAZKOVYI';
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Люди куреня</h1>
+      {canCreate && (
+        <Link href="/users/new">
+          <Button size="sm">Додати людину</Button>
+        </Link>
+      )}
       {filters.length > 0 && (
         <div className="flex gap-2">
           {filters.map((f) => (

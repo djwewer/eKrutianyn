@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useApprovalRequests } from '@/lib/queries/approval-requests-list';
 import { Card, CardContent } from '@/components/ui/card';
+import { accessErrorMessage } from '@/lib/error-message';
 
 const ACTION_LABELS: Record<string, string> = {
   CHANGE_FULL_NAME: 'Зміна ПІБ',
@@ -13,9 +14,10 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function ApprovalRequestsPage() {
-  const { data: requests, isLoading } = useApprovalRequests('PENDING');
+  const { data: requests, isLoading, isError, error } = useApprovalRequests('PENDING');
 
   if (isLoading) return <p>Завантаження...</p>;
+  if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error)}</p>;
 
   return (
     <div className="space-y-4">

@@ -11,10 +11,11 @@ import {
 } from '@/lib/queries/vykhovnyk-assignments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { accessErrorMessage } from '@/lib/error-message';
 
 export default function VykhovnykAssignmentsPage() {
   const { data: session } = useSession();
-  const { data: assignments, isLoading } = useVykhovnykAssignments();
+  const { data: assignments, isLoading, isError, error } = useVykhovnykAssignments();
   const { data: hurtky } = useHurtky();
   const { data: vykhovnyky } = useUsers({ role: 'VYKHOVNYK' });
   const assign = useAssignVykhovnyk();
@@ -25,6 +26,7 @@ export default function VykhovnykAssignmentsPage() {
   const canManage = session?.role === 'ZVYAZKOVYI';
 
   if (isLoading) return <p>Завантаження...</p>;
+  if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error)}</p>;
 
   const hurtokById = new Map((hurtky ?? []).map((h) => [h.id, h]));
   const vykhovnykById = new Map((vykhovnyky ?? []).map((v) => [v.id, v]));

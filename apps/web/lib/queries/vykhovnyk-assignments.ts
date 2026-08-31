@@ -4,11 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type { VykhovnykAssignment } from '@/lib/types';
 
-export function useVykhovnykAssignments(hurtokId?: string) {
+export function useVykhovnykAssignments(hurtokId?: string, options?: { enabled?: boolean }) {
   const query = hurtokId ? `?hurtokId=${hurtokId}` : '';
   return useQuery({
     queryKey: ['vykhovnyk-assignments', hurtokId],
     queryFn: () => apiFetch<VykhovnykAssignment[]>(`/vykhovnyk-assignments${query}`),
+    enabled: options?.enabled ?? true,
   });
 }
 
