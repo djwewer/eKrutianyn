@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useKurin, useChangeProbyProgram } from '@/lib/queries/kurin';
+import { useSession } from '@/lib/session-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,10 @@ import { Label } from '@/components/ui/label';
 
 export default function KurinPage() {
   const { data: kurin, isLoading } = useKurin();
+  const { data: session } = useSession();
   const [newProgramId, setNewProgramId] = useState('');
   const changeProgram = useChangeProbyProgram(kurin?.id ?? '');
+  const canChangeProgram = session?.role === 'ZVYAZKOVYI';
 
   if (isLoading) return <p>Завантаження...</p>;
   if (!kurin) return <p>Не знайдено.</p>;
@@ -34,20 +37,24 @@ export default function KurinPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Поточна програма: {kurin.probyProgramId}</p>
-          <div className="space-y-2">
-            <Label htmlFor="newProgramId">ID нової програми</Label>
-            <Input
-              id="newProgramId"
-              value={newProgramId}
-              onChange={(e) => setNewProgramId(e.target.value)}
-            />
-          </div>
-          <Button
-            disabled={!newProgramId || changeProgram.isPending}
-            onClick={() => changeProgram.mutate(newProgramId)}
-          >
-            Змінити програму
-          </Button>
+          {canChangeProgram && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="newProgramId">ID нової програми</Label>
+                <Input
+                  id="newProgramId"
+                  value={newProgramId}
+                  onChange={(e) => setNewProgramId(e.target.value)}
+                />
+              </div>
+              <Button
+                disabled={!newProgramId || changeProgram.isPending}
+                onClick={() => changeProgram.mutate(newProgramId)}
+              >
+                Змінити програму
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

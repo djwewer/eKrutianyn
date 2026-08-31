@@ -3,6 +3,7 @@
 import { use } from 'react';
 import { useHurtokBoard, useConfirmPoint, useUnconfirmPoint } from '@/lib/queries/hurtky';
 import { useProbyProgram } from '@/lib/queries/proby';
+import { useSession } from '@/lib/session-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -10,8 +11,10 @@ export default function HurtokBoardPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const { data: board, isLoading } = useHurtokBoard(id);
   const { data: program } = useProbyProgram();
+  const { data: session } = useSession();
   const confirmMutation = useConfirmPoint(id);
   const unconfirmMutation = useUnconfirmPoint(id);
+  const canConfirm = session?.role === 'VYKHOVNYK';
 
   if (isLoading) return <p>Завантаження...</p>;
   if (!board) return <p>Гурток не знайдено.</p>;
@@ -40,25 +43,31 @@ export default function HurtokBoardPage({ params }: { params: Promise<{ id: stri
                 return (
                   <div key={point.id} className="flex items-center justify-between gap-2">
                     <span>{point.description}</span>
-                    {done ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          unconfirmMutation.mutate({ junakId: junak.id, pointId: point.id })
-                        }
-                      >
-                        Зняти
-                      </Button>
+                    {canConfirm ? (
+                      done ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            unconfirmMutation.mutate({ junakId: junak.id, pointId: point.id })
+                          }
+                        >
+                          Зняти
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            confirmMutation.mutate({ junakId: junak.id, pointId: point.id })
+                          }
+                        >
+                          Підтвердити
+                        </Button>
+                      )
                     ) : (
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          confirmMutation.mutate({ junakId: junak.id, pointId: point.id })
-                        }
-                      >
-                        Підтвердити
-                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {done ? 'Підтверджено' : 'Не підтверджено'}
+                      </span>
                     )}
                   </div>
                 );
