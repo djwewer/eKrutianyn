@@ -27,7 +27,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   if (!user) return <p>Не знайдено.</p>;
 
   const canEditContactInfo =
-    session?.role === 'ZVYAZKOVYI' || (session?.role === 'KURINNYI' && user.role === 'JUNAK');
+    (session?.role === 'ZVYAZKOVYI' || session?.role === 'KURINNYI') && user.role === 'JUNAK';
 
   return (
     <div className="max-w-md space-y-4">

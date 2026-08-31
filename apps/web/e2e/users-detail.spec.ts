@@ -26,3 +26,21 @@ test('lets zvyazkovyi edit a junak\'s contact info directly', async ({ page }) =
   await page.reload();
   await expect(page.getByLabel('Телефон')).toHaveValue('+380001112233');
 });
+
+test('disables contact info editing for non-junak users', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const vykhovnyk = await createUserAs(zvyazkovyiToken, {
+    firstName: 'Вих',
+    lastName: 'Овник',
+    email: `vykhovnyk-${Date.now()}@example.com`,
+    role: 'VYKHOVNYK',
+  });
+
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await page.goto(`/users/${vykhovnyk.id}`);
+
+  await expect(page.getByLabel('Телефон')).toBeDisabled();
+});
