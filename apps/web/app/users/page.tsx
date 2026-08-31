@@ -1,21 +1,53 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useUsers } from '@/lib/queries/users';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { Role } from '@/lib/types';
+
+const FILTERS_BY_ROLE: Record<string, { value: Role | undefined; label: string }[]> = {
+  KURINNYI: [
+    { value: undefined, label: 'Юнаки' },
+    { value: 'VYKHOVNYK', label: 'Виховники' },
+    { value: 'ZVYAZKOVYI', label: 'Зв\'язковий' },
+  ],
+  ZVYAZKOVYI: [
+    { value: undefined, label: 'Усі' },
+    { value: 'JUNAK', label: 'Юнаки' },
+    { value: 'VYKHOVNYK', label: 'Виховники' },
+    { value: 'KURINNYI', label: 'Курінні' },
+  ],
+};
 
 export default function UsersPage() {
   const { data: session } = useSession();
-  const { data: users, isLoading } = useUsers();
+  const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
+  const { data: users, isLoading } = useUsers({ role: roleFilter });
 
   if (isLoading) return <p>Завантаження...</p>;
 
-  const title = session?.role === 'ZVYAZKOVYI' ? 'Люди куреня' : 'Юнаки куреня';
+  const filters = session ? FILTERS_BY_ROLE[session.role] ?? [] : [];
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-2xl font-bold">Люди куреня</h1>
+      {filters.length > 0 && (
+        <div className="flex gap-2">
+          {filters.map((f) => (
+            <Button
+              key={f.label}
+              variant={roleFilter === f.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setRoleFilter(f.value)}
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="space-y-2">
         {(users ?? []).map((u) => (
           <Link key={u.id} href={`/users/${u.id}`}>
