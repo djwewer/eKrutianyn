@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 declare global {
   interface Window {
@@ -21,6 +22,7 @@ declare global {
 
 export function GoogleSignInButton() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const buttonRef = useRef<HTMLDivElement>(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -34,6 +36,7 @@ export function GoogleSignInButton() {
         body: JSON.stringify({ idToken: response.credential }),
       });
       if (res.ok) {
+        queryClient.clear();
         router.push('/');
         router.refresh();
       }
@@ -52,7 +55,7 @@ export function GoogleSignInButton() {
     return () => {
       document.body.removeChild(script);
     };
-  }, [router, clientId]);
+  }, [router, queryClient, clientId]);
 
   if (!clientId) return null;
 
