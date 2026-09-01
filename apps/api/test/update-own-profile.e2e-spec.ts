@@ -112,4 +112,73 @@ describe('PATCH /users/me (e2e)', () => {
     expect(await prisma.profileChangeLog.count()).toBe(1);
     expect(mailService.sendProfileChangeNotification).not.toHaveBeenCalled();
   });
+
+  it('does not log or notify when a junak resubmits their unchanged birthDate', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const junak = await prisma.user.create({
+      data: {
+        firstName: 'Тест',
+        lastName: 'Юнак',
+        email: `junak-birthdate-${Date.now()}@example.com`,
+        role: Role.JUNAK,
+        kurinId: kurin.id,
+        birthDate: new Date('2010-05-15'),
+      },
+    });
+    const token = issueTokenFor(jwtService, junak);
+
+    await request(app.getHttpServer())
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ birthDate: '2010-05-15' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(await prisma.profileChangeLog.count()).toBe(0);
+    expect(mailService.sendProfileChangeNotification).not.toHaveBeenCalled();
+  });
+
+  it('still returns the updated profile even if the vykhovnyk notification email fails', async () => {
+    mailService.sendProfileChangeNotification.mockRejectedValueOnce(new Error('Resend is down'));
+
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Соколи' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, junak);
+
+    const response = await request(app.getHttpServer())
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ firstName: 'Оновлене' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(response.body.firstName).toBe('Оновлене');
+    const updated = await prisma.user.findUniqueOrThrow({ where: { id: junak.id } });
+    expect(updated.firstName).toBe('Оновлене');
+  });
+
+  it('notifies every vykhovnyk assigned to the hurtok, not just one', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Леви' } });
+    const vykhovnyk1 = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id, email: `vykh1-${Date.now()}@example.com` });
+    const vykhovnyk2 = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id, email: `vykh2-${Date.now()}@example.com` });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk1.id, hurtokId: hurtok.id } });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk2.id, hurtokId: hurtok.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, junak);
+
+    await request(app.getHttpServer())
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ lastName: 'Нове' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(mailService.sendProfileChangeNotification).toHaveBeenCalledTimes(2);
+    const notifiedEmails = mailService.sendProfileChangeNotification.mock.calls.map((call) => call[0]);
+    expect(notifiedEmails).toEqual(expect.arrayContaining([vykhovnyk1.email, vykhovnyk2.email]));
+  });
 });

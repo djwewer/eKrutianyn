@@ -270,7 +270,7 @@ export class UsersService {
     const sensitiveFields: { field: 'firstName' | 'lastName' | 'birthDate'; oldValue: string | null; newValue: string | undefined }[] = [
       { field: 'firstName', oldValue: user.firstName, newValue: dto.firstName },
       { field: 'lastName', oldValue: user.lastName, newValue: dto.lastName },
-      { field: 'birthDate', oldValue: user.birthDate ? user.birthDate.toISOString() : null, newValue: dto.birthDate },
+      { field: 'birthDate', oldValue: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null, newValue: dto.birthDate },
     ];
 
     const updated = await this.prisma.user.update({
@@ -301,12 +301,16 @@ export class UsersService {
         });
         for (const change of changedFields) {
           for (const assignment of assignments) {
-            await this.mailService.sendProfileChangeNotification(assignment.vykhovnyk.email, {
-              changedUserName: `${updated.firstName} ${updated.lastName}`,
-              field: change.field,
-              oldValue: change.oldValue,
-              newValue: change.newValue ?? null,
-            });
+            try {
+              await this.mailService.sendProfileChangeNotification(assignment.vykhovnyk.email, {
+                changedUserName: `${updated.firstName} ${updated.lastName}`,
+                field: change.field,
+                oldValue: change.oldValue,
+                newValue: change.newValue ?? null,
+              });
+            } catch (err) {
+              console.error(`Failed to send profile-change notification to ${assignment.vykhovnyk.email}:`, err);
+            }
           }
         }
       }
