@@ -8,6 +8,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangeEmailDto } from './dto/change-email.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
@@ -28,6 +29,11 @@ export class UsersController {
   @Patch('me/password')
   changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.changeOwnPassword(user.userId, dto);
+  }
+
+  @Patch('me/email')
+  changeEmail(@Body() dto: ChangeEmailDto, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.requestEmailChange(user.userId, dto);
   }
 
   @Get()

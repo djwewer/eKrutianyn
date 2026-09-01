@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
@@ -28,6 +28,12 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { ok: true };
+  }
+
+  @Get('confirm-email-change')
+  async confirmEmailChange(@Query('token') token: string) {
+    await this.authService.confirmEmailChange(token);
     return { ok: true };
   }
 }

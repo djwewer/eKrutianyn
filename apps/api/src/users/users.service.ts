@@ -2,11 +2,14 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { MailService } from '../mail/mail.service';
+import { generateToken } from '../common/token.util';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangeEmailDto } from './dto/change-email.dto';
 import { USER_SELECT } from './user-select.const';
 
 @Injectable()
@@ -14,6 +17,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    private readonly mailService: MailService,
   ) {}
 
   async create(dto: CreateUserDto, actorKurinId: string) {
@@ -223,6 +227,36 @@ export class UsersService {
     }
     const passwordHash = await this.authService.hashPassword(dto.newPassword);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
+  }
+
+  async requestEmailChange(userId: string, dto: ChangeEmailDto): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!user.passwordHash) {
+      throw new BadRequestException('Set a password before changing email');
+    }
+    const valid = await this.authService.validatePassword(dto.currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new ForbiddenException('Invalid current password');
+    }
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.newEmail } });
+    if (existing) {
+      throw new BadRequestException('Email already in use');
+    }
+    const { raw, hash } = generateToken();
+    await this.prisma.emailChangeRequest.create({
+      data: {
+        userId,
+        newEmail: dto.newEmail,
+        tokenHash: hash,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    const confirmUrl = `${process.env.FRONTEND_URL}/confirm-email-change?token=${raw}`;
+    await this.mailService.sendEmailChangeConfirmation(dto.newEmail, confirmUrl);
     return { ok: true };
   }
 }

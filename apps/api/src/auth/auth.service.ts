@@ -91,4 +91,20 @@ export class AuthService {
       }),
     ]);
   }
+
+  async confirmEmailChange(token: string): Promise<void> {
+    const tokenHash = hashToken(token);
+    const changeRequest = await this.prisma.emailChangeRequest.findUnique({ where: { tokenHash } });
+    if (!changeRequest || changeRequest.usedAt || changeRequest.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+    const existing = await this.prisma.user.findUnique({ where: { email: changeRequest.newEmail } });
+    if (existing) {
+      throw new BadRequestException('Email already in use');
+    }
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: changeRequest.userId }, data: { email: changeRequest.newEmail } }),
+      this.prisma.emailChangeRequest.update({ where: { id: changeRequest.id }, data: { usedAt: new Date() } }),
+    ]);
+  }
 }
