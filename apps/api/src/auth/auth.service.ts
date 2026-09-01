@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
+import { MailService } from '../mail/mail.service';
+import { generateToken, hashToken } from '../common/token.util';
 
 export interface JwtPayload {
   sub: string;
@@ -17,6 +19,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly googleVerifier: GoogleTokenVerifierService,
+    private readonly mailService: MailService,
   ) {}
 
   hashPassword(plain: string): Promise<string> {
@@ -57,5 +60,35 @@ export class AuthService {
       await this.prisma.user.update({ where: { id: user.id }, data: { googleId: verified.sub } });
     }
     return this.signToken(user.id, user.role, user.kurinId);
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return;
+    }
+    const { raw, hash } = generateToken();
+    await this.prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+    });
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${raw}`;
+    await this.mailService.sendPasswordReset(user.email, resetUrl);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const tokenHash = hashToken(token);
+    const resetToken = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+    const passwordHash = await this.hashPassword(newPassword);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+      this.prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: resetToken.userId, usedAt: null, id: { not: resetToken.id } },
+        data: { usedAt: new Date() },
+      }),
+    ]);
   }
 }

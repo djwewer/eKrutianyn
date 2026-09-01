@@ -7,6 +7,7 @@ import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-us
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
@@ -22,6 +23,11 @@ export class UsersController {
   @Get('me')
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.service.findById(user.userId);
+  }
+
+  @Patch('me/password')
+  changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.changeOwnPassword(user.userId, dto);
   }
 
   @Get()

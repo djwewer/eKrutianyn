@@ -6,6 +6,7 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { USER_SELECT } from './user-select.const';
 
 @Injectable()
@@ -204,5 +205,24 @@ export class UsersService {
       return !!assigned;
     }
     return false;
+  }
+
+  async changeOwnPassword(userId: string, dto: ChangePasswordDto): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.passwordHash) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('currentPassword is required');
+      }
+      const valid = await this.authService.validatePassword(dto.currentPassword, user.passwordHash);
+      if (!valid) {
+        throw new ForbiddenException('Invalid current password');
+      }
+    }
+    const passwordHash = await this.authService.hashPassword(dto.newPassword);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
   }
 }

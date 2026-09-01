@@ -10,6 +10,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
     prisma.probyCategory.deleteMany(),
     prisma.probyStage.deleteMany(),
     prisma.vykhovnykHurtok.deleteMany(),
+    prisma.passwordResetToken.deleteMany(),
     prisma.user.deleteMany(),
     prisma.hurtok.deleteMany(),
     prisma.kurin.deleteMany(),
