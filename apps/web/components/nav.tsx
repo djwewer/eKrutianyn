@@ -7,12 +7,19 @@ import { useSession } from '@/lib/session-client';
 import { Button } from '@/components/ui/button';
 
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
-  JUNAK: [{ href: '/proby', label: 'Моя проба' }],
-  VYKHOVNYK: [{ href: '/hurtky', label: 'Мої гуртки' }],
+  JUNAK: [
+    { href: '/proby', label: 'Моя проба' },
+    { href: '/settings', label: 'Налаштування' },
+  ],
+  VYKHOVNYK: [
+    { href: '/hurtky', label: 'Мої гуртки' },
+    { href: '/settings', label: 'Налаштування' },
+  ],
   KURINNYI: [
     { href: '/proby', label: 'Моя проба' },
     { href: '/users', label: 'Юнаки' },
     { href: '/vykhovnyk-assignments', label: 'Виховники' },
+    { href: '/settings', label: 'Налаштування' },
   ],
   ZVYAZKOVYI: [
     { href: '/approval-requests', label: 'Запити' },
@@ -20,6 +27,7 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/hurtky', label: 'Гуртки' },
     { href: '/vykhovnyk-assignments', label: 'Призначення' },
     { href: '/kurin', label: 'Курінь' },
+    { href: '/settings', label: 'Налаштування' },
   ],
 };
 
