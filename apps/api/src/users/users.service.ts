@@ -227,7 +227,13 @@ export class UsersService {
       }
     }
     const passwordHash = await this.authService.hashPassword(dto.newPassword);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+    ]);
     return { ok: true };
   }
 

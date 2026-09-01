@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Resend } from 'resend';
 
 export interface CapturedMail {
@@ -6,16 +6,35 @@ export interface CapturedMail {
   type: 'password-reset' | 'email-change-confirmation' | 'profile-change-notification';
   link?: string;
   meta?: Record<string, string | null>;
+  html?: string;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
+  private readonly logger = new Logger(MailService.name);
+  private readonly captureMode = process.env.MAIL_MODE === 'test';
   private readonly resend: Resend | null;
-  private readonly testMode = process.env.MAIL_MODE === 'test' || !process.env.RESEND_API_KEY;
   private readonly lastMailByRecipient = new Map<string, CapturedMail>();
 
   constructor() {
-    this.resend = this.testMode ? null : new Resend(process.env.RESEND_API_KEY);
+    this.resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+  }
+
+  onModuleInit() {
+    if (!this.captureMode && (!this.resend || !process.env.FRONTEND_URL)) {
+      throw new Error(
+        'MailService is misconfigured: RESEND_API_KEY and FRONTEND_URL must both be set unless MAIL_MODE=test.',
+      );
+    }
   }
 
   async sendPasswordReset(to: string, resetUrl: string): Promise<void> {
@@ -50,7 +69,7 @@ export class MailService {
       },
       {
         subject: `${params.changedUserName} змінив(-ла) особисті дані`,
-        html: `<p>${params.changedUserName} самостійно змінив(-ла) поле "${params.field}": "${params.oldValue ?? '—'}" → "${params.newValue ?? '—'}".</p>`,
+        html: `<p>${escapeHtml(params.changedUserName)} самостійно змінив(-ла) поле "${params.field}": "${escapeHtml(params.oldValue ?? '—')}" → "${escapeHtml(params.newValue ?? '—')}".</p>`,
       },
     );
   }
@@ -60,15 +79,19 @@ export class MailService {
   }
 
   private async deliver(captured: CapturedMail, email: { subject: string; html: string }): Promise<void> {
-    if (this.testMode) {
-      this.lastMailByRecipient.set(captured.to, captured);
+    if (this.captureMode) {
+      this.lastMailByRecipient.set(captured.to, { ...captured, html: email.html });
       return;
     }
-    await this.resend!.emails.send({
+    const { error } = await this.resend!.emails.send({
       from: process.env.MAIL_FROM ?? 'onboarding@resend.dev',
       to: captured.to,
       subject: email.subject,
       html: email.html,
     });
+    if (error) {
+      this.logger.error(`Failed to send "${captured.type}" mail to ${captured.to}: ${error.message ?? JSON.stringify(error)}`);
+      throw new BadGatewayException('Failed to send email');
+    }
   }
 }

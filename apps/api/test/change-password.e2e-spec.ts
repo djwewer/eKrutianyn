@@ -81,4 +81,28 @@ describe('PATCH /users/me/password (e2e)', () => {
       .send({ newPassword: 'first-password-123' })
       .expect(200);
   });
+
+  it('invalidates outstanding password-reset tokens when the password is changed directly', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const user = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id, password: 'correct-pass' });
+    const token = issueTokenFor(jwtService, user);
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: 'fake-hash-for-test-only',
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    await request(app.getHttpServer())
+      .patch('/users/me/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: 'correct-pass', newPassword: 'new-password-123' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const outstandingToken = await prisma.passwordResetToken.findFirst({ where: { userId: user.id } });
+    expect(outstandingToken?.usedAt).not.toBeNull();
+  });
 });
