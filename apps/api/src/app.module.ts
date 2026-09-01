@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { MailModule } from './mail/mail.module';
 import { AdminModule } from './admin/admin.module';
 import { HurtkyModule } from './hurtky/hurtky.module';
 import { UsersModule } from './users/users.module';
@@ -17,6 +18,7 @@ import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
+    MailModule,
     AdminModule,
     HurtkyModule,
     UsersModule,

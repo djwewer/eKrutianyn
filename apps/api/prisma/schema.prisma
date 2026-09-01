@@ -99,6 +99,9 @@ model User {
   auditLogEntries      ProgressAuditLog[] @relation("ActorAuditLogs")
   initiatedRequests    ApprovalRequest[]  @relation("InitiatedRequests")
   decidedRequests      ApprovalRequest[]  @relation("DecidedRequests")
+  passwordResetTokens  PasswordResetToken[]
+  emailChangeRequests  EmailChangeRequest[]
+  profileChangeLogs    ProfileChangeLog[]
 }
 
 model VykhovnykHurtok {
@@ -201,4 +204,35 @@ model ApprovalRequest {
   approvedBy    User?              @relation("DecidedRequests", fields: [approvedById], references: [id])
   decidedAt     DateTime?
   createdAt     DateTime           @default(now())
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model EmailChangeRequest {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  newEmail  String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model ProfileChangeLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  field     String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
 }
