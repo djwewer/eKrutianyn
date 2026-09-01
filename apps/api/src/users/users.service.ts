@@ -10,6 +10,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
+import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { USER_SELECT } from './user-select.const';
 
 @Injectable()
@@ -258,5 +259,59 @@ export class UsersService {
     const confirmUrl = `${process.env.FRONTEND_URL}/confirm-email-change?token=${raw}`;
     await this.mailService.sendEmailChangeConfirmation(dto.newEmail, confirmUrl);
     return { ok: true };
+  }
+
+  async updateOwnProfile(userId: string, dto: UpdateOwnProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const sensitiveFields: { field: 'firstName' | 'lastName' | 'birthDate'; oldValue: string | null; newValue: string | undefined }[] = [
+      { field: 'firstName', oldValue: user.firstName, newValue: dto.firstName },
+      { field: 'lastName', oldValue: user.lastName, newValue: dto.lastName },
+      { field: 'birthDate', oldValue: user.birthDate ? user.birthDate.toISOString() : null, newValue: dto.birthDate },
+    ];
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        nickname: dto.nickname,
+        phone: dto.phone,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+      },
+      select: { ...USER_SELECT, notes: true, phone: true },
+    });
+
+    if (PROBY_TRACKING_ROLES.includes(user.role)) {
+      const changedFields = sensitiveFields.filter((f) => f.newValue !== undefined && f.newValue !== f.oldValue);
+
+      for (const change of changedFields) {
+        await this.prisma.profileChangeLog.create({
+          data: { userId, field: change.field, oldValue: change.oldValue, newValue: change.newValue ?? null },
+        });
+      }
+
+      if (changedFields.length > 0 && user.hurtokId) {
+        const assignments = await this.prisma.vykhovnykHurtok.findMany({
+          where: { hurtokId: user.hurtokId },
+          include: { vykhovnyk: true },
+        });
+        for (const change of changedFields) {
+          for (const assignment of assignments) {
+            await this.mailService.sendProfileChangeNotification(assignment.vykhovnyk.email, {
+              changedUserName: `${updated.firstName} ${updated.lastName}`,
+              field: change.field,
+              oldValue: change.oldValue,
+              newValue: change.newValue ?? null,
+            });
+          }
+        }
+      }
+    }
+
+    return updated;
   }
 }
