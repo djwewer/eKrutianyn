@@ -11,7 +11,7 @@ export interface CapturedMail {
 @Injectable()
 export class MailService {
   private readonly resend: Resend | null;
-  private readonly testMode = process.env.MAIL_MODE === 'test';
+  private readonly testMode = process.env.MAIL_MODE === 'test' || !process.env.RESEND_API_KEY;
   private readonly lastMailByRecipient = new Map<string, CapturedMail>();
 
   constructor() {
