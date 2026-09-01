@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,11 @@ export default function LoginPage() {
               {loading ? 'Зачекайте...' : 'Увійти'}
             </Button>
           </form>
+          <div className="mt-2 text-center">
+            <Link href="/forgot-password" className="text-sm underline">
+              Забули пароль?
+            </Link>
+          </div>
           <div className="mt-4">
             <GoogleSignInButton />
           </div>

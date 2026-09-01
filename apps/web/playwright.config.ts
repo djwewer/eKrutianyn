@@ -25,6 +25,9 @@ export default defineConfig({
         DATABASE_URL: DATABASE_URL_TEST,
         ADMIN_API_KEY,
         JWT_SECRET,
+        MAIL_MODE: 'test',
+        MAIL_FROM: 'test@example.com',
+        FRONTEND_URL: 'http://localhost:3000',
       },
     },
     {
