@@ -4,6 +4,7 @@ import { use, useState, useEffect } from 'react';
 import { useUser, useUpdateContactInfo } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
+import { ROLE_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +46,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>Email: {user.email}</p>
-          <p>Роль: {user.role}</p>
+          <p>Роль: {ROLE_LABELS[user.role]}</p>
           {user.birthDate && <p>Дата народження: {user.birthDate}</p>}
         </CardContent>
       </Card>

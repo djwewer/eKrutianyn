@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useUsers } from '@/lib/queries/users';
+import { ROLE_LABELS } from '@/lib/role-labels';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
@@ -64,7 +65,7 @@ export default function UsersPage() {
                 <span>
                   {u.lastName} {u.firstName}
                 </span>
-                <span className="text-sm text-muted-foreground">{u.role}</span>
+                <span className="text-sm text-muted-foreground">{ROLE_LABELS[u.role]}</span>
               </CardContent>
             </Card>
           </Link>
