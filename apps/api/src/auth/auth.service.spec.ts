@@ -8,12 +8,14 @@ describe('AuthService', () => {
   let service: AuthService;
   let prisma: { user: { findUnique: jest.Mock; update: jest.Mock } };
   let googleVerifier: { verify: jest.Mock };
+  let mailService: { sendPasswordReset: jest.Mock };
   const jwtService = new JwtService({ secret: 'test-secret', signOptions: { expiresIn: '1h' } });
 
   beforeEach(() => {
     prisma = { user: { findUnique: jest.fn(), update: jest.fn() } };
     googleVerifier = { verify: jest.fn() };
-    service = new AuthService(prisma as any, jwtService, googleVerifier as any);
+    mailService = { sendPasswordReset: jest.fn() };
+    service = new AuthService(prisma as any, jwtService, googleVerifier as any, mailService as any);
   });
 
   describe('hashPassword / validatePassword', () => {
