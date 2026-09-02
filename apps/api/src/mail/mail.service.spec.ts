@@ -65,11 +65,12 @@ describe('MailService (test mode)', () => {
   describe('onModuleInit', () => {
     const ORIGINAL = {
       MAIL_MODE: process.env.MAIL_MODE,
-      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      GMAIL_USER: process.env.GMAIL_USER,
+      GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
       FRONTEND_URL: process.env.FRONTEND_URL,
     };
 
-    function setEnv(key: 'MAIL_MODE' | 'RESEND_API_KEY' | 'FRONTEND_URL', value: string | undefined) {
+    function setEnv(key: keyof typeof ORIGINAL, value: string | undefined) {
       if (value === undefined) {
         delete process.env[key];
       } else {
@@ -79,13 +80,24 @@ describe('MailService (test mode)', () => {
 
     afterEach(() => {
       setEnv('MAIL_MODE', ORIGINAL.MAIL_MODE);
-      setEnv('RESEND_API_KEY', ORIGINAL.RESEND_API_KEY);
+      setEnv('GMAIL_USER', ORIGINAL.GMAIL_USER);
+      setEnv('GMAIL_APP_PASSWORD', ORIGINAL.GMAIL_APP_PASSWORD);
       setEnv('FRONTEND_URL', ORIGINAL.FRONTEND_URL);
     });
 
-    it('throws if not in test mode and RESEND_API_KEY is missing', () => {
+    it('throws if not in test mode and Gmail credentials are missing', () => {
       setEnv('MAIL_MODE', undefined);
-      setEnv('RESEND_API_KEY', undefined);
+      setEnv('GMAIL_USER', undefined);
+      setEnv('GMAIL_APP_PASSWORD', undefined);
+      setEnv('FRONTEND_URL', 'https://example.com');
+      const service = new MailService();
+      expect(() => service.onModuleInit()).toThrow(/misconfigured/);
+    });
+
+    it('throws if not in test mode and only one of GMAIL_USER/GMAIL_APP_PASSWORD is set', () => {
+      setEnv('MAIL_MODE', undefined);
+      setEnv('GMAIL_USER', 'test@gmail.com');
+      setEnv('GMAIL_APP_PASSWORD', undefined);
       setEnv('FRONTEND_URL', 'https://example.com');
       const service = new MailService();
       expect(() => service.onModuleInit()).toThrow(/misconfigured/);
@@ -93,15 +105,17 @@ describe('MailService (test mode)', () => {
 
     it('throws if not in test mode and FRONTEND_URL is missing', () => {
       setEnv('MAIL_MODE', undefined);
-      setEnv('RESEND_API_KEY', 're_test_key');
+      setEnv('GMAIL_USER', 'test@gmail.com');
+      setEnv('GMAIL_APP_PASSWORD', 'app-password');
       setEnv('FRONTEND_URL', undefined);
       const service = new MailService();
       expect(() => service.onModuleInit()).toThrow(/misconfigured/);
     });
 
-    it('does not throw in test mode even with no key or FRONTEND_URL configured', () => {
+    it('does not throw in test mode even with no Gmail credentials or FRONTEND_URL configured', () => {
       setEnv('MAIL_MODE', 'test');
-      setEnv('RESEND_API_KEY', undefined);
+      setEnv('GMAIL_USER', undefined);
+      setEnv('GMAIL_APP_PASSWORD', undefined);
       setEnv('FRONTEND_URL', undefined);
       const service = new MailService();
       expect(() => service.onModuleInit()).not.toThrow();

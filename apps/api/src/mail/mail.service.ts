@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
 export interface CapturedMail {
   to: string;
@@ -22,17 +23,25 @@ function escapeHtml(value: string): string {
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
   private readonly captureMode = process.env.MAIL_MODE === 'test';
-  private readonly resend: Resend | null;
+  private readonly transporter: Transporter | null;
   private readonly lastMailByRecipient = new Map<string, CapturedMail>();
 
   constructor() {
-    this.resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+    this.transporter =
+      process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD
+        ? nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+          })
+        : null;
   }
 
   onModuleInit() {
-    if (!this.captureMode && (!this.resend || !process.env.FRONTEND_URL)) {
+    if (!this.captureMode && (!this.transporter || !process.env.FRONTEND_URL)) {
       throw new Error(
-        'MailService is misconfigured: RESEND_API_KEY and FRONTEND_URL must both be set unless MAIL_MODE=test.',
+        'MailService is misconfigured: GMAIL_USER, GMAIL_APP_PASSWORD, and FRONTEND_URL must all be set unless MAIL_MODE=test.',
       );
     }
   }
@@ -83,14 +92,17 @@ export class MailService implements OnModuleInit {
       this.lastMailByRecipient.set(captured.to, { ...captured, html: email.html });
       return;
     }
-    const { error } = await this.resend!.emails.send({
-      from: process.env.MAIL_FROM ?? 'onboarding@resend.dev',
-      to: captured.to,
-      subject: email.subject,
-      html: email.html,
-    });
-    if (error) {
-      this.logger.error(`Failed to send "${captured.type}" mail to ${captured.to}: ${error.message ?? JSON.stringify(error)}`);
+    try {
+      await this.transporter!.sendMail({
+        from: `"Пласт — Ядро і Проби" <${process.env.GMAIL_USER}>`,
+        to: captured.to,
+        subject: email.subject,
+        html: email.html,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to send "${captured.type}" mail to ${captured.to}: ${err instanceof Error ? err.message : String(err)}`,
+      );
       throw new BadGatewayException('Failed to send email');
     }
   }
