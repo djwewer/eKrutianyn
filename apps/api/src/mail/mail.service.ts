@@ -94,7 +94,7 @@ export class MailService implements OnModuleInit {
     }
     try {
       await this.transporter!.sendMail({
-        from: `"Пласт — Ядро і Проби" <${process.env.GMAIL_USER}>`,
+        from: `"єКрутянин" <${process.env.GMAIL_USER}>`,
         to: captured.to,
         subject: email.subject,
         html: email.html,
