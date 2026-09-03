@@ -1,9 +1,10 @@
-export type Role = 'JUNAK' | 'VYKHOVNYK' | 'KURINNYI' | 'ZVYAZKOVYI';
+export type Role = 'JUNAK' | 'VYKHOVNYK' | 'ZVYAZKOVYI';
 
 export interface CurrentUserPayload {
   userId: string;
   role: Role;
   kurinId: string;
+  isKurinniy: boolean;
 }
 
 export interface UserSummary {

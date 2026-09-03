@@ -3,20 +3,25 @@ import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
 
-test('shows a clean access-denied state instead of a crash or false empty state', async ({ page }) => {
+test('shows a clean access-denied state instead of a crash or false empty state', async ({ page, request }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
   const kurinnyiEmail = `kurinnyi-${Date.now()}@example.com`;
-  await createUserAs(zvyazkovyiToken, {
+  const junak = await createUserAs(zvyazkovyiToken, {
     firstName: 'Кур',
     lastName: 'Інний',
     email: kurinnyiEmail,
-    role: 'KURINNYI',
+    role: 'JUNAK',
     hurtokId: hurtok.id,
     password: 'password123',
+  });
+
+  await request.post('http://localhost:3001/kurin-positions', {
+    headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
+    data: { userId: junak.id, scope: 'KURIN', positionType: 'KURINNYI' },
   });
 
   // GET /approval-requests is ZVYAZKOVYI-only (@Roles(Role.ZVYAZKOVYI) on the controller),

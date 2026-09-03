@@ -16,6 +16,7 @@ export async function GET() {
       userId: decoded.sub,
       role: decoded.role,
       kurinId: decoded.kurinId,
+      isKurinniy: !!decoded.isKurinniy,
     };
     return NextResponse.json(session);
   } catch {

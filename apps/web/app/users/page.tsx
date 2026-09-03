@@ -10,19 +10,17 @@ import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
 import type { Role } from '@/lib/types';
 
-const FILTERS_BY_ROLE: Record<string, { value: Role | undefined; label: string }[]> = {
-  KURINNYI: [
-    { value: undefined, label: 'Юнаки' },
-    { value: 'VYKHOVNYK', label: 'Виховники' },
-    { value: 'ZVYAZKOVYI', label: 'Зв\'язковий' },
-  ],
-  ZVYAZKOVYI: [
-    { value: undefined, label: 'Усі' },
-    { value: 'JUNAK', label: 'Юнаки' },
-    { value: 'VYKHOVNYK', label: 'Виховники' },
-    { value: 'KURINNYI', label: 'Курінні' },
-  ],
-};
+const ZVYAZKOVYI_FILTERS: { value: Role | undefined; label: string }[] = [
+  { value: undefined, label: 'Усі' },
+  { value: 'JUNAK', label: 'Юнаки' },
+  { value: 'VYKHOVNYK', label: 'Виховники' },
+];
+
+const KURINNIY_FILTERS: { value: Role | undefined; label: string }[] = [
+  { value: undefined, label: 'Юнаки' },
+  { value: 'VYKHOVNYK', label: 'Виховники' },
+  { value: 'ZVYAZKOVYI', label: "Зв'язковий" },
+];
 
 export default function UsersPage() {
   const { data: session } = useSession();
@@ -32,8 +30,8 @@ export default function UsersPage() {
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error)}</p>;
 
-  const filters = session ? FILTERS_BY_ROLE[session.role] ?? [] : [];
-  const canCreate = session?.role === 'KURINNYI' || session?.role === 'ZVYAZKOVYI';
+  const filters = session?.role === 'ZVYAZKOVYI' ? ZVYAZKOVYI_FILTERS : session?.isKurinniy ? KURINNIY_FILTERS : [];
+  const canCreate = session?.role === 'ZVYAZKOVYI' || session?.isKurinniy;
 
   return (
     <div className="space-y-4">

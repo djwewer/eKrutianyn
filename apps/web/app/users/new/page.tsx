@@ -43,7 +43,7 @@ function ZvyazkovyiDirectCreateForm() {
     },
   });
 
-  const needsHurtok = role === 'JUNAK' || role === 'KURINNYI';
+  const needsHurtok = role === 'JUNAK';
 
   return (
     <Card className="max-w-md">
@@ -68,7 +68,6 @@ function ZvyazkovyiDirectCreateForm() {
             >
               <option value="JUNAK">Юнак</option>
               <option value="VYKHOVNYK">Виховник</option>
-              <option value="KURINNYI">Курінний</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -203,5 +202,8 @@ export default function NewUserPage() {
   if (session?.role === 'ZVYAZKOVYI') {
     return <ZvyazkovyiDirectCreateForm />;
   }
-  return <KurinnyiApprovalRequestForm />;
+  if (session?.isKurinniy) {
+    return <KurinnyiApprovalRequestForm />;
+  }
+  return null;
 }

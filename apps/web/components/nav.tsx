@@ -15,18 +15,13 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/hurtky', label: 'Мої гуртки' },
     { href: '/settings', label: 'Налаштування' },
   ],
-  KURINNYI: [
-    { href: '/proby', label: 'Моя проба' },
-    { href: '/users', label: 'Юнаки' },
-    { href: '/vykhovnyk-assignments', label: 'Виховники' },
-    { href: '/settings', label: 'Налаштування' },
-  ],
   ZVYAZKOVYI: [
     { href: '/approval-requests', label: 'Запити' },
     { href: '/users', label: 'Люди' },
     { href: '/hurtky', label: 'Гуртки' },
     { href: '/vykhovnyk-assignments', label: 'Призначення' },
     { href: '/kurin', label: 'Курінь' },
+    { href: '/positions', label: 'Діловоди' },
     { href: '/settings', label: 'Налаштування' },
   ],
 };
@@ -45,7 +40,10 @@ export function Nav() {
 
   if (!session) return null;
 
-  const links = LINKS_BY_ROLE[session.role] ?? [];
+  const links = [...(LINKS_BY_ROLE[session.role] ?? [])];
+  if (session.isKurinniy) {
+    links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/vykhovnyk-assignments', label: 'Виховники' });
+  }
 
   return (
     <nav className="flex items-center justify-between border-b px-4 py-3">

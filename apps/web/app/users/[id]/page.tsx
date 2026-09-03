@@ -33,7 +33,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   if (!user) return <p>Не знайдено.</p>;
 
   const canEditContactInfo =
-    (session?.role === 'ZVYAZKOVYI' || session?.role === 'KURINNYI') && user.role === 'JUNAK';
+    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && user.role === 'JUNAK';
 
   return (
     <div className="max-w-md space-y-4">
@@ -80,7 +80,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
-      {session?.role === 'KURINNYI' && user.role === 'JUNAK' && (
+      {session?.isKurinniy && user.role === 'JUNAK' && (
         <Card>
           <CardHeader>
             <CardTitle>Змінити ПІБ (потребує затвердження)</CardTitle>
