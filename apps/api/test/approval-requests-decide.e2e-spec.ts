@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ApprovalActionType, ApprovalStatus } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Approval requests approve/reject (e2e)', () => {
   let app: INestApplication;
@@ -33,7 +33,7 @@ describe('Approval requests approve/reject (e2e)', () => {
   async function baseSetup() {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     return { kurin, kurinnyi, zvyazkovyi };
   }
@@ -201,7 +201,7 @@ describe('Approval requests approve/reject (e2e)', () => {
     });
     const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
     const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
-    const otherKurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: otherKurin.id });
+    const otherKurinnyi = await createKurinniyUser(prisma, { kurinId: otherKurin.id });
     const otherJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: otherKurin.id });
     await prisma.approvalRequest.create({
       data: {

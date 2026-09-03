@@ -12,7 +12,6 @@ import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 export class ApprovalRequestsController {
   constructor(private readonly service: ApprovalRequestsService) {}
 
-  @Roles(Role.KURINNYI)
   @Post()
   create(@Body() dto: CreateApprovalRequestDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.create(dto, user);

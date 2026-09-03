@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -44,6 +44,9 @@ export class VykhovnykAssignmentsService {
   }
 
   async list(actor: CurrentUserPayload, hurtokId?: string) {
+    if (actor.role !== Role.ZVYAZKOVYI && actor.role !== Role.VYKHOVNYK && !actor.isKurinniy) {
+      throw new ForbiddenException('Insufficient role');
+    }
     if (hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
       if (!hurtok || hurtok.kurinId !== actor.kurinId) {

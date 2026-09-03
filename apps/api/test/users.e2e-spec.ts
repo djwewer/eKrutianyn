@@ -75,7 +75,7 @@ describe('Users (e2e)', () => {
         .expect(404);
     });
 
-    it('requires hurtokId for KURINNYI too', async () => {
+    it('forbids creating a KURINNYI directly through this endpoint', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
       const kurin = await createKurin(prisma, { probyProgramId: program.id });
       const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
@@ -84,7 +84,7 @@ describe('Users (e2e)', () => {
       await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', `Bearer ${token}`)
-        .send({ firstName: 'Кур', lastName: 'Інний', email: 'kurinnyi-nohurtok@example.com', role: Role.KURINNYI })
+        .send({ firstName: 'Кур', lastName: 'Інний', email: 'no-direct-kurinnyi@example.com', role: 'KURINNYI' })
         .expect(400);
     });
 

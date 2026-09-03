@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /users (e2e)', () => {
   let app: INestApplication;
@@ -76,11 +76,10 @@ describe('GET /users (e2e)', () => {
       .expect(403);
   });
 
-  it('lets a kurinniy list junaky by default and filter by role to see vykhovnyky/zvyazkovyi, but forbids listing other kurinni', async () => {
+  it('lets a kurinniy list junaky by default and filter by role to see vykhovnyky/zvyazkovyi', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinniy = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
-    const kurinniy2 = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak1 = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const junak2 = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
@@ -91,7 +90,7 @@ describe('GET /users (e2e)', () => {
       .get('/users')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
-    expect(defaultList.body.map((u: any) => u.id).sort()).toEqual([junak1.id, junak2.id].sort());
+    expect(defaultList.body.map((u: any) => u.id).sort()).toEqual([kurinniy.id, junak1.id, junak2.id].sort());
 
     const vykhovnykyList = await request(app.getHttpServer())
       .get('/users?role=VYKHOVNYK')
@@ -106,11 +105,6 @@ describe('GET /users (e2e)', () => {
       .expect(200);
     expect(zvyazkovyiList.body).toHaveLength(1);
     expect(zvyazkovyiList.body[0].id).toBe(zvyazkovyi.id);
-
-    await request(app.getHttpServer())
-      .get('/users?role=KURINNYI')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(403);
   });
 
   it('lets a zvyazkovyi list all roles in their kurin with no filter, and filter by role', async () => {
@@ -119,7 +113,7 @@ describe('GET /users (e2e)', () => {
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
 
     const all = await request(app.getHttpServer())
@@ -134,13 +128,6 @@ describe('GET /users (e2e)', () => {
       .expect(200);
     expect(onlyVykhovnyky.body).toHaveLength(1);
     expect(onlyVykhovnyky.body[0].id).toBe(vykhovnyk.id);
-
-    const onlyKurinni = await request(app.getHttpServer())
-      .get('/users?role=KURINNYI')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    expect(onlyKurinni.body).toHaveLength(1);
-    expect(onlyKurinni.body[0].id).toBe(kurinnyi.id);
   });
 
   it('returns 404 when hurtokId belongs to another kurin', async () => {

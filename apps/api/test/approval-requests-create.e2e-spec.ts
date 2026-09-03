@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ApprovalActionType, ApprovalStatus } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Approval requests create (e2e)', () => {
   let app: INestApplication;
@@ -33,7 +33,7 @@ describe('Approval requests create (e2e)', () => {
   it('lets kurinnyi request a full-name change, capturing old data, without applying it yet', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinnyi);
 
@@ -57,7 +57,7 @@ describe('Approval requests create (e2e)', () => {
   it('lets kurinnyi request creating a new junak without junakId', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
     const token = issueTokenFor(jwtService, kurinnyi);
 
@@ -82,7 +82,7 @@ describe('Approval requests create (e2e)', () => {
   it('returns 400 when junakId is missing for a non-CREATE_JUNAK action', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinnyi);
 
     await request(app.getHttpServer())
@@ -96,7 +96,7 @@ describe('Approval requests create (e2e)', () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
     const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
-    const kurinnyiA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const kurinnyiA = await createKurinniyUser(prisma, { kurinId: kurinA.id });
     const junakB = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinB.id });
     const token = issueTokenFor(jwtService, kurinnyiA);
 
@@ -132,7 +132,7 @@ describe('Approval requests create (e2e)', () => {
   it('returns 400 when junakId is provided for CREATE_JUNAK action', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinnyi);
 

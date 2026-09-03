@@ -9,6 +9,9 @@ export class ApprovalRequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
+    if (!actor.isKurinniy) {
+      throw new ForbiddenException('Only kurinniy can create approval requests');
+    }
     if (dto.actionType === ApprovalActionType.CREATE_JUNAK && dto.junakId) {
       throw new BadRequestException('junakId must not be provided for CREATE_JUNAK');
     }

@@ -24,7 +24,6 @@ export class VykhovnykAssignmentsController {
     return this.service.unassign(id, user.kurinId);
   }
 
-  @Roles(Role.ZVYAZKOVYI, Role.VYKHOVNYK, Role.KURINNYI)
   @Get()
   list(@Query('hurtokId') hurtokId: string | undefined, @CurrentUser() user: CurrentUserPayload) {
     return this.service.list(user, hurtokId);

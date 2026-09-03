@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus, ProgressAction } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Proby progress confirm (e2e)', () => {
   let app: INestApplication;
@@ -115,7 +115,7 @@ describe('Proby progress confirm (e2e)', () => {
     const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id, hurtokId: hurtok.id });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
     const token = issueTokenFor(jwtService, vykhovnyk);
@@ -132,7 +132,7 @@ describe('Proby progress confirm (e2e)', () => {
     const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id, hurtokId: hurtok.id });
     const unassignedVykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, unassignedVykhovnyk);
 
@@ -146,7 +146,7 @@ describe('Proby progress confirm (e2e)', () => {
     const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
     const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
-    const kurinnyiA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const kurinnyiA = await createKurinniyUser(prisma, { kurinId: kurinA.id });
     const hurtokB = await prisma.hurtok.create({ data: { name: 'B', kurinId: kurinB.id } });
     const vykhovnykB = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinB.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnykB.id, hurtokId: hurtokB.id } });

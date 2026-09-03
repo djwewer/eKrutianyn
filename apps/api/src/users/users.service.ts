@@ -5,7 +5,6 @@ import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { generateToken } from '../common/token.util';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -25,7 +24,10 @@ export class UsersService {
     if (dto.role === Role.ZVYAZKOVYI) {
       throw new BadRequestException('Cannot self-service create another zvyazkovyi');
     }
-    if (PROBY_TRACKING_ROLES.includes(dto.role) && !dto.hurtokId) {
+    if (dto.role === Role.KURINNYI) {
+      throw new BadRequestException('Kurinniy is assigned via Діловоди, not created directly');
+    }
+    if (dto.role === Role.JUNAK && !dto.hurtokId) {
       throw new BadRequestException('hurtokId is required for this role');
     }
     if (dto.hurtokId) {
@@ -59,9 +61,12 @@ export class UsersService {
     });
   }
 
-  async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actorKurinId: string) {
+  async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actor: CurrentUserPayload) {
+    if (actor.role !== Role.ZVYAZKOVYI && !actor.isKurinniy) {
+      throw new ForbiddenException('Insufficient role');
+    }
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
-    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actorKurinId) {
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
     return this.prisma.user.update({
@@ -95,14 +100,11 @@ export class UsersService {
   }
 
   async list(actor: CurrentUserPayload, filters: { role?: Role; hurtokId?: string }) {
-    if (actor.role === Role.JUNAK) {
+    if (actor.role === Role.JUNAK && !actor.isKurinniy) {
       throw new ForbiddenException('Junak cannot list users');
     }
     if (actor.role === Role.VYKHOVNYK && filters.role && filters.role !== Role.JUNAK) {
       throw new ForbiddenException('Vykhovnyk can only list junaky');
-    }
-    if (actor.role === Role.KURINNYI && filters.role === Role.KURINNYI) {
-      throw new ForbiddenException('Kurinnyi cannot list other kurinni');
     }
     if (filters.hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: filters.hurtokId } });
@@ -144,7 +146,7 @@ export class UsersService {
       });
     }
 
-    if (actor.role === Role.KURINNYI) {
+    if (actor.isKurinniy) {
       return this.prisma.user.findMany({
         where: {
           kurinId: actor.kurinId,
@@ -169,7 +171,7 @@ export class UsersService {
   }
 
   async findScoped(id: string, actor: CurrentUserPayload) {
-    if (actor.role === Role.JUNAK) {
+    if (actor.role === Role.JUNAK && !actor.isKurinniy) {
       if (actor.userId !== id) {
         throw new NotFoundException('User not found');
       }
@@ -193,13 +195,20 @@ export class UsersService {
 
   private async isVisibleTo(
     actor: CurrentUserPayload,
-    target: { role: Role; hurtokId: string | null },
+    target: { id: string; role: Role; hurtokId: string | null },
   ): Promise<boolean> {
     if (actor.role === Role.ZVYAZKOVYI) {
       return true;
     }
-    if (actor.role === Role.KURINNYI) {
-      return target.role !== Role.KURINNYI;
+    if (actor.isKurinniy) {
+      // Kurinnyi can see anyone in their kurin, except other kurinni
+      if (target.role === Role.JUNAK) {
+        const targetIsKurinniy = await this.prisma.kurinPosition.findFirst({
+          where: { userId: target.id, positionType: 'KURINNYI', removedAt: null },
+        });
+        if (targetIsKurinniy) return false;
+      }
+      return true;
     }
     if (actor.role === Role.VYKHOVNYK) {
       if (target.role !== Role.JUNAK) return false;
@@ -291,7 +300,7 @@ export class UsersService {
       select: { ...USER_SELECT, notes: true, phone: true },
     });
 
-    if (PROBY_TRACKING_ROLES.includes(user.role)) {
+    if (user.role === Role.JUNAK) {
       const changedFields = sensitiveFields.filter((f) => f.newValue !== undefined && f.newValue !== f.oldValue);
 
       for (const change of changedFields) {

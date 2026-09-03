@@ -56,13 +56,12 @@ export class UsersController {
     return this.service.findScoped(id, user);
   }
 
-  @Roles(Role.KURINNYI, Role.ZVYAZKOVYI)
   @Patch(':id/contact-info')
   updateContactInfo(
     @Param('id') id: string,
     @Body() dto: UpdateContactInfoDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.service.updateContactInfo(id, dto, user.kurinId);
+    return this.service.updateContactInfo(id, dto, user);
   }
 }

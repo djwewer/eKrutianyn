@@ -2,7 +2,6 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 
 @Injectable()
 export class ProbyProgressService {
@@ -10,7 +9,7 @@ export class ProbyProgressService {
 
   async getProgressFor(junakId: string, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
-    if (!junak || !PROBY_TRACKING_ROLES.includes(junak.role) || junak.kurinId !== actor.kurinId) {
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
 
@@ -18,7 +17,7 @@ export class ProbyProgressService {
       throw new ForbiddenException("Cannot view another junak's progress");
     }
 
-    if (actor.role === Role.KURINNYI && actor.userId !== junakId) {
+    if (actor.isKurinniy && actor.userId !== junakId) {
       throw new ForbiddenException("Kurinnyi cannot view another user's proby progress");
     }
 
@@ -80,7 +79,7 @@ export class ProbyProgressService {
 
   private async assertAssignedVykhovnyk(junakId: string, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
-    if (!junak || !PROBY_TRACKING_ROLES.includes(junak.role) || junak.kurinId !== actor.kurinId) {
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
     const assigned = await this.prisma.vykhovnykHurtok.findFirst({

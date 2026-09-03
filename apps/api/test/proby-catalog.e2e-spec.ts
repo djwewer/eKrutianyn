@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Proby catalog (e2e)', () => {
   let app: INestApplication;
@@ -55,7 +55,7 @@ describe('Proby catalog (e2e)', () => {
   it('allows a kurinniy to read the catalog', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinniy = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinniy);
 
     await request(app.getHttpServer())

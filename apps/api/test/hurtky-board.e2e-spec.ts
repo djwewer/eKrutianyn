@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /hurtky/:id/board (e2e)', () => {
   let app: INestApplication;
@@ -68,7 +68,7 @@ describe('GET /hurtky/:id/board (e2e)', () => {
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id, hurtokId: hurtok.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id, hurtokId: hurtok.id });
 
     const token = issueTokenFor(jwtService, vykhovnyk);
     const response = await request(app.getHttpServer())
@@ -110,7 +110,7 @@ describe('GET /hurtky/:id/board (e2e)', () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
-    const kurinniy = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
 
     await request(app.getHttpServer())

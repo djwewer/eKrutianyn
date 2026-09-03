@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
 import { USER_SELECT } from '../users/user-select.const';
 
@@ -34,7 +33,7 @@ export class HurtkyService {
     }
 
     const junaky = await this.prisma.user.findMany({
-      where: { hurtokId, role: { in: [...PROBY_TRACKING_ROLES] }, kurinId: actor.kurinId },
+      where: { hurtokId, role: Role.JUNAK, kurinId: actor.kurinId },
       select: USER_SELECT,
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });

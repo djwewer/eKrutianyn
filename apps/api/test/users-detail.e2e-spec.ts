@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /users/:id (e2e)', () => {
   let app: INestApplication;
@@ -98,7 +98,7 @@ describe('GET /users/:id (e2e)', () => {
     const zvyazkovyiA = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinA.id });
     const junakA = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinA.id });
     const vykhovnykA = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurinA.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurinA.id });
     const junakB = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinB.id });
     const token = issueTokenFor(jwtService, zvyazkovyiA);
 
@@ -126,8 +126,8 @@ describe('GET /users/:id (e2e)', () => {
   it('lets a kurinnyi fetch a vykhovnyk or zvyazkovyi but not another kurinnyi', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
-    const kurinnyi2 = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const kurinnyi2 = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinnyi);
@@ -152,7 +152,7 @@ describe('GET /users/:id (e2e)', () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const vykhovnyk = await prisma.user.create({
       data: {
         firstName: 'Test',

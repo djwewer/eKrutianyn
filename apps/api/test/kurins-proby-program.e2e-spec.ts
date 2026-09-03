@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus, ProgressAction } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Kurin proby-program change (e2e)', () => {
   let app: INestApplication;
@@ -86,7 +86,7 @@ describe('Kurin proby-program change (e2e)', () => {
     });
     const kurin = await createKurin(prisma, { probyProgramId: oldTree.program.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     await prisma.junakProgress.create({
       data: { junakId: kurinnyi.id, pointId: oldTree.points[0].id, status: ProgressStatus.DONE },
     });

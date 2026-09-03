@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /vykhovnyk-assignments (e2e)', () => {
   let app: INestApplication;
@@ -90,7 +90,7 @@ describe('GET /vykhovnyk-assignments (e2e)', () => {
     });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnykB.id, hurtokId: hurtokB.id } });
 
-    const kurinniyA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const kurinniyA = await createKurinniyUser(prisma, { kurinId: kurinA.id });
     const token = issueTokenFor(jwtService, kurinniyA);
 
     const response = await request(app.getHttpServer())

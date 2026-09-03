@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressAction, ProgressStatus } from '@prisma/client';
+import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';
 
 @Injectable()
 export class KurinsService {
@@ -28,7 +27,7 @@ export class KurinsService {
 
     const oldProgramId = kurin.probyProgramId;
     const junaky = await this.prisma.user.findMany({
-      where: { kurinId, role: { in: [...PROBY_TRACKING_ROLES] } },
+      where: { kurinId, role: Role.JUNAK },
       select: { id: true },
     });
 

@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Users contact-info update (e2e)', () => {
   let app: INestApplication;
@@ -33,7 +33,7 @@ describe('Users contact-info update (e2e)', () => {
   it('lets kurinnyi update notes/phone immediately, with no approval step', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const kurinnyi = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurin.id });
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, kurinnyi);
 
@@ -83,7 +83,7 @@ describe('Users contact-info update (e2e)', () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
     const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
-    const kurinnyiA = await createUser(prisma, { role: Role.KURINNYI, kurinId: kurinA.id });
+    const kurinnyiA = await createKurinniyUser(prisma, { kurinId: kurinA.id });
     const junakB = await createUser(prisma, { role: Role.JUNAK, kurinId: kurinB.id });
     const token = issueTokenFor(jwtService, kurinnyiA);
 

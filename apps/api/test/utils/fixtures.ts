@@ -1,4 +1,4 @@
-import { PrismaClient, Role, KurinGender, ProbyProgramVersion } from '@prisma/client';
+import { PrismaClient, Role, KurinGender, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 
@@ -72,6 +72,29 @@ export async function createUser(
       hurtokId: overrides.hurtokId,
     },
   });
+}
+
+export async function createKurinniyUser(
+  prisma: PrismaClient,
+  overrides: { kurinId: string; hurtokId?: string; email?: string; password?: string },
+) {
+  const user = await createUser(prisma, {
+    role: Role.JUNAK,
+    kurinId: overrides.kurinId,
+    hurtokId: overrides.hurtokId,
+    email: overrides.email,
+    password: overrides.password,
+  });
+  await prisma.kurinPosition.create({
+    data: {
+      kurinId: overrides.kurinId,
+      scope: PositionScope.KURIN,
+      positionType: PositionType.KURINNYI,
+      userId: user.id,
+      assignedById: user.id,
+    },
+  });
+  return user;
 }
 
 export function issueTokenFor(
