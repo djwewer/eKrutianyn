@@ -14,6 +14,22 @@ enum Role {
   ZVYAZKOVYI
 }
 
+enum PositionScope {
+  KURIN
+  HURTOK
+}
+
+enum PositionType {
+  KURINNYI
+  SUDDIA
+  PYSAR
+  SKARBNYK
+  INTENDANT
+  KHORUNZHYI
+  SMM
+  HURTKOVYI
+}
+
 enum KurinGender {
   MALE
   FEMALE
@@ -61,6 +77,7 @@ model Kurin {
 
   hurtky Hurtok[]
   users  User[]
+  positions KurinPosition[]
 }
 
 model Hurtok {
@@ -72,6 +89,7 @@ model Hurtok {
 
   junaky               User[]            @relation("JunakHurtok")
   vykhovnykAssignments VykhovnykHurtok[]
+  positions KurinPosition[]
 }
 
 model User {
@@ -102,6 +120,27 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   emailChangeRequests  EmailChangeRequest[]
   profileChangeLogs    ProfileChangeLog[]
+  positionsHeld     KurinPosition[] @relation("PositionHolder")
+  positionsAssigned KurinPosition[] @relation("PositionAssignedBy")
+  positionsRemoved  KurinPosition[] @relation("PositionRemovedBy")
+}
+
+model KurinPosition {
+  id           String        @id @default(uuid())
+  kurinId      String
+  kurin        Kurin         @relation(fields: [kurinId], references: [id])
+  hurtokId     String?
+  hurtok       Hurtok?       @relation(fields: [hurtokId], references: [id])
+  scope        PositionScope
+  positionType PositionType
+  userId       String
+  user         User          @relation("PositionHolder", fields: [userId], references: [id])
+  assignedAt   DateTime      @default(now())
+  assignedById String
+  assignedBy   User          @relation("PositionAssignedBy", fields: [assignedById], references: [id])
+  removedAt    DateTime?
+  removedById  String?
+  removedBy    User?         @relation("PositionRemovedBy", fields: [removedById], references: [id])
 }
 
 model VykhovnykHurtok {

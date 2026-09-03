@@ -6,11 +6,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
 import { MailService } from '../mail/mail.service';
 import { generateToken, hashToken } from '../common/token.util';
+import { isKurinniyForUser } from '../common/kurinniy.util';
 
 export interface JwtPayload {
   sub: string;
   role: Role;
   kurinId: string;
+  isKurinniy: boolean;
 }
 
 @Injectable()
@@ -30,8 +32,8 @@ export class AuthService {
     return argon2.verify(hash, plain);
   }
 
-  signToken(userId: string, role: Role, kurinId: string): { accessToken: string } {
-    const payload: JwtPayload = { sub: userId, role, kurinId };
+  signToken(userId: string, role: Role, kurinId: string, isKurinniy: boolean): { accessToken: string } {
+    const payload: JwtPayload = { sub: userId, role, kurinId, isKurinniy };
     return { accessToken: this.jwtService.sign(payload) };
   }
 
@@ -44,7 +46,8 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.signToken(user.id, user.role, user.kurinId);
+    const isKurinniy = await isKurinniyForUser(this.prisma, user.id);
+    return this.signToken(user.id, user.role, user.kurinId, isKurinniy);
   }
 
   async loginWithGoogle(idToken: string): Promise<{ accessToken: string }> {
@@ -59,7 +62,8 @@ export class AuthService {
     if (!user.googleId) {
       await this.prisma.user.update({ where: { id: user.id }, data: { googleId: verified.sub } });
     }
-    return this.signToken(user.id, user.role, user.kurinId);
+    const isKurinniy = await isKurinniyForUser(this.prisma, user.id);
+    return this.signToken(user.id, user.role, user.kurinId, isKurinniy);
   }
 
   async requestPasswordReset(email: string): Promise<void> {

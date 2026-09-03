@@ -6,16 +6,19 @@ import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: { user: { findUnique: jest.Mock; update: jest.Mock } };
+  let prisma: any;
   let googleVerifier: { verify: jest.Mock };
   let mailService: { sendPasswordReset: jest.Mock };
   const jwtService = new JwtService({ secret: 'test-secret', signOptions: { expiresIn: '1h' } });
 
   beforeEach(() => {
-    prisma = { user: { findUnique: jest.fn(), update: jest.fn() } };
+    prisma = {
+      user: { findUnique: jest.fn(), update: jest.fn() },
+      kurinPosition: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
     googleVerifier = { verify: jest.fn() };
     mailService = { sendPasswordReset: jest.fn() };
-    service = new AuthService(prisma as any, jwtService, googleVerifier as any, mailService as any);
+    service = new AuthService(prisma, jwtService, googleVerifier as any, mailService as any);
   });
 
   describe('hashPassword / validatePassword', () => {
@@ -27,10 +30,10 @@ describe('AuthService', () => {
   });
 
   describe('signToken', () => {
-    it('signs a JWT carrying sub/role/kurinId and it decodes back', () => {
-      const { accessToken } = service.signToken('user-1', Role.ZVYAZKOVYI, 'kurin-1');
+    it('signs a JWT carrying sub/role/kurinId/isKurinniy and it decodes back', () => {
+      const { accessToken } = service.signToken('user-1', Role.ZVYAZKOVYI, 'kurin-1', false);
       const decoded: any = jwtService.verify(accessToken);
-      expect(decoded).toMatchObject({ sub: 'user-1', role: Role.ZVYAZKOVYI, kurinId: 'kurin-1' });
+      expect(decoded).toMatchObject({ sub: 'user-1', role: Role.ZVYAZKOVYI, kurinId: 'kurin-1', isKurinniy: false });
     });
   });
 
