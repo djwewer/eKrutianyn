@@ -123,7 +123,7 @@ describe('GET /users/:id (e2e)', () => {
       .expect(404);
   });
 
-  it('lets a kurinnyi fetch a vykhovnyk or zvyazkovyi but not another kurinnyi', async () => {
+  it('lets a kurinnyi fetch anyone else in their kurin', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
@@ -145,7 +145,7 @@ describe('GET /users/:id (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/users/${kurinnyi2.id}`)
       .set('Authorization', `Bearer ${token}`)
-      .expect(404);
+      .expect(200);
   });
 
   it('lets a zvyazkovyi and a kurinnyi see notes/phone on another user detail', async () => {

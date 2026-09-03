@@ -195,19 +195,12 @@ export class UsersService {
 
   private async isVisibleTo(
     actor: CurrentUserPayload,
-    target: { id: string; role: Role; hurtokId: string | null },
+    target: { role: Role; hurtokId: string | null },
   ): Promise<boolean> {
     if (actor.role === Role.ZVYAZKOVYI) {
       return true;
     }
     if (actor.isKurinniy) {
-      // Kurinnyi can see anyone in their kurin, except other kurinni
-      if (target.role === Role.JUNAK) {
-        const targetIsKurinniy = await this.prisma.kurinPosition.findFirst({
-          where: { userId: target.id, positionType: 'KURINNYI', removedAt: null },
-        });
-        if (targetIsKurinniy) return false;
-      }
       return true;
     }
     if (actor.role === Role.VYKHOVNYK) {
