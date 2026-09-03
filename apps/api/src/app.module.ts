@@ -12,6 +12,7 @@ import { ProbyProgressModule } from './proby-progress/proby-progress.module';
 import { KurinsModule } from './kurins/kurins.module';
 import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
 import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
+import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
     KurinsModule,
     ApprovalRequestsModule,
     ProbyCatalogModule,
+    KurinPositionsModule,
   ],
   controllers: [HealthController],
 })
