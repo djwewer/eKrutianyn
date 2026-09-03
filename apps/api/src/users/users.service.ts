@@ -24,9 +24,6 @@ export class UsersService {
     if (dto.role === Role.ZVYAZKOVYI) {
       throw new BadRequestException('Cannot self-service create another zvyazkovyi');
     }
-    if (dto.role === Role.KURINNYI) {
-      throw new BadRequestException('Kurinniy is assigned via Діловоди, not created directly');
-    }
     if (dto.role === Role.JUNAK && !dto.hurtokId) {
       throw new BadRequestException('hurtokId is required for this role');
     }

@@ -10,7 +10,6 @@ datasource db {
 enum Role {
   JUNAK
   VYKHOVNYK
-  KURINNYI
   ZVYAZKOVYI
 }
 
