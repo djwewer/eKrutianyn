@@ -30,6 +30,27 @@ export interface Hurtok {
   number: string | null;
 }
 
+export type PositionScope = 'KURIN' | 'HURTOK';
+
+export type PositionType =
+  | 'KURINNYI'
+  | 'SUDDIA'
+  | 'PYSAR'
+  | 'SKARBNYK'
+  | 'INTENDANT'
+  | 'KHORUNZHYI'
+  | 'SMM'
+  | 'HURTKOVYI';
+
+export interface KurinPosition {
+  id: string;
+  scope: PositionScope;
+  positionType: PositionType;
+  hurtokId: string | null;
+  assignedAt: string;
+  user: UserSummary;
+}
+
 export interface ProbyPoint {
   id: string;
   order: number;
