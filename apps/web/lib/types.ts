@@ -52,6 +52,14 @@ export interface KurinPosition {
   user: UserSummary;
 }
 
+export interface GuardianContact {
+  id: string;
+  name: string;
+  phone: string;
+  role: string | null;
+  email: string | null;
+}
+
 export interface ProbyPoint {
   id: string;
   order: number;

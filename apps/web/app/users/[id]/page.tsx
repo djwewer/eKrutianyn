@@ -4,11 +4,125 @@ import { use, useState, useEffect } from 'react';
 import { useUser, useUpdateContactInfo } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
+import {
+  useGuardianContacts,
+  useAddGuardianContact,
+  useUpdateGuardianContact,
+  useRemoveGuardianContact,
+} from '@/lib/queries/guardian-contacts';
+import type { GuardianContact } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+function GuardianContactRow({
+  contact,
+  junakId,
+}: {
+  contact: GuardianContact;
+  junakId: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(contact.name);
+  const [phone, setPhone] = useState(contact.phone);
+  const [role, setRole] = useState(contact.role ?? '');
+  const [email, setEmail] = useState(contact.email ?? '');
+  const update = useUpdateGuardianContact(junakId);
+  const remove = useRemoveGuardianContact(junakId);
+
+  if (isEditing) {
+    return (
+      <div className="space-y-2 border-b py-2 last:border-b-0">
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ім'я" />
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон" />
+        <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Роль (мама, тато...)" />
+        <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() =>
+              update.mutate(
+                { id: contact.id, name, phone, role: role || undefined, email: email || undefined },
+                { onSuccess: () => setIsEditing(false) },
+              )
+            }
+          >
+            Зберегти
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+            Скасувати
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between border-b py-2 text-sm last:border-b-0">
+      <div>
+        <p className="font-medium">
+          {contact.name}
+          {contact.role && ` (${contact.role})`}
+        </p>
+        <p className="text-muted-foreground">
+          {contact.phone}
+          {contact.email && ` · ${contact.email}`}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+          Редагувати
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => remove.mutate(contact.id)}
+          disabled={remove.isPending}
+        >
+          Видалити
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AddGuardianContactForm({ junakId }: { junakId: string }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState('');
+  const [email, setEmail] = useState('');
+  const add = useAddGuardianContact(junakId);
+
+  return (
+    <div className="space-y-2 pt-2">
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ім'я" />
+      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон" />
+      <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Роль (мама, тато...)" />
+      <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+      <Button
+        size="sm"
+        disabled={!name || !phone || add.isPending}
+        onClick={() =>
+          add.mutate(
+            { name, phone, role: role || undefined, email: email || undefined },
+            {
+              onSuccess: () => {
+                setName('');
+                setPhone('');
+                setRole('');
+                setEmail('');
+              },
+            },
+          )
+        }
+      >
+        Додати опікуна
+      </Button>
+    </div>
+  );
+}
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -22,6 +136,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [newLastName, setNewLastName] = useState('');
   const [nameRequestSent, setNameRequestSent] = useState(false);
 
+  const canEditContactInfo =
+    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && user?.role === 'JUNAK';
+  const { data: guardianContacts } = useGuardianContacts(id, { enabled: !!canEditContactInfo });
+
   useEffect(() => {
     if (user) {
       setNotes(user.notes ?? '');
@@ -31,9 +149,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   if (isLoading) return <p>Завантаження...</p>;
   if (!user) return <p>Не знайдено.</p>;
-
-  const canEditContactInfo =
-    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && user.role === 'JUNAK';
 
   return (
     <div className="max-w-md space-y-4">
@@ -80,6 +195,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+      {canEditContactInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Опікуни</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(guardianContacts ?? []).map((contact) => (
+              <GuardianContactRow key={contact.id} contact={contact} junakId={id} />
+            ))}
+            <AddGuardianContactForm junakId={id} />
+          </CardContent>
+        </Card>
+      )}
       {session?.isKurinniy && user.role === 'JUNAK' && (
         <Card>
           <CardHeader>
