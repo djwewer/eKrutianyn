@@ -13,6 +13,7 @@ import { KurinsModule } from './kurins/kurins.module';
 import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
 import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
+import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
     ApprovalRequestsModule,
     ProbyCatalogModule,
     KurinPositionsModule,
+    GuardianContactsModule,
   ],
   controllers: [HealthController],
 })

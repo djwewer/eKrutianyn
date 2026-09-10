@@ -122,6 +122,7 @@ model User {
   positionsHeld     KurinPosition[] @relation("PositionHolder")
   positionsAssigned KurinPosition[] @relation("PositionAssignedBy")
   positionsRemoved  KurinPosition[] @relation("PositionRemovedBy")
+  guardianContacts  GuardianContact[] @relation("JunakGuardians")
 }
 
 model KurinPosition {
@@ -140,6 +141,18 @@ model KurinPosition {
   removedAt    DateTime?
   removedById  String?
   removedBy    User?         @relation("PositionRemovedBy", fields: [removedById], references: [id])
+}
+
+model GuardianContact {
+  id        String   @id @default(uuid())
+  junakId   String
+  junak     User     @relation("JunakGuardians", fields: [junakId], references: [id])
+  name      String
+  phone     String
+  role      String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VykhovnykHurtok {
