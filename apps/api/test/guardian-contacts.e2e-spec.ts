@@ -120,6 +120,28 @@ describe('guardian-contacts (e2e)', () => {
       .expect(404);
   });
 
+  it('lets a zvyazkovyi clear the role of a guardian contact by patching it to null', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const created = await request(app.getHttpServer())
+      .post(`/users/${junak.id}/guardian-contacts`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Марія Петренко', phone: '+380501234567', role: 'Мама' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+    expect(created.body.role).toBe('Мама');
+
+    const updated = await request(app.getHttpServer())
+      .patch(`/users/${junak.id}/guardian-contacts/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ role: null })
+      .expect(200);
+    expect(updated.body.role).toBeNull();
+  });
+
   it('returns 404 when guardianId belongs to a different junak', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });

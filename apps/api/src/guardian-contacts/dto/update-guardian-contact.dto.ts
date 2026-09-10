@@ -1,8 +1,8 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateGuardianContactDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsString() role?: string;
-  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsNotEmpty() @IsString() name?: string;
+  @IsOptional() @IsNotEmpty() @IsString() phone?: string;
+  @IsOptional() @IsString() role?: string | null;
+  @IsOptional() @IsString() email?: string | null;
 }

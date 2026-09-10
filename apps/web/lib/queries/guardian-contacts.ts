@@ -29,7 +29,16 @@ export function useAddGuardianContact(junakId: string) {
 export function useUpdateGuardianContact(junakId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; name?: string; phone?: string; role?: string; email?: string }) =>
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      name?: string;
+      phone?: string;
+      role?: string | null;
+      email?: string | null;
+    }) =>
       apiFetch<GuardianContact>(`/users/${junakId}/guardian-contacts/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),

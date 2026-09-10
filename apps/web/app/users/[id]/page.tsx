@@ -12,6 +12,7 @@ import {
 } from '@/lib/queries/guardian-contacts';
 import type { GuardianContact } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/role-labels';
+import { accessErrorMessage } from '@/lib/error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,9 +43,10 @@ function GuardianContactRow({
         <div className="flex gap-2">
           <Button
             size="sm"
+            disabled={!name || !phone || update.isPending}
             onClick={() =>
               update.mutate(
-                { id: contact.id, name, phone, role: role || undefined, email: email || undefined },
+                { id: contact.id, name, phone, role: role || null, email: email || null },
                 { onSuccess: () => setIsEditing(false) },
               )
             }
@@ -138,7 +140,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   const canEditContactInfo =
     (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && user?.role === 'JUNAK';
-  const { data: guardianContacts } = useGuardianContacts(id, { enabled: !!canEditContactInfo });
+  const {
+    data: guardianContacts,
+    isError,
+    error,
+  } = useGuardianContacts(id, { enabled: !!canEditContactInfo });
 
   useEffect(() => {
     if (user) {
@@ -201,6 +207,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <CardTitle>Опікуни</CardTitle>
           </CardHeader>
           <CardContent>
+            {isError && (
+              <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження опікунів.'}</p>
+            )}
             {(guardianContacts ?? []).map((contact) => (
               <GuardianContactRow key={contact.id} contact={contact} junakId={id} />
             ))}
