@@ -10,7 +10,8 @@ import {
   useUpdateGuardianContact,
   useRemoveGuardianContact,
 } from '@/lib/queries/guardian-contacts';
-import type { GuardianContact } from '@/lib/types';
+import { useProbyProgram, useJunakProgress, useConfirmPoint, useUnconfirmPoint } from '@/lib/queries/proby';
+import type { GuardianContact, ProbyCategory } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,6 +127,65 @@ function AddGuardianContactForm({ junakId }: { junakId: string }) {
   );
 }
 
+function ProbyCategorySection({
+  category,
+  doneByPointId,
+  canConfirm,
+  onConfirm,
+  onUnconfirm,
+}: {
+  category: ProbyCategory;
+  doneByPointId: Set<string>;
+  canConfirm: boolean;
+  onConfirm: (pointId: string) => void;
+  onUnconfirm: (pointId: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const doneCount = category.points.filter((p) => doneByPointId.has(p.id)).length;
+
+  return (
+    <div className="border-b py-2 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between text-left font-semibold"
+      >
+        <span>
+          {category.name} ({doneCount}/{category.points.length})
+        </span>
+        <span aria-hidden>{isOpen ? '▾' : '▸'}</span>
+      </button>
+      {isOpen && (
+        <ul className="mt-2 space-y-1 pl-4">
+          {category.points
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .map((point) => {
+              const done = doneByPointId.has(point.id);
+              return (
+                <li key={point.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span>
+                    <span aria-hidden>{done ? '✅' : '⬜'}</span> {point.description}
+                  </span>
+                  {canConfirm &&
+                    (done ? (
+                      <Button variant="outline" size="sm" onClick={() => onUnconfirm(point.id)}>
+                        Зняти
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => onConfirm(point.id)}>
+                        Підтвердити
+                      </Button>
+                    ))}
+                </li>
+              );
+            })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: user, isLoading } = useUser(id);
@@ -145,6 +205,13 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     isError,
     error,
   } = useGuardianContacts(id, { enabled: !!canEditContactInfo });
+
+  const isJunak = user?.role === 'JUNAK';
+  const { data: probyProgram } = useProbyProgram();
+  const { data: junakProgress } = useJunakProgress(isJunak ? id : undefined);
+  const confirmPoint = useConfirmPoint(id);
+  const unconfirmPoint = useUnconfirmPoint(id);
+  const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
 
   useEffect(() => {
     if (user) {
@@ -214,6 +281,38 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               <GuardianContactRow key={contact.id} contact={contact} junakId={id} />
             ))}
             <AddGuardianContactForm junakId={id} />
+          </CardContent>
+        </Card>
+      )}
+      {isJunak && probyProgram && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Проба</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const doneByPointId = new Set(
+                (junakProgress ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
+              );
+              return probyProgram.stages
+                .slice()
+                .sort((a, b) => a.order - b.order)
+                .map((stage) => (
+                  <div key={stage.id} className="mb-4 last:mb-0">
+                    <h3 className="mb-2 text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
+                    {stage.categories.map((category) => (
+                      <ProbyCategorySection
+                        key={category.id}
+                        category={category}
+                        doneByPointId={doneByPointId}
+                        canConfirm={canConfirmProby}
+                        onConfirm={(pointId) => confirmPoint.mutate(pointId)}
+                        onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
+                      />
+                    ))}
+                  </div>
+                ));
+            })()}
           </CardContent>
         </Card>
       )}
