@@ -40,7 +40,7 @@ export async function createKurin(
   return prisma.kurin.create({
     data: {
       name: overrides.name ?? 'Test Kurin',
-      kurinNumber: overrides.kurinNumber ?? '1',
+      kurinNumber: overrides.kurinNumber ?? `T${Date.now()}${Math.floor(Math.random() * 100000)}`,
       gender: overrides.gender ?? KurinGender.MALE,
       stanytsia: overrides.stanytsia ?? 'Test Stanytsia',
       probyProgramId: overrides.probyProgramId,
