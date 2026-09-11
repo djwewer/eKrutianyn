@@ -37,7 +37,7 @@ export class ProbyProgressService {
   }
 
   async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
-    await this.assertAssignedVykhovnyk(junakId, actor);
+    await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
@@ -57,7 +57,7 @@ export class ProbyProgressService {
   }
 
   async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
-    await this.assertAssignedVykhovnyk(junakId, actor);
+    await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
@@ -77,10 +77,13 @@ export class ProbyProgressService {
     }
   }
 
-  private async assertAssignedVykhovnyk(junakId: string, actor: CurrentUserPayload) {
+  private async assertCanConfirm(junakId: string, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
+    }
+    if (actor.role === Role.ZVYAZKOVYI) {
+      return junak;
     }
     const assigned = await this.prisma.vykhovnykHurtok.findFirst({
       where: { vykhovnykId: actor.userId, hurtokId: junak.hurtokId ?? undefined },

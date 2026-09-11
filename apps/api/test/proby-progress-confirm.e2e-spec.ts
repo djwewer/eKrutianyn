@@ -69,15 +69,17 @@ describe('Proby progress confirm (e2e)', () => {
       .expect(403);
   });
 
-  it('forbids a zvyazkovyi from confirming (only vykhovnyk can)', async () => {
-    const { junak, kurin, points } = await setup();
+  it('lets a zvyazkovyi confirm a point without being assigned to the hurtok', async () => {
+    const { kurin, junak, points } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post(`/junaky/${junak.id}/progress/${points[0].id}/confirm`)
       .set('Authorization', `Bearer ${token}`)
-      .expect(403);
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(response.body.status).toBe('DONE');
   });
 
   it('is idempotent: confirming an already-DONE point keeps a single progress row', async () => {

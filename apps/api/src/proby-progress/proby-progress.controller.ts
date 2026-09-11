@@ -17,7 +17,7 @@ export class ProbyProgressController {
   }
 
   @UseGuards(RolesGuard)
-  @Roles(Role.VYKHOVNYK)
+  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
   @Post(':pointId/confirm')
   confirm(
     @Param('junakId') junakId: string,
@@ -28,7 +28,7 @@ export class ProbyProgressController {
   }
 
   @UseGuards(RolesGuard)
-  @Roles(Role.VYKHOVNYK)
+  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
   @Post(':pointId/unconfirm')
   unconfirm(
     @Param('junakId') junakId: string,
