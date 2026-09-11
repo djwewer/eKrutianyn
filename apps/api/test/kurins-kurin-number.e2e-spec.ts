@@ -72,6 +72,19 @@ describe('PATCH /kurins/:id/kurin-number (e2e)', () => {
       .expect(403);
   });
 
+  it('returns 400 when the new number contains a slash', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id, kurinNumber: 'П-1' });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .patch(`/kurins/${kurin.id}/kurin-number`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newNumber: '/evil.com' })
+      .expect(400);
+  });
+
   it('forbids a zvyazkovyi from changing another kurin\'s number', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id });

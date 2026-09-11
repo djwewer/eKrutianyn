@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class ChangeKurinNumberDto {
-  @IsString() @IsNotEmpty() newNumber: string;
+  @IsString() @IsNotEmpty() @Matches(/^[\p{L}\p{N}][\p{L}\p{N} \-]{0,23}$/u) newNumber: string;
 }

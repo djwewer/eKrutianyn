@@ -141,6 +141,22 @@ describe('Admin kurins (e2e)', () => {
         })
         .expect(409);
     });
+
+    it('returns 400 when an explicitly provided kurinNumber contains a slash', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({
+          name: 'Курінь Тестовий',
+          kurinNumber: '/evil.com',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+        })
+        .expect(400);
+    });
   });
 
   describe('POST /admin/kurins/zvyazkovyi', () => {

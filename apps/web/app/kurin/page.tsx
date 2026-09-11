@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { accessErrorMessage } from '@/lib/error-message';
+import { ApiError } from '@/lib/api-client';
 
 export default function KurinPage() {
   const { data: kurin, isLoading } = useKurin();
@@ -52,7 +53,9 @@ export default function KurinPage() {
               </Button>
               {changeKurinNumber.isError && (
                 <p className="text-sm text-destructive">
-                  {accessErrorMessage(changeKurinNumber.error) ?? 'Цей номер уже зайнятий.'}
+                  {changeKurinNumber.error instanceof ApiError && changeKurinNumber.error.status === 409
+                    ? 'Цей номер уже зайнятий.'
+                    : accessErrorMessage(changeKurinNumber.error)}
                 </p>
               )}
             </div>
