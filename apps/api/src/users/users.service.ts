@@ -293,6 +293,9 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+    if (dto.birthDate && new Date(dto.birthDate) > new Date()) {
+      throw new BadRequestException('birthDate cannot be in the future');
+    }
 
     const sensitiveFields: { field: 'firstName' | 'lastName' | 'birthDate'; oldValue: string | null; newValue: string | undefined }[] = [
       { field: 'firstName', oldValue: user.firstName, newValue: dto.firstName },

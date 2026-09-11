@@ -110,6 +110,7 @@ export default function SettingsPage() {
                 id="birthDate"
                 type="date"
                 value={birthDate}
+                max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>

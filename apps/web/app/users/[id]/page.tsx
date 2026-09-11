@@ -249,7 +249,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <CardContent className="space-y-2 text-sm">
           <p>Email: {user.email}</p>
           <p>Роль: {ROLE_LABELS[user.role]}</p>
-          {user.birthDate && <p>Дата народження: {user.birthDate}</p>}
+          {user.birthDate && <p>Дата народження: {new Date(user.birthDate).toLocaleDateString('uk-UA')}</p>}
           {isJunak && (
             <div className="space-y-2 pt-2">
               <Label htmlFor="hurtok">Гурток</Label>

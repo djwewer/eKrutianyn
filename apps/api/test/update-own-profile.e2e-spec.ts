@@ -138,6 +138,19 @@ describe('PATCH /users/me (e2e)', () => {
     expect(mailService.sendProfileChangeNotification).not.toHaveBeenCalled();
   });
 
+  it('rejects a birthDate in the future', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, junak);
+
+    await request(app.getHttpServer())
+      .patch('/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ birthDate: '2999-01-01' })
+      .expect(400);
+  });
+
   it('still returns the updated profile even if the vykhovnyk notification email fails', async () => {
     mailService.sendProfileChangeNotification.mockRejectedValueOnce(new Error('Resend is down'));
 
