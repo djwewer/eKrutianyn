@@ -6,6 +6,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { KurinsService } from './kurins.service';
 import { ChangeProbyProgramDto } from './dto/change-proby-program.dto';
+import { ChangeKurinNumberDto } from './dto/change-kurin-number.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('kurins')
@@ -28,5 +29,18 @@ export class KurinsController {
       throw new ForbiddenException('Cross-tenant access denied');
     }
     return this.kurinsService.changeProbyProgram(id, dto.newProgramId, user.userId);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Patch(':id/kurin-number')
+  changeKurinNumber(
+    @Param('id') id: string,
+    @Body() dto: ChangeKurinNumberDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (id !== user.kurinId) {
+      throw new ForbiddenException('Cross-tenant access denied');
+    }
+    return this.kurinsService.changeKurinNumber(id, dto.newNumber);
   }
 }

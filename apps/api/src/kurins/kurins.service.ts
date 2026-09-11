@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -12,6 +12,21 @@ export class KurinsService {
       throw new NotFoundException('Kurin not found');
     }
     return kurin;
+  }
+
+  async changeKurinNumber(kurinId: string, newNumber: string) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    if (kurin.kurinNumber === newNumber) {
+      return kurin;
+    }
+    const existing = await this.prisma.kurin.findUnique({ where: { kurinNumber: newNumber } });
+    if (existing) {
+      throw new ConflictException('This kurin number is already in use');
+    }
+    return this.prisma.kurin.update({ where: { id: kurinId }, data: { kurinNumber: newNumber } });
   }
 
   async changeProbyProgram(kurinId: string, newProgramId: string, actorId: string) {
