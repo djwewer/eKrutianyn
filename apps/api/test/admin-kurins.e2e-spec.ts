@@ -80,6 +80,67 @@ describe('Admin kurins (e2e)', () => {
         })
         .expect(404);
     });
+
+    it('auto-assigns "П-1" when kurinNumber is omitted', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+
+      const response = await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({
+          name: 'Курінь Підготовчий',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+        })
+        .expect(201);
+
+      expect(response.body.kurinNumber).toBe('П-1');
+    });
+
+    it('auto-assigns "П-2" when "П-1" already exists', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({ name: 'Перший', gender: KurinGender.MALE, stanytsia: 'Львів', probyProgramId: program.id })
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({ name: 'Другий', gender: KurinGender.MALE, stanytsia: 'Львів', probyProgramId: program.id })
+        .expect(201);
+
+      expect(response.body.kurinNumber).toBe('П-2');
+    });
+
+    it('returns 409 when an explicitly provided kurinNumber is already taken', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({
+          name: 'Перший',
+          kurinNumber: '75',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .send({
+          name: 'Другий',
+          kurinNumber: '75',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+        })
+        .expect(409);
+    });
   });
 
   describe('POST /admin/kurins/zvyazkovyi', () => {
