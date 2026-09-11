@@ -24,8 +24,8 @@ export class HurtkyController {
   }
 
   @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
-  @Get(':id/board')
-  board(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
-    return this.service.getBoard(id, user);
+  @Get('by-slug/:slug')
+  membersBySlug(@Param('slug') slug: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.getMembersBySlug(slug, user);
   }
 }

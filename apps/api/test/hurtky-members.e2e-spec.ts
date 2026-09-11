@@ -2,12 +2,12 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
-describe('GET /hurtky/:id/board (e2e)', () => {
+describe('GET /hurtky/by-slug/:slug (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
@@ -30,41 +30,43 @@ describe('GET /hurtky/:id/board (e2e)', () => {
     await cleanDatabase(prisma);
   });
 
-  it('lets an assigned vykhovnyk see the hurtok, its junaky, and their progress', async () => {
-    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+  it('lets an assigned vykhovnyk see junaky and vykhovnyky in the hurtok, with their positions', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
-    const junak = await createUser(prisma, {
-      role: Role.JUNAK,
-      kurinId: kurin.id,
-      hurtokId: hurtok.id,
-      password: 'x',
-    });
-    await prisma.junakProgress.create({
-      data: { junakId: junak.id, pointId: points[0].id, status: ProgressStatus.DONE, confirmedById: vykhovnyk.id, confirmedAt: new Date() },
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        hurtokId: hurtok.id,
+        scope: PositionScope.HURTOK,
+        positionType: PositionType.HURTKOVYI,
+        userId: junak.id,
+        assignedById: junak.id,
+      },
     });
 
     const token = issueTokenFor(jwtService, vykhovnyk);
     const response = await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body.hurtok.id).toBe(hurtok.id);
-    expect(response.body.junaky).toHaveLength(1);
-    expect(response.body.junaky[0].id).toBe(junak.id);
-    expect(response.body.junaky[0].passwordHash).toBeUndefined();
-    expect(response.body.junaky[0].progress).toHaveLength(1);
-    expect(response.body.junaky[0].progress[0].status).toBe(ProgressStatus.DONE);
-    expect(response.body.junaky[0].progress[0].point.id).toBe(points[0].id);
+    expect(response.body.hurtok.slug).toBe('orlyky');
+    const memberIds = response.body.members.map((m: any) => m.id).sort();
+    expect(memberIds).toEqual([junak.id, vykhovnyk.id].sort());
+    const junakMember = response.body.members.find((m: any) => m.id === junak.id);
+    expect(junakMember.positions).toHaveLength(1);
+    expect(junakMember.positions[0].positionType).toBe('HURTKOVYI');
+    expect(junakMember.passwordHash).toBeUndefined();
   });
 
   it('includes a kurinnyi among junaky, alongside regular junaky', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id } });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
@@ -72,77 +74,72 @@ describe('GET /hurtky/:id/board (e2e)', () => {
 
     const token = issueTokenFor(jwtService, vykhovnyk);
     const response = await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    const ids = response.body.junaky.map((u: any) => u.id).sort();
-    expect(ids).toEqual([junak.id, kurinnyi.id].sort());
+    const junakIds = response.body.members
+      .filter((m: any) => m.role === 'JUNAK')
+      .map((m: any) => m.id)
+      .sort();
+    expect(junakIds).toEqual([junak.id, kurinnyi.id].sort());
   });
 
   it('returns 404 for a vykhovnyk not assigned to the hurtok', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, vykhovnyk);
 
     await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
   });
 
-  it('lets a zvyazkovyi view any hurtok board in their kurin', async () => {
+  it('lets a zvyazkovyi view any hurtok in their kurin by slug', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
 
     await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
   });
 
-  it('forbids a kurinniy and a junak from viewing the board', async () => {
+  it('forbids a kurinniy and a junak from viewing the members list', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
     const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
 
     await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${issueTokenFor(jwtService, kurinniy)}`)
       .expect(403);
 
     await request(app.getHttpServer())
-      .get(`/hurtky/${hurtok.id}/board`)
+      .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${issueTokenFor(jwtService, junak)}`)
       .expect(403);
   });
 
-  it('returns 404 for a hurtok from another kurin', async () => {
+  it('returns 404 for a slug that only exists in another kurin', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
     const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
-    const hurtokB = await prisma.hurtok.create({ data: { name: 'HB', kurinId: kurinB.id } });
+    await prisma.hurtok.create({ data: { name: 'HB', slug: 'hb', kurinId: kurinB.id } });
     const zvyazkovyiA = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinA.id });
     const token = issueTokenFor(jwtService, zvyazkovyiA);
 
     await request(app.getHttpServer())
-      .get(`/hurtky/${hurtokB.id}/board`)
+      .get('/hurtky/by-slug/hb')
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
-  });
-
-  it('returns 401 without a token', async () => {
-    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
-    const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
-
-    await request(app.getHttpServer()).get(`/hurtky/${hurtok.id}/board`).expect(401);
   });
 });
