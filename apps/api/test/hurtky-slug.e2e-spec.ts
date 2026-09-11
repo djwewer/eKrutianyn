@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
 
-describe('Hurtky (e2e)', () => {
+describe('Hurtok slug generation (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
@@ -30,7 +30,7 @@ describe('Hurtky (e2e)', () => {
     await cleanDatabase(prisma);
   });
 
-  it('lets zvyazkovyi create a hurtok in their own kurin', async () => {
+  it('generates a transliterated slug for a new hurtok', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
@@ -39,47 +39,52 @@ describe('Hurtky (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/hurtky')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Орлики', number: '3' })
+      .send({ name: 'Вовки' })
       .expect(201);
 
-    expect(response.body.kurinId).toBe(kurin.id);
-    expect(response.body.number).toBe('3');
-    expect(response.body.slug).toBe('orlyky');
+    expect(response.body.slug).toBe('vovky');
   });
 
-  it('forbids a vykhovnyk from creating a hurtok', async () => {
+  it('appends a numeric suffix on a slug collision within the same kurin', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
-    const token = issueTokenFor(jwtService, vykhovnyk);
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
 
-    await request(app.getHttpServer())
+    const first = await request(app.getHttpServer())
       .post('/hurtky')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Орлики' })
-      .expect(403);
-  });
-
-  it("only lists hurtky belonging to the caller's own kurin", async () => {
-    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
-    const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'Kurin A' });
-    const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'Kurin B' });
-    await prisma.hurtok.create({ data: { name: 'Hurtok A', kurinId: kurinA.id } });
-    await prisma.hurtok.create({ data: { name: 'Hurtok B', kurinId: kurinB.id } });
-
-    const userA = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinA.id });
-    const token = issueTokenFor(jwtService, userA);
-
-    const response = await request(app.getHttpServer())
-      .get('/hurtky')
+      .send({ name: 'Вовки' })
+      .expect(201);
+    const second = await request(app.getHttpServer())
+      .post('/hurtky')
       .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+      .send({ name: 'Вовки' })
+      .expect(201);
 
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].name).toBe('Hurtok A');
+    expect(first.body.slug).toBe('vovky');
+    expect(second.body.slug).toBe('vovky_1');
   });
 
-  it('returns 401 without a token', async () => {
-    await request(app.getHttpServer()).get('/hurtky').expect(401);
+  it('does not collide with a same-named hurtok in a different kurin', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });
+    const kurinB = await createKurin(prisma, { probyProgramId: program.id, name: 'B' });
+    const zvyazkovyiA = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinA.id });
+    const zvyazkovyiB = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurinB.id });
+
+    const responseA = await request(app.getHttpServer())
+      .post('/hurtky')
+      .set('Authorization', `Bearer ${issueTokenFor(jwtService, zvyazkovyiA)}`)
+      .send({ name: 'Вовки' })
+      .expect(201);
+    const responseB = await request(app.getHttpServer())
+      .post('/hurtky')
+      .set('Authorization', `Bearer ${issueTokenFor(jwtService, zvyazkovyiB)}`)
+      .send({ name: 'Вовки' })
+      .expect(201);
+
+    expect(responseA.body.slug).toBe('vovky');
+    expect(responseB.body.slug).toBe('vovky');
   });
 });

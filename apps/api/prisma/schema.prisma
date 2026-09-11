@@ -84,6 +84,7 @@ model Hurtok {
   kurinId String
   kurin   Kurin   @relation(fields: [kurinId], references: [id])
   name    String
+  slug    String?
   number  String?
 
   junaky               User[]            @relation("JunakHurtok")

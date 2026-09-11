@@ -4,13 +4,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
 import { USER_SELECT } from '../users/user-select.const';
+import { generateUniqueSlug } from './slug.util';
 
 @Injectable()
 export class HurtkyService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateHurtokDto, kurinId: string) {
-    return this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId } });
+  async create(dto: CreateHurtokDto, kurinId: string) {
+    const slug = await generateUniqueSlug(this.prisma, kurinId, dto.name);
+    return this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId, slug } });
   }
 
   listForKurin(kurinId: string) {
