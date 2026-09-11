@@ -28,6 +28,7 @@ export interface Hurtok {
   id: string;
   kurinId: string;
   name: string;
+  slug: string | null;
   number: string | null;
 }
 
@@ -100,9 +101,13 @@ export interface JunakProgress {
   point: ProbyPoint;
 }
 
-export interface HurtokBoard {
-  hurtok: { id: string; name: string; number: string | null };
-  junaky: (UserSummary & { progress: JunakProgress[] })[];
+export interface HurtokMember extends UserSummary {
+  positions: { positionType: PositionType; scope: PositionScope; hurtokId: string | null }[];
+}
+
+export interface HurtokMembers {
+  hurtok: { id: string; name: string; slug: string | null; number: string | null };
+  members: HurtokMember[];
 }
 
 export interface VykhovnykAssignment {

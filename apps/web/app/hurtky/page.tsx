@@ -54,7 +54,7 @@ export default function HurtkyPage() {
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         {displayedHurtky.map((h) => (
-          <Link key={h.id} href={`/hurtky/${h.id}`}>
+          <Link key={h.id} href={`/${session?.kurinId}/hurtky/${h.slug}`}>
             <Card>
               <CardHeader>
                 <CardTitle>
