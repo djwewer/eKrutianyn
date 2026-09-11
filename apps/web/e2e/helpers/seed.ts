@@ -39,9 +39,10 @@ export async function seedProbyProgram(pointDescriptions: string[] = ['Точк�
 
 export async function seedKurinWithZvyazkovyi(probyProgramId: string) {
   const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const kurin = await adminPost<{ id: string; name: string }>('/admin/kurins', {
+  const kurinNumber = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const kurin = await adminPost<{ id: string; name: string; kurinNumber: string }>('/admin/kurins', {
     name: `Курінь ${uniqueSuffix}`,
-    kurinNumber: '1',
+    kurinNumber,
     gender: 'MALE',
     stanytsia: 'Тестова станиця',
     probyProgramId,

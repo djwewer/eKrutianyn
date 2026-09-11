@@ -5,6 +5,7 @@ export interface CurrentUserPayload {
   role: Role;
   kurinId: string;
   isKurinniy: boolean;
+  kurinNumber: string;
 }
 
 export interface UserSummary {

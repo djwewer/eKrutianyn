@@ -1,18 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { useKurin, useChangeProbyProgram } from '@/lib/queries/kurin';
+import { useKurin, useChangeProbyProgram, useChangeKurinNumber } from '@/lib/queries/kurin';
 import { useSession } from '@/lib/session-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { accessErrorMessage } from '@/lib/error-message';
 
 export default function KurinPage() {
   const { data: kurin, isLoading } = useKurin();
   const { data: session } = useSession();
   const [newProgramId, setNewProgramId] = useState('');
   const changeProgram = useChangeProbyProgram(kurin?.id ?? '');
+  const changeKurinNumber = useChangeKurinNumber(kurin?.id ?? '');
+  const [newKurinNumber, setNewKurinNumber] = useState('');
   const canChangeProgram = session?.role === 'ZVYAZKOVYI';
 
   if (isLoading) return <p>Завантаження...</p>;
@@ -25,10 +28,35 @@ export default function KurinPage() {
         <CardHeader>
           <CardTitle>Дані куреня</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-1 text-sm">
+        <CardContent className="space-y-4 text-sm">
           <p>Номер: {kurin.kurinNumber}</p>
           <p>Станиця: {kurin.stanytsia}</p>
           <p>Стать: {kurin.gender === 'MALE' ? 'Чоловіча' : 'Жіноча'}</p>
+          {canChangeProgram && (
+            <div className="space-y-2">
+              <Label htmlFor="newKurinNumber">Змінити номер куреня</Label>
+              <Input
+                id="newKurinNumber"
+                value={newKurinNumber}
+                onChange={(e) => setNewKurinNumber(e.target.value)}
+                placeholder={kurin.kurinNumber}
+              />
+              <Button
+                size="sm"
+                disabled={!newKurinNumber || changeKurinNumber.isPending}
+                onClick={() =>
+                  changeKurinNumber.mutate(newKurinNumber, { onSuccess: () => setNewKurinNumber('') })
+                }
+              >
+                Змінити номер
+              </Button>
+              {changeKurinNumber.isError && (
+                <p className="text-sm text-destructive">
+                  {accessErrorMessage(changeKurinNumber.error) ?? 'Цей номер уже зайнятий.'}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>

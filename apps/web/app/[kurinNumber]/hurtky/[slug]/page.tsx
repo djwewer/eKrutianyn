@@ -7,7 +7,7 @@ import { ROLE_LABELS, POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { accessErrorMessage } from '@/lib/error-message';
 
-export default function HurtokMembersPage({ params }: { params: Promise<{ kurinId: string; slug: string }> }) {
+export default function HurtokMembersPage({ params }: { params: Promise<{ kurinNumber: string; slug: string }> }) {
   const { slug } = use(params);
   const { data, isLoading, isError, error } = useHurtokBySlug(slug);
 
