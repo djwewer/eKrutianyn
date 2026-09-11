@@ -82,6 +82,24 @@ describe('Proby progress GET (e2e)', () => {
       .expect(403);
   });
 
+  it('forbids a vykhovnyk with an unrelated hurtok assignment from viewing a hurtok-less junak', async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший гурток', kurinId: kurin.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: junak.id, pointId: points[0].id, status: ProgressStatus.DONE },
+    });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: otherHurtok.id } });
+
+    const response = await request(app.getHttpServer())
+      .get(`/junaky/${junak.id}/progress`)
+      .set('Authorization', `Bearer ${issueTokenFor(jwtService, vykhovnyk)}`);
+
+    expect([403, 404]).toContain(response.status);
+  });
+
   it('lets zvyazkovyi view any junak in their own kurin', async () => {
     const { junak, kurin } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });

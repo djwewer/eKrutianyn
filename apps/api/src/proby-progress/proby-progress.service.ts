@@ -22,6 +22,9 @@ export class ProbyProgressService {
     }
 
     if (actor.role === Role.VYKHOVNYK) {
+      if (!junak.hurtokId) {
+        throw new ForbiddenException("Not assigned to this junak's hurtok");
+      }
       const assigned = await this.prisma.vykhovnykHurtok.findFirst({
         where: { vykhovnykId: actor.userId, hurtokId: junak.hurtokId ?? undefined },
       });
@@ -84,6 +87,9 @@ export class ProbyProgressService {
     }
     if (actor.role === Role.ZVYAZKOVYI) {
       return junak;
+    }
+    if (!junak.hurtokId) {
+      throw new ForbiddenException("Not assigned to this junak's hurtok");
     }
     const assigned = await this.prisma.vykhovnykHurtok.findFirst({
       where: { vykhovnykId: actor.userId, hurtokId: junak.hurtokId ?? undefined },

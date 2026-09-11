@@ -144,6 +144,22 @@ describe('Proby progress confirm (e2e)', () => {
       .expect(403);
   });
 
+  it('forbids a vykhovnyk with an unrelated hurtok assignment from confirming for a hurtok-less junak', async () => {
+    const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Інший гурток', kurinId: kurin.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    await prisma.vykhovnykHurtok.create({ data: { vykhovnykId: vykhovnyk.id, hurtokId: otherHurtok.id } });
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    const response = await request(app.getHttpServer())
+      .post(`/junaky/${junak.id}/progress/${points[0].id}/confirm`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect([403, 404]).toContain(response.status);
+  });
+
   it('forbids a vykhovnyk from another kurin from confirming a point for a kurinnyi', async () => {
     const { program, points } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurinA = await createKurin(prisma, { probyProgramId: program.id, name: 'A' });

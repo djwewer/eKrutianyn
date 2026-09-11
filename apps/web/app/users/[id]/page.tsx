@@ -208,7 +208,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   const isJunak = user?.role === 'JUNAK';
   const { data: probyProgram } = useProbyProgram();
-  const { data: junakProgress } = useJunakProgress(isJunak ? id : undefined);
+  const {
+    data: junakProgress,
+    isError: isJunakProgressError,
+    error: junakProgressError,
+  } = useJunakProgress(isJunak ? id : undefined);
   const confirmPoint = useConfirmPoint(id);
   const unconfirmPoint = useUnconfirmPoint(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
@@ -290,29 +294,35 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <CardTitle>Проба</CardTitle>
           </CardHeader>
           <CardContent>
-            {(() => {
-              const doneByPointId = new Set(
-                (junakProgress ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
-              );
-              return probyProgram.stages
-                .slice()
-                .sort((a, b) => a.order - b.order)
-                .map((stage) => (
-                  <div key={stage.id} className="mb-4 last:mb-0">
-                    <h3 className="mb-2 text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
-                    {stage.categories.map((category) => (
-                      <ProbyCategorySection
-                        key={category.id}
-                        category={category}
-                        doneByPointId={doneByPointId}
-                        canConfirm={canConfirmProby}
-                        onConfirm={(pointId) => confirmPoint.mutate(pointId)}
-                        onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
-                      />
-                    ))}
-                  </div>
-                ));
-            })()}
+            {isJunakProgressError && (
+              <p className="text-sm text-destructive">
+                {accessErrorMessage(junakProgressError) ?? 'Помилка завантаження проби.'}
+              </p>
+            )}
+            {!isJunakProgressError &&
+              (() => {
+                const doneByPointId = new Set(
+                  (junakProgress ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
+                );
+                return probyProgram.stages
+                  .slice()
+                  .sort((a, b) => a.order - b.order)
+                  .map((stage) => (
+                    <div key={stage.id} className="mb-4 last:mb-0">
+                      <h3 className="mb-2 text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
+                      {stage.categories.map((category) => (
+                        <ProbyCategorySection
+                          key={category.id}
+                          category={category}
+                          doneByPointId={doneByPointId}
+                          canConfirm={canConfirmProby}
+                          onConfirm={(pointId) => confirmPoint.mutate(pointId)}
+                          onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
+                        />
+                      ))}
+                    </div>
+                  ));
+              })()}
           </CardContent>
         </Card>
       )}
