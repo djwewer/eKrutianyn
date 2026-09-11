@@ -7,6 +7,7 @@ import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-us
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
+import { UpdateHurtokDto } from './dto/update-hurtok.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
@@ -63,5 +64,14 @@ export class UsersController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.service.updateContactInfo(id, dto, user);
+  }
+
+  @Patch(':id/hurtok')
+  updateHurtok(
+    @Param('id') id: string,
+    @Body() dto: UpdateHurtokDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.updateHurtok(id, dto, user);
   }
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useUser, useUpdateContactInfo } from '@/lib/queries/users';
+import { useUser, useUpdateContactInfo, useUpdateHurtok } from '@/lib/queries/users';
+import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import {
@@ -217,6 +218,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const unconfirmPoint = useUnconfirmPoint(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
 
+  const canMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak;
+  const { data: hurtky } = useHurtky();
+  const updateHurtok = useUpdateHurtok(id);
+  const [selectedHurtokId, setSelectedHurtokId] = useState('');
+
+  useEffect(() => {
+    setSelectedHurtokId(user?.hurtokId ?? '');
+  }, [user?.hurtokId]);
+
   useEffect(() => {
     if (user) {
       setNotes(user.notes ?? '');
@@ -240,6 +250,42 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           <p>Email: {user.email}</p>
           <p>Роль: {ROLE_LABELS[user.role]}</p>
           {user.birthDate && <p>Дата народження: {user.birthDate}</p>}
+          {isJunak && (
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="hurtok">Гурток</Label>
+              {canMoveHurtok ? (
+                <div className="flex gap-2">
+                  <select
+                    id="hurtok"
+                    value={selectedHurtokId}
+                    onChange={(e) => setSelectedHurtokId(e.target.value)}
+                    className="flex-1 rounded-md border px-2 py-1 text-sm"
+                  >
+                    <option value="">Без гуртка</option>
+                    {(hurtky ?? []).map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    disabled={selectedHurtokId === (user.hurtokId ?? '') || updateHurtok.isPending}
+                    onClick={() => updateHurtok.mutate(selectedHurtokId || null)}
+                  >
+                    Перевести
+                  </Button>
+                </div>
+              ) : (
+                <p>{hurtky?.find((h) => h.id === user.hurtokId)?.name ?? 'Без гуртка'}</p>
+              )}
+              {updateHurtok.isError && (
+                <p className="text-sm text-destructive">
+                  {accessErrorMessage(updateHurtok.error) ?? 'Не вдалося перевести юнака.'}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>

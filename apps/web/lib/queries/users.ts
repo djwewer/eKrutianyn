@@ -37,3 +37,17 @@ export function useUpdateContactInfo(id: string) {
     },
   });
 }
+
+export function useUpdateHurtok(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (hurtokId: string | null) =>
+      apiFetch<UserDetail>(`/users/${id}/hurtok`, {
+        method: 'PATCH',
+        body: JSON.stringify({ hurtokId }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', id] });
+    },
+  });
+}

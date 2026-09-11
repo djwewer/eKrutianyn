@@ -7,6 +7,7 @@ import { generateToken } from '../common/token.util';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateContactInfoDto } from './dto/update-contact-info.dto';
+import { UpdateHurtokDto } from './dto/update-hurtok.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
@@ -82,6 +83,27 @@ export class UsersService {
         notes: true,
         phone: true,
       },
+    });
+  }
+
+  async updateHurtok(junakId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload) {
+    if (actor.role !== Role.ZVYAZKOVYI) {
+      throw new ForbiddenException('Insufficient role');
+    }
+    const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
+    if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
+      throw new NotFoundException('Junak not found');
+    }
+    if (dto.hurtokId) {
+      const hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });
+      if (!hurtok || hurtok.kurinId !== actor.kurinId) {
+        throw new NotFoundException('Hurtok not found in this kurin');
+      }
+    }
+    return this.prisma.user.update({
+      where: { id: junakId },
+      data: { hurtokId: dto.hurtokId ?? null },
+      select: USER_SELECT,
     });
   }
 
