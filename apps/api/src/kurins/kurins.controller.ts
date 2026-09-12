@@ -28,7 +28,7 @@ export class KurinsController {
     if (id !== user.kurinId) {
       throw new ForbiddenException('Cross-tenant access denied');
     }
-    return this.kurinsService.changeProbyProgram(id, dto.newProgramId, user.userId);
+    return this.kurinsService.changeProbyProgram(id, dto.version, user.userId);
   }
 
   @Roles(Role.ZVYAZKOVYI)

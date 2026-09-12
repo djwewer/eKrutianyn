@@ -1,6 +1,7 @@
-import { IsUUID } from 'class-validator';
+import { IsEnum } from 'class-validator';
+import { ProbyProgramVersion } from '@prisma/client';
 
 export class ChangeProbyProgramDto {
-  @IsUUID()
-  newProgramId: string;
+  @IsEnum(ProbyProgramVersion)
+  version: ProbyProgramVersion;
 }

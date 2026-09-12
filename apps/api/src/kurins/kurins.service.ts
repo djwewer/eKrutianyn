@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
+import { ProgressAction, ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -7,7 +7,10 @@ export class KurinsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(kurinId: string) {
-    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      include: { probyProgram: { select: { version: true } } },
+    });
     if (!kurin) {
       throw new NotFoundException('Kurin not found');
     }
@@ -29,14 +32,14 @@ export class KurinsService {
     return this.prisma.kurin.update({ where: { id: kurinId }, data: { kurinNumber: newNumber } });
   }
 
-  async changeProbyProgram(kurinId: string, newProgramId: string, actorId: string) {
+  async changeProbyProgram(kurinId: string, version: ProbyProgramVersion, actorId: string) {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
     if (!kurin) throw new NotFoundException('Kurin not found');
 
-    const newProgram = await this.prisma.probyProgram.findUnique({ where: { id: newProgramId } });
+    const newProgram = await this.prisma.probyProgram.findFirst({ where: { version } });
     if (!newProgram) throw new NotFoundException('Proby program not found');
 
-    if (kurin.probyProgramId === newProgramId) {
+    if (kurin.probyProgramId === newProgram.id) {
       return kurin;
     }
 
@@ -98,7 +101,7 @@ export class KurinsService {
 
     return this.prisma.kurin.update({
       where: { id: kurinId },
-      data: { probyProgramId: newProgramId },
+      data: { probyProgramId: newProgram.id },
     });
   }
 }

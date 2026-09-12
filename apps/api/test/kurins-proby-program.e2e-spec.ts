@@ -54,7 +54,7 @@ describe('Kurin proby-program change (e2e)', () => {
     const response = await request(app.getHttpServer())
       .patch(`/kurins/${kurin.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(200);
 
     expect(response.body.probyProgramId).toBe(newTree.program.id);
@@ -95,7 +95,7 @@ describe('Kurin proby-program change (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/kurins/${kurin.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(200);
 
     const newProgress = await prisma.junakProgress.findUnique({
@@ -121,7 +121,7 @@ describe('Kurin proby-program change (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/kurins/${kurin.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(200);
 
     const allProgress = await prisma.junakProgress.findMany({ where: { junakId: junak.id } });
@@ -156,7 +156,7 @@ describe('Kurin proby-program change (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/kurins/${kurin.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(200);
 
     const targetProgress = await prisma.junakProgress.findUnique({
@@ -176,7 +176,7 @@ describe('Kurin proby-program change (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/kurins/${kurinB.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(403);
   });
 
@@ -190,7 +190,7 @@ describe('Kurin proby-program change (e2e)', () => {
     await request(app.getHttpServer())
       .patch(`/kurins/${kurin.id}/proby-program`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ newProgramId: newTree.program.id })
+      .send({ version: ProbyProgramVersion.NEW })
       .expect(403);
   });
 });
