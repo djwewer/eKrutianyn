@@ -14,10 +14,10 @@ export function useKurin() {
 export function useChangeProbyProgram(kurinId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (newProgramId: string) =>
+    mutationFn: (version: 'OLD' | 'NEW') =>
       apiFetch<Kurin>(`/kurins/${kurinId}/proby-program`, {
         method: 'PATCH',
-        body: JSON.stringify({ newProgramId }),
+        body: JSON.stringify({ version }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kurin', 'me'] });

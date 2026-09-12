@@ -145,5 +145,7 @@ export interface Kurin {
   kurinNumber: string;
   gender: 'MALE' | 'FEMALE';
   stanytsia: string;
-  probyProgramId: string;
+  probyProgram: {
+    version: 'OLD' | 'NEW';
+  };
 }
