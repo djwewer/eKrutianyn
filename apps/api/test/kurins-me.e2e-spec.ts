@@ -44,6 +44,7 @@ describe('Kurins self-read (e2e)', () => {
     expect(response.body.id).toBe(kurin.id);
     expect(response.body.name).toBe('Курінь Орлів');
     expect(response.body.probyProgramId).toBe(program.id);
+    expect(response.body.probyProgram.version).toBe(ProbyProgramVersion.OLD);
   });
 
   it('returns 401 without a token', async () => {
