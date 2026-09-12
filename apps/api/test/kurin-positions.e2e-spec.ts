@@ -128,6 +128,95 @@ describe('kurin-positions (e2e)', () => {
       .expect((res) => expect([200, 201]).toContain(res.status));
   });
 
+  it('retires a junak from their other kurin-scoped position when assigned a new one', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'KURIN', positionType: 'KURINNYI' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'KURIN', positionType: 'SUDDIA' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const list = await request(app.getHttpServer())
+      .get('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0].positionType).toBe('SUDDIA');
+    expect(list.body[0].user.id).toBe(junak.id);
+  });
+
+  it('retires a junak from their other hurtok-scoped position when assigned a new one in the same hurtok', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: hurtok.id })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'HURTOK', positionType: 'PYSAR', hurtokId: hurtok.id })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const list = await request(app.getHttpServer())
+      .get('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0].positionType).toBe('PYSAR');
+    expect(list.body[0].user.id).toBe(junak.id);
+  });
+
+  it('does not let a kurin-scoped assignment retire the same junak’s hurtok-scoped position', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: hurtok.id })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'KURIN', positionType: 'PYSAR' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const list = await request(app.getHttpServer())
+      .get('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(list.body).toHaveLength(2);
+    const positionTypes = list.body.map((p: { positionType: string }) => p.positionType).sort();
+    expect(positionTypes).toEqual(['HURTKOVYI', 'PYSAR']);
+  });
+
   it('lets zvyazkovyi remove a position without a replacement', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });

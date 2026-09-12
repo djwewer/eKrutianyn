@@ -59,9 +59,13 @@ export class KurinPositionsService {
         where: {
           kurinId: actor.kurinId,
           scope: dto.scope,
-          positionType: dto.positionType,
-          hurtokId: dto.hurtokId ?? null,
           removedAt: null,
+          OR: [
+            // the slot being filled, in case someone else currently holds it
+            { positionType: dto.positionType, hurtokId: dto.hurtokId ?? null },
+            // any other active position this junak holds in this scope
+            { userId: dto.userId },
+          ],
         },
         data: { removedAt: new Date(), removedById: actor.userId },
       });
