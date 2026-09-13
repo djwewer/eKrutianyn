@@ -8,31 +8,41 @@
 
 ### Явно поза межами цього підпроєкту
 
-- Кілька фото на одну річ реманенту — тільки одне фото.
 - Вибір/перегляд уже наявних файлів на Drive через Google Picker — тільки завантаження нового файлу з пристрою користувача.
 - Синхронне видалення файлу з Drive при видаленні речі з бази — видаляється лише запис у БД, файл лишається на Drive (простіше, безпечніше від випадкових втрат).
 - "Книга судді", "Точкування", "Імпорт протоколу", "Вкладка"/"Скарбниця" — окремі майбутні підпроєкти зі свого списку `docs/backlog.md`.
 
 ## Частина 1: Дані
 
-Нова модель `InventoryItem` (kurin-scope, без прив'язки до гуртка):
+Нова модель `InventoryItem` (kurin-scope, без прив'язки до гуртка) — річ може мати кілька фото (Андрій підтвердив 2026-09-13: "хай буде, щоб можна було обрати айтем і листати фотки"), тож фото винесено в окрему таблицю one-to-many:
 
 ```prisma
 model InventoryItem {
-  id               String   @id @default(uuid())
-  kurinId          String
-  kurin            Kurin    @relation(fields: [kurinId], references: [id])
-  name             String
-  description      String?
-  quantity         Int
-  photoDriveFileId String?
-  photoUrl         String?
-  createdById      String
-  createdBy        User     @relation(fields: [createdById], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id          String              @id @default(uuid())
+  kurinId     String
+  kurin       Kurin               @relation(fields: [kurinId], references: [id])
+  name        String
+  description String?
+  quantity    Int
+  createdById String
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  photos      InventoryItemPhoto[]
+}
+
+model InventoryItemPhoto {
+  id            String        @id @default(uuid())
+  itemId        String
+  item          InventoryItem @relation(fields: [itemId], references: [id])
+  driveFileId   String
+  url           String
+  createdAt     DateTime      @default(now())
 }
 ```
+
+`InventoryItemPhoto` має каскадне видалення при видаленні `InventoryItem` (`onDelete: Cascade` на `item`-звʼязку) — коли річ видаляють, її фото-записи йдуть разом (сам файл на Drive все одно лишається, як і для одиночного фото раніше — див. "явно поза межами"). Порядок гортання фото — за `createdAt` (порядок додавання), без окремого поля сортування — переставляти місцями фото не потрібно.
 
 У модель `Kurin` додається нове нульове поле `driveFolderId: String?` — ID підпапки цього куреня на спільному Google Drive. Створюється лениво (автоматично, при першому завантаженні фото для цього куреня), а не заздалегідь — жодної міграції даних не потрібно, і майбутні фічі (книга судді, скарбництво) під час свого розвитку створюватимуть власні названі підпапки всередині тієї самої `Kurin.driveFolderId` (наприклад, "Реманент", "Книга судді") — так весь вміст одного куреня групується в одному місці на Drive.
 
@@ -48,12 +58,14 @@ model InventoryItem {
 
 **Бібліотека:** `googleapis` (офіційний Node SDK), новий production-залежність в `apps/api`.
 
-**Флоу завантаження фото:**
-1. Фронтенд шле `multipart/form-data` (name, description?, quantity, photo?) на `POST /kurins/:kurinId/inventory`.
+**Флоу завантаження фото (одного файлу — і при створенні речі, і при додаванні ще одного фото пізніше, обидва випадки використовують той самий внутрішній метод):**
+1. Фронтенд шле `multipart/form-data` з файлом на відповідний ендпоінт (див. Частина 4).
 2. Бекенд приймає файл у памʼять через `multer` (`FileInterceptor`, memory storage — файл ніколи не пишеться на диск сервера).
 3. Якщо `Kurin.driveFolderId` ще не встановлено — створює нову підпапку з іменем куреня всередині `GOOGLE_DRIVE_ROOT_FOLDER_ID`, зберігає її ID в `Kurin.driveFolderId`.
 4. Якщо всередині папки куреня ще немає підпапки "Реманент" — створює її (шукає за назвою, щоб не плодити дублікати при паралельних запитах).
-5. Завантажує файл у підпапку "Реманент" через Drive API, отримує `fileId`, робить файл доступним для перегляду за посиланням (`webViewLink` або прямий `https://drive.google.com/uc?id=<fileId>` для показу як зображення), зберігає `photoDriveFileId` + посилання в `InventoryItem`.
+5. Завантажує файл у підпапку "Реманент" через Drive API, отримує `fileId`, робить файл доступним для перегляду за посиланням (`webViewLink` або прямий `https://drive.google.com/uc?id=<fileId>` для показу як зображення), створює новий рядок `InventoryItemPhoto` (`driveFileId`, `url`, `itemId`).
+
+Створення речі (`POST /kurins/:kurinId/inventory`) може одразу прийняти кілька файлів в одному запиті (`multipart/form-data` з полем `photos` як масивом) — кожен проходить кроки 2-5 незалежно, всі привʼязуються до щойно створеної речі.
 
 ## Частина 3: Доступ
 
@@ -67,10 +79,12 @@ model InventoryItem {
 
 ## Частина 4: API
 
-- `GET /kurins/:kurinId/inventory` → `InventoryItem[]`.
-- `POST /kurins/:kurinId/inventory` (`multipart/form-data`) → створена річ.
-- `PATCH /kurins/:kurinId/inventory/:itemId` (`multipart/form-data`, усі поля опціональні, включно з заміною фото) → оновлена річ.
-- `DELETE /kurins/:kurinId/inventory/:itemId` → `{ success: true }`.
+- `GET /kurins/:kurinId/inventory` → `InventoryItem[]`, кожен з вкладеним `photos: InventoryItemPhoto[]`.
+- `POST /kurins/:kurinId/inventory` (`multipart/form-data`: name, description?, quantity, photos? — 0 або більше файлів) → створена річ разом зі своїми фото.
+- `PATCH /kurins/:kurinId/inventory/:itemId` (звичайний JSON: name?, description?, quantity? — фото тут **не** редагуються, для цього окремі ендпоінти нижче) → оновлена річ.
+- `DELETE /kurins/:kurinId/inventory/:itemId` → `{ success: true }` (каскадно видаляє її `InventoryItemPhoto` записи).
+- `POST /kurins/:kurinId/inventory/:itemId/photos` (`multipart/form-data`, один файл) → додає ще одне фото до наявної речі.
+- `DELETE /kurins/:kurinId/inventory/:itemId/photos/:photoId` → видаляє один запис фото (`{ success: true }`).
 
 Усі — під `@UseGuards(JwtAuthGuard)`, доступ перевіряється в сервісі (як `guardian-contacts`), а не декоратором `@Roles`, бо права різні для читання й запису в межах одного контролера.
 
@@ -78,7 +92,7 @@ model InventoryItem {
 
 Нова сторінка `/inventory` (плаский шлях верхнього рівня, як і наявні `/proby`, `/positions`, `/hurtky`), доступна з навігації через випадаюче меню для звʼязкового (узгоджений раніше UX-патерн для нових сторінок діловодів, щоб не нагромаджувати верхній рівень навігації) і напряму — для інтенданта й курінного.
 
-Список карток: фото (або іконка-заглушка, якщо фото немає), назва, опис, кількість; кнопки "Редагувати"/"Видалити" видимі лише якщо `canEdit` (звʼязковий або інтендант). Форма додавання/редагування — стандартна форма з полем вибору файлу (`<input type="file" accept="image/*">`).
+Список карток: перше фото речі як мініатюра (або іконка-заглушка, якщо фото немає), назва, опис, кількість; кнопки "Редагувати"/"Видалити" видимі лише якщо `canEdit` (звʼязковий або інтендант). Клік на річ відкриває детальний перегляд із каруселлю фото (стрілки або свайп для гортання, якщо фото кілька) — там само форма для редагування назви/опису/кількості, кнопка "Додати фото" (`<input type="file" accept="image/*">`) і кнопка видалення для кожного окремого фото. Форма додавання нової речі — назва/опис/кількість плюс вибір одного або кількох файлів одразу (`<input type="file" accept="image/*" multiple>`).
 
 ## Тестування
 
