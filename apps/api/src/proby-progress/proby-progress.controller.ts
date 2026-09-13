@@ -37,4 +37,26 @@ export class ProbyProgressController {
   ) {
     return this.service.unconfirm(junakId, pointId, user);
   }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
+  @Post('stages/:stageId/close')
+  closeStage(
+    @Param('junakId') junakId: string,
+    @Param('stageId') stageId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.closeStage(junakId, stageId, user);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
+  @Post('stages/:stageId/reopen')
+  reopenStage(
+    @Param('junakId') junakId: string,
+    @Param('stageId') stageId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.reopenStage(junakId, stageId, user);
+  }
 }

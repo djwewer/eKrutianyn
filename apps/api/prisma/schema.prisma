@@ -124,6 +124,8 @@ model User {
   positionsAssigned KurinPosition[] @relation("PositionAssignedBy")
   positionsRemoved  KurinPosition[] @relation("PositionRemovedBy")
   guardianContacts  GuardianContact[] @relation("JunakGuardians")
+  stageProgressEntries JunakStageProgress[] @relation("JunakStageProgressEntries")
+  stageClosedLogs      JunakStageProgress[] @relation("StageClosedByUser")
 }
 
 model KurinPosition {
@@ -183,6 +185,7 @@ model ProbyStage {
   name      String
 
   categories ProbyCategory[]
+  stageProgressEntries JunakStageProgress[]
 }
 
 model ProbyCategory {
@@ -231,6 +234,20 @@ model JunakProgress {
   transferredFromPoint   ProbyPoint?    @relation("TransferredFromPoint", fields: [transferredFromPointId], references: [id])
 
   @@unique([junakId, pointId])
+}
+
+model JunakStageProgress {
+  id            String     @id @default(uuid())
+  junakId       String
+  junak         User       @relation("JunakStageProgressEntries", fields: [junakId], references: [id])
+  stageId       String
+  stage         ProbyStage @relation(fields: [stageId], references: [id])
+  firstClosedAt DateTime?
+  closedAt      DateTime?
+  closedById    String?
+  closedBy      User?      @relation("StageClosedByUser", fields: [closedById], references: [id])
+
+  @@unique([junakId, stageId])
 }
 
 model ProgressAuditLog {

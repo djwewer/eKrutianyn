@@ -5,6 +5,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
     prisma.progressAuditLog.deleteMany(),
     prisma.approvalRequest.deleteMany(),
     prisma.junakProgress.deleteMany(),
+    prisma.junakStageProgress.deleteMany(),
     prisma.pointMapping.deleteMany(),
     prisma.probyPoint.deleteMany(),
     prisma.probyCategory.deleteMany(),
