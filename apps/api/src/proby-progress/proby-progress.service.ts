@@ -43,7 +43,11 @@ export class ProbyProgressService {
       throw new NotFoundException('Kurin not found');
     }
     const statuses = await this.getStageStatuses(junakId, kurin.probyProgramId);
-    const stages = Array.from(statuses.entries()).map(([stageId, status]) => ({ stageId, status }));
+    const stages = Array.from(statuses.entries()).map(([stageId, info]) => ({
+      stageId,
+      status: info.status,
+      hasDebt: info.hasDebt,
+    }));
 
     return { points, stages };
   }
@@ -95,7 +99,7 @@ export class ProbyProgressService {
       throw new NotFoundException('Stage not found');
     }
     const statuses = await this.getStageStatuses(junakId, stage.programId);
-    if (statuses.get(stageId) === 'LOCKED') {
+    if (statuses.get(stageId)?.status === 'LOCKED') {
       throw new BadRequestException('Cannot close a locked stage');
     }
 
@@ -123,7 +127,7 @@ export class ProbyProgressService {
       throw new NotFoundException('Stage not found');
     }
     const statuses = await this.getStageStatuses(junakId, stage.programId);
-    if (statuses.get(stageId) !== 'CLOSED') {
+    if (statuses.get(stageId)?.status !== 'CLOSED') {
       throw new BadRequestException('Only a closed stage can be reopened');
     }
 
@@ -136,7 +140,7 @@ export class ProbyProgressService {
   private async getStageStatuses(
     junakId: string,
     programId: string,
-  ): Promise<Map<string, 'LOCKED' | 'OPEN' | 'CLOSED'>> {
+  ): Promise<Map<string, { status: 'LOCKED' | 'OPEN' | 'CLOSED'; hasDebt: boolean }>> {
     const stages = await this.prisma.probyStage.findMany({
       where: { programId },
       orderBy: { order: 'asc' },
@@ -162,7 +166,7 @@ export class ProbyProgressService {
       doneCountByStageId.set(stageId, (doneCountByStageId.get(stageId) ?? 0) + 1);
     }
 
-    const statuses = new Map<string, 'LOCKED' | 'OPEN' | 'CLOSED'>();
+    const statuses = new Map<string, { status: 'LOCKED' | 'OPEN' | 'CLOSED'; hasDebt: boolean }>();
     for (let i = 0; i < stages.length; i++) {
       const stage = stages[i];
       const previousStage = i > 0 ? stages[i - 1] : null;
@@ -170,7 +174,7 @@ export class ProbyProgressService {
       const reachable = i === 0 || !!previousStageProgress?.firstClosedAt;
 
       if (!reachable) {
-        statuses.set(stage.id, 'LOCKED');
+        statuses.set(stage.id, { status: 'LOCKED', hasDebt: false });
         continue;
       }
 
@@ -180,7 +184,10 @@ export class ProbyProgressService {
       const thisStageProgress = stageProgressByStageId.get(stage.id);
       const closedNow = !!thisStageProgress?.closedAt;
 
-      statuses.set(stage.id, closedNow && allDone ? 'CLOSED' : 'OPEN');
+      statuses.set(stage.id, {
+        status: closedNow && allDone ? 'CLOSED' : 'OPEN',
+        hasDebt: closedNow && !allDone,
+      });
     }
 
     return statuses;
@@ -195,7 +202,7 @@ export class ProbyProgressService {
       return;
     }
     const statuses = await this.getStageStatuses(junakId, point.category.stage.programId);
-    if (statuses.get(point.category.stageId) !== 'OPEN') {
+    if (statuses.get(point.category.stageId)?.status !== 'OPEN') {
       throw new ForbiddenException('This proba stage is locked or closed');
     }
   }

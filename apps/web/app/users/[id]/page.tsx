@@ -362,11 +362,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                 const statusByStageId = new Map(
                   (junakProgress?.stages ?? []).map((s) => [s.stageId, s.status]),
                 );
+                const hasDebtByStageId = new Map(
+                  (junakProgress?.stages ?? []).map((s) => [s.stageId, s.hasDebt]),
+                );
                 return probyProgram.stages
                   .slice()
                   .sort((a, b) => a.order - b.order)
                   .map((stage) => {
                     const status = statusByStageId.get(stage.id);
+                    const hasDebt = hasDebtByStageId.get(stage.id) ?? false;
                     if (status === 'LOCKED' || status === undefined) {
                       return (
                         <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
@@ -388,6 +392,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                               <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
                                 🔓 Перевідкрити пробу
                               </Button>
+                            ) : hasDebt ? (
+                              <span className="text-xs text-muted-foreground">
+                                Закрито (є непідтверджені точки)
+                              </span>
                             ) : (
                               <Button size="sm" variant="outline" onClick={() => closeStage.mutate(stage.id)}>
                                 Закрити пробу

@@ -106,7 +106,7 @@ export type StageStatus = 'LOCKED' | 'OPEN' | 'CLOSED';
 
 export interface JunakProgressResponse {
   points: JunakProgress[];
-  stages: { stageId: string; status: StageStatus }[];
+  stages: { stageId: string; status: StageStatus; hasDebt: boolean }[];
 }
 
 export interface HurtokMember extends UserSummary {

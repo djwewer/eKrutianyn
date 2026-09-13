@@ -136,4 +136,35 @@ describe('Proby progress confirm/unconfirm stage guard (e2e)', () => {
     const statusByStageId = new Map(response.body.stages.map((s: { stageId: string; status: string }) => [s.stageId, s.status]));
     expect(statusByStageId.get(stage1.id)).toBe('CLOSED');
   });
+
+  it('GET /progress reports hasDebt when a stage is closed but not fully done', async () => {
+    const { junak, token, stage1 } = await setup();
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${junak.id}/progress/stages/${stage1.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const response = await request(app.getHttpServer())
+      .get(`/junaky/${junak.id}/progress`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const stage1Info = response.body.stages.find((s: { stageId: string }) => s.stageId === stage1.id);
+    expect(stage1Info.status).toBe('OPEN');
+    expect(stage1Info.hasDebt).toBe(true);
+  });
+
+  it('GET /progress reports hasDebt as false for a never-closed stage', async () => {
+    const { junak, token, stage1 } = await setup();
+
+    const response = await request(app.getHttpServer())
+      .get(`/junaky/${junak.id}/progress`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const stage1Info = response.body.stages.find((s: { stageId: string }) => s.stageId === stage1.id);
+    expect(stage1Info.status).toBe('OPEN');
+    expect(stage1Info.hasDebt).toBe(false);
+  });
 });

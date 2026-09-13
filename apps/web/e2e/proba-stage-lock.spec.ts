@@ -72,6 +72,13 @@ test('lets zvyazkovyi close a stage with debt, work in the next stage, then clos
   await expect(page.getByText('🔒 Стадія 2')).not.toBeVisible();
   await expect(page.getByText('Категорія 2 (0/1)')).toBeVisible();
 
+  // Stage 1 was just closed with debt (its only point is still unconfirmed)
+  // — its "Закрити пробу" button must be replaced by a "debt" label so it's
+  // clear the close already happened, instead of looking identical to a
+  // never-closed stage. Only stage 2's own button remains.
+  await expect(page.getByText('Закрито (є непідтверджені точки)')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Закрити пробу' })).toHaveCount(1);
+
   await page.getByText('Категорія 1 (0/1)').click();
   await page.getByRole('button', { name: 'Підтвердити' }).first().click();
 
