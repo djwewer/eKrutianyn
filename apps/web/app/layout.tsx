@@ -4,7 +4,7 @@ import { QueryProvider } from '@/components/query-provider';
 import { Nav } from '@/components/nav';
 
 export const metadata: Metadata = {
-  title: 'Пласт — Ядро і Проби',
+  title: 'єПластун',
   description: 'Облік проб та структури куреня',
   manifest: '/manifest.json',
 };
