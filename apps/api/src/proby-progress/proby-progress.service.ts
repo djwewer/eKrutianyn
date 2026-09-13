@@ -85,9 +85,13 @@ export class ProbyProgressService {
   }
 
   async closeStage(junakId: string, stageId: string, actor: CurrentUserPayload) {
-    await this.assertCanConfirm(junakId, actor);
+    const junak = await this.assertCanConfirm(junakId, actor);
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: junak.kurinId } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
     const stage = await this.prisma.probyStage.findUnique({ where: { id: stageId } });
-    if (!stage) {
+    if (!stage || stage.programId !== kurin.probyProgramId) {
       throw new NotFoundException('Stage not found');
     }
     const statuses = await this.getStageStatuses(junakId, stage.programId);
@@ -109,9 +113,13 @@ export class ProbyProgressService {
   }
 
   async reopenStage(junakId: string, stageId: string, actor: CurrentUserPayload) {
-    await this.assertCanConfirm(junakId, actor);
+    const junak = await this.assertCanConfirm(junakId, actor);
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: junak.kurinId } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
     const stage = await this.prisma.probyStage.findUnique({ where: { id: stageId } });
-    if (!stage) {
+    if (!stage || stage.programId !== kurin.probyProgramId) {
       throw new NotFoundException('Stage not found');
     }
     const statuses = await this.getStageStatuses(junakId, stage.programId);

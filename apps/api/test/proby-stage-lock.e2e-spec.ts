@@ -140,6 +140,17 @@ describe('Proby stage lock (e2e)', () => {
       .expect(404);
   });
 
+  it('returns 404 when closing a stage that belongs to a different kurin\'s program', async () => {
+    const { junak, token } = await setup();
+    const otherProgram = await prisma.probyProgram.create({ data: { version: ProbyProgramVersion.OLD, name: 'Other program' } });
+    const foreignStage = await prisma.probyStage.create({ data: { programId: otherProgram.id, order: 1, name: 'Foreign stage' } });
+
+    await request(app.getHttpServer())
+      .post(`/junaky/${junak.id}/progress/stages/${foreignStage.id}/close`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
+
   it('is idempotent: closing an already-closed stage keeps firstClosedAt unchanged', async () => {
     const { junak, token, stage1 } = await setup();
 

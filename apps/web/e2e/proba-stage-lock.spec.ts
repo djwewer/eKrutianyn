@@ -79,10 +79,13 @@ test('lets zvyazkovyi close a stage with debt, work in the next stage, then clos
 
   await page.getByRole('button', { name: '🔓 Перевідкрити пробу' }).click();
 
-  // Stage 2 is also OPEN by now (unaffected by reopening stage 1), so two
-  // "Закрити пробу" buttons exist on the page at this point — assert on
-  // the first rather than a bare locator to avoid a Playwright strict-mode
-  // violation from matching multiple elements.
-  await expect(page.getByRole('button', { name: 'Закрити пробу' }).first()).toBeVisible();
+  // A successful reopen removes the "🔓 Перевідкрити пробу" button and
+  // restores stage 1's own "Закрити пробу" button — so there must now be
+  // TWO such buttons (stage 1, freshly reopened, and stage 2, which has
+  // remained OPEN the whole time and was never touched by the reopen).
+  // Asserting the count (not just visibility of "a" match) is what
+  // actually distinguishes "reopen worked" from "reopen silently failed".
+  await expect(page.getByRole('button', { name: '🔓 Перевідкрити пробу' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Закрити пробу' })).toHaveCount(2);
   await expect(page.getByText('🔒 Стадія 2')).not.toBeVisible();
 });

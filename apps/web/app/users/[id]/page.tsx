@@ -367,7 +367,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   .sort((a, b) => a.order - b.order)
                   .map((stage) => {
                     const status = statusByStageId.get(stage.id);
-                    if (status === 'LOCKED') {
+                    if (status === 'LOCKED' || status === undefined) {
                       return (
                         <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
                           <h3 className="text-sm font-bold uppercase text-muted-foreground">
