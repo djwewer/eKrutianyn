@@ -11,7 +11,14 @@ import {
   useUpdateGuardianContact,
   useRemoveGuardianContact,
 } from '@/lib/queries/guardian-contacts';
-import { useProbyProgram, useJunakProgress, useConfirmPoint, useUnconfirmPoint } from '@/lib/queries/proby';
+import {
+  useProbyProgram,
+  useJunakProgress,
+  useConfirmPoint,
+  useUnconfirmPoint,
+  useCloseStage,
+  useReopenStage,
+} from '@/lib/queries/proby';
 import type { GuardianContact, ProbyCategory } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
@@ -216,6 +223,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   } = useJunakProgress(isJunak ? id : undefined);
   const confirmPoint = useConfirmPoint(id);
   const unconfirmPoint = useUnconfirmPoint(id);
+  const closeStage = useCloseStage(id);
+  const reopenStage = useReopenStage(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
 
   const canMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak;
@@ -348,26 +357,56 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             {!isJunakProgressError &&
               (() => {
                 const doneByPointId = new Set(
-                  (junakProgress ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
+                  (junakProgress?.points ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
+                );
+                const statusByStageId = new Map(
+                  (junakProgress?.stages ?? []).map((s) => [s.stageId, s.status]),
                 );
                 return probyProgram.stages
                   .slice()
                   .sort((a, b) => a.order - b.order)
-                  .map((stage) => (
-                    <div key={stage.id} className="mb-4 last:mb-0">
-                      <h3 className="mb-2 text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
-                      {stage.categories.map((category) => (
-                        <ProbyCategorySection
-                          key={category.id}
-                          category={category}
-                          doneByPointId={doneByPointId}
-                          canConfirm={canConfirmProby}
-                          onConfirm={(pointId) => confirmPoint.mutate(pointId)}
-                          onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
-                        />
-                      ))}
-                    </div>
-                  ));
+                  .map((stage) => {
+                    const status = statusByStageId.get(stage.id);
+                    if (status === 'LOCKED') {
+                      return (
+                        <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
+                          <h3 className="text-sm font-bold uppercase text-muted-foreground">
+                            🔒 {stage.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            Розблокується після закриття попередньої проби
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={stage.id} className="mb-4 last:mb-0">
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
+                          {canConfirmProby &&
+                            (status === 'CLOSED' ? (
+                              <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
+                                🔓 Перевідкрити пробу
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => closeStage.mutate(stage.id)}>
+                                Закрити пробу
+                              </Button>
+                            ))}
+                        </div>
+                        {stage.categories.map((category) => (
+                          <ProbyCategorySection
+                            key={category.id}
+                            category={category}
+                            doneByPointId={doneByPointId}
+                            canConfirm={canConfirmProby && status !== 'CLOSED'}
+                            onConfirm={(pointId) => confirmPoint.mutate(pointId)}
+                            onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  });
               })()}
           </CardContent>
         </Card>

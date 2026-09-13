@@ -102,6 +102,13 @@ export interface JunakProgress {
   point: ProbyPoint;
 }
 
+export type StageStatus = 'LOCKED' | 'OPEN' | 'CLOSED';
+
+export interface JunakProgressResponse {
+  points: JunakProgress[];
+  stages: { stageId: string; status: StageStatus }[];
+}
+
 export interface HurtokMember extends UserSummary {
   positions: { positionType: PositionType; scope: PositionScope; hurtokId: string | null }[];
 }
