@@ -50,8 +50,8 @@ describe('Proby progress GET (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].status).toBe(ProgressStatus.DONE);
+    expect(response.body.points).toHaveLength(1);
+    expect(response.body.points[0].status).toBe(ProgressStatus.DONE);
   });
 
   it("forbids a junak from viewing another junak's progress", async () => {
@@ -134,8 +134,8 @@ describe('Proby progress GET (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].status).toBe(ProgressStatus.DONE);
+    expect(response.body.points).toHaveLength(1);
+    expect(response.body.points[0].status).toBe(ProgressStatus.DONE);
   });
 
   it("forbids a kurinnyi from viewing another kurinnyi's progress", async () => {
@@ -169,7 +169,7 @@ describe('Proby progress GET (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toHaveLength(1);
+    expect(response.body.points).toHaveLength(1);
   });
 
   it('returns 404 for a junak in another kurin', async () => {

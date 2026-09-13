@@ -33,15 +33,25 @@ export class ProbyProgressService {
       }
     }
 
-    return this.prisma.junakProgress.findMany({
+    const points = await this.prisma.junakProgress.findMany({
       where: { junakId },
       include: { point: true },
     });
+
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: junak.kurinId } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    const statuses = await this.getStageStatuses(junakId, kurin.probyProgramId);
+    const stages = Array.from(statuses.entries()).map(([stageId, status]) => ({ stageId, status }));
+
+    return { points, stages };
   }
 
   async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
+    await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
       update: { status: ProgressStatus.DONE, confirmedById: actor.userId, confirmedAt: new Date() },
@@ -62,6 +72,7 @@ export class ProbyProgressService {
   async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
+    await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
       update: { status: ProgressStatus.NOT_DONE, confirmedById: null, confirmedAt: null },
@@ -165,6 +176,20 @@ export class ProbyProgressService {
     }
 
     return statuses;
+  }
+
+  private async assertStageIsOpenForPoint(junakId: string, pointId: string) {
+    const point = await this.prisma.probyPoint.findUnique({
+      where: { id: pointId },
+      select: { category: { select: { stageId: true, stage: { select: { programId: true } } } } },
+    });
+    if (!point) {
+      return;
+    }
+    const statuses = await this.getStageStatuses(junakId, point.category.stage.programId);
+    if (statuses.get(point.category.stageId) !== 'OPEN') {
+      throw new ForbiddenException('This proba stage is locked or closed');
+    }
   }
 
   private async assertPointExists(pointId: string) {
