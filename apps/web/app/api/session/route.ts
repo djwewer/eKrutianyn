@@ -17,6 +17,7 @@ export async function GET() {
       role: decoded.role,
       kurinId: decoded.kurinId,
       isKurinniy: !!decoded.isKurinniy,
+      positions: Array.isArray(decoded.positions) ? decoded.positions : [],
       kurinNumber: decoded.kurinNumber,
     };
     return NextResponse.json(session);

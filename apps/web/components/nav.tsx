@@ -26,6 +26,8 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   ],
 };
 
+const DILOVODY_PAGES = [{ href: '/inventory', label: 'Облік реманенту' }];
+
 export function Nav() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -44,6 +46,9 @@ export function Nav() {
   if (session.isKurinniy) {
     links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/vykhovnyk-assignments', label: 'Виховники' });
   }
+  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('INTENDANT') || session.isKurinniy)) {
+    links.push({ href: '/inventory', label: 'Облік реманенту' });
+  }
 
   return (
     <nav className="flex items-center justify-between border-b px-4 py-3">
@@ -53,6 +58,18 @@ export function Nav() {
             {link.label}
           </Link>
         ))}
+        {session.role === 'ZVYAZKOVYI' && (
+          <details className="relative">
+            <summary className="cursor-pointer text-sm font-medium">Діловодство</summary>
+            <div className="absolute z-10 mt-1 flex flex-col rounded border bg-background p-2 shadow-md">
+              {DILOVODY_PAGES.map((page) => (
+                <Link key={page.href} href={page.href} className="whitespace-nowrap px-2 py-1 text-sm">
+                  {page.label}
+                </Link>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
       <Button variant="outline" size="sm" onClick={handleLogout}>
         Вийти

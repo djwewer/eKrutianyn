@@ -9,13 +9,14 @@ async function proxy(request: NextRequest, path: string[]) {
 
   const targetUrl = `${API_URL}/${path.join('/')}${request.nextUrl.search}`;
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const incomingContentType = request.headers.get('Content-Type');
+  const headers: Record<string, string> = { 'Content-Type': incomingContentType ?? 'application/json' };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
   const hasBody = !['GET', 'HEAD'].includes(request.method);
-  const body = hasBody ? await request.text() : undefined;
+  const body = hasBody ? await request.arrayBuffer() : undefined;
 
   const response = await fetch(targetUrl, {
     method: request.method,

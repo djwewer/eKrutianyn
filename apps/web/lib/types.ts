@@ -5,6 +5,7 @@ export interface CurrentUserPayload {
   role: Role;
   kurinId: string;
   isKurinniy: boolean;
+  positions: PositionType[];
   kurinNumber: string;
 }
 
@@ -52,6 +53,21 @@ export interface KurinPosition {
   hurtokId: string | null;
   assignedAt: string;
   user: UserSummary;
+}
+
+export interface InventoryItemPhoto {
+  id: string;
+  driveFileId: string;
+  url: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  kurinId: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+  photos: InventoryItemPhoto[];
 }
 
 export interface GuardianContact {
