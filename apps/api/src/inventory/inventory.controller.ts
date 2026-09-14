@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -30,7 +31,15 @@ export class InventoryController {
   }
 
   @Post()
-  @UseInterceptors(FilesInterceptor('photos', undefined, { storage: memoryStorage() }))
+  @UseInterceptors(
+    FilesInterceptor('photos', undefined, {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024, files: 10 },
+      fileFilter: (req, file, callback) => {
+        callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Дозволені лише зображення'), file.mimetype.startsWith('image/'));
+      },
+    }),
+  )
   create(
     @Param('kurinId') kurinId: string,
     @Body() dto: CreateInventoryItemDto,
@@ -60,7 +69,15 @@ export class InventoryController {
   }
 
   @Post(':itemId/photos')
-  @UseInterceptors(FileInterceptor('photo', { storage: memoryStorage() }))
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Дозволені лише зображення'), file.mimetype.startsWith('image/'));
+      },
+    }),
+  )
   addPhoto(
     @Param('kurinId') kurinId: string,
     @Param('itemId') itemId: string,

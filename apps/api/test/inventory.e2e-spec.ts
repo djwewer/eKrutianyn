@@ -215,6 +215,37 @@ describe('Inventory (e2e)', () => {
       .expect(404);
   });
 
+  it('rejects a non-image file uploaded as a new item photo', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/kurins/${kurin.id}/inventory`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('name', 'Пилка')
+      .field('quantity', '1')
+      .attach('photos', Buffer.from('not an image'), { filename: 'file.txt', contentType: 'text/plain' })
+      .expect(400);
+  });
+
+  it('rejects a non-image file uploaded as an individual item photo', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+    const created = await request(app.getHttpServer())
+      .post(`/kurins/${kurin.id}/inventory`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('name', 'Стіл')
+      .field('quantity', '1');
+
+    await request(app.getHttpServer())
+      .post(`/kurins/${kurin.id}/inventory/${created.body.id}/photos`)
+      .set('Authorization', `Bearer ${token}`)
+      .attach('photo', Buffer.from('not an image'), { filename: 'file.txt', contentType: 'text/plain' })
+      .expect(400);
+  });
+
   it('reuses the cached kurin Drive folder across multiple uploads', async () => {
     const { kurin } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });

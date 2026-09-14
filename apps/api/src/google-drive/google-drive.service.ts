@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,9 +7,16 @@ import { GOOGLE_DRIVE_CLIENT } from './google-drive-client.provider';
 @Injectable()
 export class GoogleDriveService {
   constructor(
-    @Inject(GOOGLE_DRIVE_CLIENT) private readonly drive: drive_v3.Drive,
+    @Inject(GOOGLE_DRIVE_CLIENT) private readonly drive: drive_v3.Drive | null,
     private readonly prisma: PrismaService,
   ) {}
+
+  private requireDrive(): drive_v3.Drive {
+    if (!this.drive) {
+      throw new ServiceUnavailableException('Google Drive не налаштовано (GOOGLE_SERVICE_ACCOUNT_KEY відсутній або невалідний)');
+    }
+    return this.drive;
+  }
 
   async ensureKurinFolder(kurinId: string): Promise<string> {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
@@ -25,7 +32,7 @@ export class GoogleDriveService {
   }
 
   async ensureSubfolder(parentFolderId: string, name: string): Promise<string> {
-    const existing = await this.drive.files.list({
+    const existing = await this.requireDrive().files.list({
       q: `'${parentFolderId}' in parents and name = '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id)',
     });
@@ -42,7 +49,7 @@ export class GoogleDriveService {
     filename: string,
     mimeType: string,
   ): Promise<{ fileId: string; url: string }> {
-    const res = await this.drive.files.create({
+    const res = await this.requireDrive().files.create({
       requestBody: { name: filename, parents: [folderId] },
       media: { mimeType, body: Readable.from(buffer) },
       fields: 'id',
@@ -51,7 +58,7 @@ export class GoogleDriveService {
     if (!fileId) {
       throw new Error('Failed to upload file to Drive');
     }
-    await this.drive.permissions.create({
+    await this.requireDrive().permissions.create({
       fileId,
       requestBody: { role: 'reader', type: 'anyone' },
     });
@@ -59,7 +66,7 @@ export class GoogleDriveService {
   }
 
   private async createFolder(name: string, parentId: string): Promise<string> {
-    const res = await this.drive.files.create({
+    const res = await this.requireDrive().files.create({
       requestBody: { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
       fields: 'id',
     });

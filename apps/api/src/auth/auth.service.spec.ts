@@ -1,7 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { Role } from '@prisma/client';
+import { PositionType, Role } from '@prisma/client';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -42,6 +42,19 @@ describe('AuthService', () => {
         positions: [],
         kurinNumber: '75',
       });
+    });
+
+    it('carries a non-empty positions array through into the signed JWT', () => {
+      const { accessToken } = service.signToken(
+        'user-1',
+        Role.ZVYAZKOVYI,
+        'kurin-1',
+        false,
+        [PositionType.INTENDANT],
+        '75',
+      );
+      const decoded: any = jwtService.verify(accessToken);
+      expect(decoded.positions).toEqual([PositionType.INTENDANT]);
     });
   });
 

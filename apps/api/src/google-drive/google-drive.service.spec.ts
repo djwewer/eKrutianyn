@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleDriveService } from './google-drive.service';
 
 describe('GoogleDriveService', () => {
@@ -83,6 +83,16 @@ describe('GoogleDriveService', () => {
         fileId: 'file-1',
         requestBody: { role: 'reader', type: 'anyone' },
       });
+    });
+  });
+
+  describe('when the Drive client is unavailable', () => {
+    it('throws ServiceUnavailableException instead of calling a null Drive client', async () => {
+      const unavailableService = new GoogleDriveService(null, prisma);
+
+      await expect(unavailableService.ensureSubfolder('parent-1', 'Реманент')).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
   });
 });
