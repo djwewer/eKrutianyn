@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isKurinniyForUser } from '../../common/kurinniy.util';
+import { getActiveKurinPositions } from '../../common/positions.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const isKurinniy = await isKurinniyForUser(this.prisma, payload.sub);
-    return { userId: payload.sub, role: payload.role, kurinId: payload.kurinId, isKurinniy };
+    const positions = await getActiveKurinPositions(this.prisma, payload.sub, payload.kurinId);
+    return { userId: payload.sub, role: payload.role, kurinId: payload.kurinId, isKurinniy, positions };
   }
 }

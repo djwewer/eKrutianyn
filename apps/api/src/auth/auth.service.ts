@@ -1,18 +1,20 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { Role } from '@prisma/client';
+import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
 import { MailService } from '../mail/mail.service';
 import { generateToken, hashToken } from '../common/token.util';
 import { isKurinniyForUser } from '../common/kurinniy.util';
+import { getActiveKurinPositions } from '../common/positions.util';
 
 export interface JwtPayload {
   sub: string;
   role: Role;
   kurinId: string;
   isKurinniy: boolean;
+  positions: PositionType[];
   kurinNumber: string;
 }
 
@@ -38,9 +40,10 @@ export class AuthService {
     role: Role,
     kurinId: string,
     isKurinniy: boolean,
+    positions: PositionType[],
     kurinNumber: string,
   ): { accessToken: string } {
-    const payload: JwtPayload = { sub: userId, role, kurinId, isKurinniy, kurinNumber };
+    const payload: JwtPayload = { sub: userId, role, kurinId, isKurinniy, positions, kurinNumber };
     return { accessToken: this.jwtService.sign(payload) };
   }
 
@@ -54,8 +57,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const isKurinniy = await isKurinniyForUser(this.prisma, user.id);
+    const positions = await getActiveKurinPositions(this.prisma, user.id, user.kurinId);
     const kurin = await this.prisma.kurin.findUnique({ where: { id: user.kurinId } });
-    return this.signToken(user.id, user.role, user.kurinId, isKurinniy, kurin!.kurinNumber);
+    return this.signToken(user.id, user.role, user.kurinId, isKurinniy, positions, kurin!.kurinNumber);
   }
 
   async loginWithGoogle(idToken: string): Promise<{ accessToken: string }> {
@@ -71,8 +75,9 @@ export class AuthService {
       await this.prisma.user.update({ where: { id: user.id }, data: { googleId: verified.sub } });
     }
     const isKurinniy = await isKurinniyForUser(this.prisma, user.id);
+    const positions = await getActiveKurinPositions(this.prisma, user.id, user.kurinId);
     const kurin = await this.prisma.kurin.findUnique({ where: { id: user.kurinId } });
-    return this.signToken(user.id, user.role, user.kurinId, isKurinniy, kurin!.kurinNumber);
+    return this.signToken(user.id, user.role, user.kurinId, isKurinniy, positions, kurin!.kurinNumber);
   }
 
   async requestPasswordReset(email: string): Promise<void> {

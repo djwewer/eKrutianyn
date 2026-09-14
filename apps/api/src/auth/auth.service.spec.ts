@@ -14,7 +14,7 @@ describe('AuthService', () => {
   beforeEach(() => {
     prisma = {
       user: { findUnique: jest.fn(), update: jest.fn() },
-      kurinPosition: { findFirst: jest.fn().mockResolvedValue(null) },
+      kurinPosition: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
       kurin: { findUnique: jest.fn().mockResolvedValue({ kurinNumber: '75' }) },
     };
     googleVerifier = { verify: jest.fn() };
@@ -31,14 +31,15 @@ describe('AuthService', () => {
   });
 
   describe('signToken', () => {
-    it('signs a JWT carrying sub/role/kurinId/isKurinniy/kurinNumber and it decodes back', () => {
-      const { accessToken } = service.signToken('user-1', Role.ZVYAZKOVYI, 'kurin-1', false, '75');
+    it('signs a JWT carrying sub/role/kurinId/isKurinniy/positions/kurinNumber and it decodes back', () => {
+      const { accessToken } = service.signToken('user-1', Role.ZVYAZKOVYI, 'kurin-1', false, [], '75');
       const decoded: any = jwtService.verify(accessToken);
       expect(decoded).toMatchObject({
         sub: 'user-1',
         role: Role.ZVYAZKOVYI,
         kurinId: 'kurin-1',
         isKurinniy: false,
+        positions: [],
         kurinNumber: '75',
       });
     });
