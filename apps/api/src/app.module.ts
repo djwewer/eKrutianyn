@@ -14,6 +14,7 @@ import { ApprovalRequestsModule } from './approval-requests/approval-requests.mo
 import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
+import { InventoryModule } from './inventory/inventory.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.mo
     ProbyCatalogModule,
     KurinPositionsModule,
     GuardianContactsModule,
+    InventoryModule,
   ],
   controllers: [HealthController],
 })
