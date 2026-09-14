@@ -73,8 +73,10 @@ model Kurin {
   probyProgram   ProbyProgram @relation(fields: [probyProgramId], references: [id])
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  driveFolderId  String?
 
   hurtky Hurtok[]
+  inventoryItems InventoryItem[]
   users  User[]
   positions KurinPosition[]
 }
@@ -124,6 +126,7 @@ model User {
   positionsAssigned KurinPosition[] @relation("PositionAssignedBy")
   positionsRemoved  KurinPosition[] @relation("PositionRemovedBy")
   guardianContacts  GuardianContact[] @relation("JunakGuardians")
+  createdInventoryItems InventoryItem[]
   stageProgressEntries JunakStageProgress[] @relation("JunakStageProgressEntries")
   stageClosedLogs      JunakStageProgress[] @relation("StageClosedByUser")
 }
@@ -144,6 +147,30 @@ model KurinPosition {
   removedAt    DateTime?
   removedById  String?
   removedBy    User?         @relation("PositionRemovedBy", fields: [removedById], references: [id])
+}
+
+model InventoryItem {
+  id          String   @id @default(uuid())
+  kurinId     String
+  kurin       Kurin    @relation(fields: [kurinId], references: [id])
+  name        String
+  description String?
+  quantity    Int
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  photos InventoryItemPhoto[]
+}
+
+model InventoryItemPhoto {
+  id          String        @id @default(uuid())
+  itemId      String
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  driveFileId String
+  url         String
+  createdAt   DateTime      @default(now())
 }
 
 model GuardianContact {
