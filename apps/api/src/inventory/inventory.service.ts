@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
@@ -116,10 +116,15 @@ export class InventoryService {
   }
 
   private async uploadAndAttachPhoto(kurinId: string, itemId: string, file: Express.Multer.File) {
-    const kurinFolderId = await this.googleDrive.ensureKurinFolder(kurinId);
-    const inventoryFolderId = await this.googleDrive.ensureSubfolder(kurinFolderId, 'Реманент');
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    if (!kurin?.driveFolderId) {
+      throw new ServiceUnavailableException(
+        'Курінь ще не підключив Google Drive або не обрав папку для реманенту',
+      );
+    }
     const { fileId, url } = await this.googleDrive.uploadFile(
-      inventoryFolderId,
+      kurinId,
+      kurin.driveFolderId,
       file.buffer,
       file.originalname,
       file.mimetype,

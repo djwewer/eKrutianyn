@@ -6,25 +6,19 @@ import { PrismaClient, Role, PositionScope, PositionType, ProbyProgramVersion } 
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
-import { GOOGLE_DRIVE_CLIENT } from '../src/google-drive/google-drive-client.provider';
+import { GoogleDriveService } from '../src/google-drive/google-drive.service';
 
 describe('Inventory (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
-  let fakeDrive: {
-    files: { list: jest.Mock; create: jest.Mock };
-    permissions: { create: jest.Mock };
-  };
+  let fakeGoogleDrive: { uploadFile: jest.Mock };
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
-    fakeDrive = {
-      files: { list: jest.fn(), create: jest.fn() },
-      permissions: { create: jest.fn() },
-    };
+    fakeGoogleDrive = { uploadFile: jest.fn() };
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(GOOGLE_DRIVE_CLIENT)
-      .useValue(fakeDrive)
+      .overrideProvider(GoogleDriveService)
+      .useValue(fakeGoogleDrive)
       .compile();
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -40,18 +34,17 @@ describe('Inventory (e2e)', () => {
 
   beforeEach(async () => {
     await cleanDatabase(prisma);
-    fakeDrive.files.list.mockReset().mockResolvedValue({ data: { files: [] } });
-    fakeDrive.files.create.mockReset().mockImplementation((args: { requestBody?: { mimeType?: string } }) => {
-      const isFolder = args.requestBody?.mimeType === 'application/vnd.google-apps.folder';
-      return Promise.resolve({ data: { id: isFolder ? 'fake-folder-id' : 'fake-file-id' } });
-    });
-    fakeDrive.permissions.create.mockReset().mockResolvedValue({});
+    fakeGoogleDrive.uploadFile.mockReset().mockResolvedValue({ fileId: 'fake-file-id', url: 'https://drive.google.com/uc?id=fake-file-id' });
   });
 
   async function setup() {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    return { kurin };
+    const connectedKurin = await prisma.kurin.update({
+      where: { id: kurin.id },
+      data: { driveFolderId: 'connected-folder-id' },
+    });
+    return { kurin: connectedKurin };
   }
 
   it('lets zvyazkovyi create an item with a photo', async () => {
@@ -246,38 +239,34 @@ describe('Inventory (e2e)', () => {
       .expect(400);
   });
 
-  it('reuses the cached kurin Drive folder across multiple uploads', async () => {
-    const { kurin } = await setup();
-    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+  it('returns 503 when creating an item with a photo on a kurin with no connected Drive folder', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const disconnectedKurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: disconnectedKurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
 
     await request(app.getHttpServer())
-      .post(`/kurins/${kurin.id}/inventory`)
+      .post(`/kurins/${disconnectedKurin.id}/inventory`)
       .set('Authorization', `Bearer ${token}`)
-      .field('name', 'Річ 1')
+      .field('name', 'Пилка')
       .field('quantity', '1')
-      .attach('photos', Buffer.from('fake'), 'a.jpg');
+      .attach('photos', Buffer.from('fake-image-data'), 'saw.jpg')
+      .expect(503);
+  });
 
-    fakeDrive.files.list.mockResolvedValueOnce({ data: { files: [{ id: 'fake-folder-id' }] } });
+  it('still creates an item without photos on a kurin with no connected Drive folder', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const disconnectedKurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: disconnectedKurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
 
-    await request(app.getHttpServer())
-      .post(`/kurins/${kurin.id}/inventory`)
+    const response = await request(app.getHttpServer())
+      .post(`/kurins/${disconnectedKurin.id}/inventory`)
       .set('Authorization', `Bearer ${token}`)
-      .field('name', 'Річ 2')
+      .field('name', 'Стіл')
       .field('quantity', '1')
-      .attach('photos', Buffer.from('fake'), 'b.jpg');
+      .expect((res) => expect([200, 201]).toContain(res.status));
 
-    const kurinAfter = await prisma.kurin.findUnique({ where: { id: kurin.id } });
-    expect(kurinAfter?.driveFolderId).toBe('fake-folder-id');
-
-    const folderCreateCalls = fakeDrive.files.create.mock.calls.filter(
-      (call: [{ requestBody?: { mimeType?: string } }]) =>
-        call[0]?.requestBody?.mimeType === 'application/vnd.google-apps.folder',
-    );
-    // Post 1 creates both the kurin's own Drive folder and the "Реманент" subfolder
-    // (2 folder-create calls, since neither exists yet). Post 2 reuses both: the kurin
-    // folder via the cached Kurin.driveFolderId, and the subfolder via the Drive search
-    // mocked above to find it — so no further folder-create calls happen.
-    expect(folderCreateCalls).toHaveLength(2);
+    expect(response.body.photos).toHaveLength(0);
   });
 });
