@@ -73,7 +73,11 @@ model Kurin {
   probyProgram   ProbyProgram @relation(fields: [probyProgramId], references: [id])
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  driveFolderId  String?
+  driveFolderId        String?
+  driveFolderName      String?
+  driveRefreshToken    String?
+  driveConnectedEmail  String?
+  driveConnectedAt     DateTime?
 
   hurtky Hurtok[]
   inventoryItems InventoryItem[]
