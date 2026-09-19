@@ -1,98 +1,128 @@
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
+
+const mockOAuth2Instance = {
+  generateAuthUrl: jest.fn(),
+  getToken: jest.fn(),
+  setCredentials: jest.fn(),
+  getAccessToken: jest.fn(),
+};
+const mockFilesCreate = jest.fn();
+const mockPermissionsCreate = jest.fn();
+const mockUserinfoGet = jest.fn();
+
+jest.mock('googleapis', () => ({
+  google: {
+    auth: { OAuth2: jest.fn().mockImplementation(() => mockOAuth2Instance) },
+    drive: jest.fn().mockImplementation(() => ({
+      files: { create: mockFilesCreate },
+      permissions: { create: mockPermissionsCreate },
+    })),
+    oauth2: jest.fn().mockImplementation(() => ({
+      userinfo: { get: mockUserinfoGet },
+    })),
+  },
+}));
+
 import { GoogleDriveService } from './google-drive.service';
 
 describe('GoogleDriveService', () => {
   let service: GoogleDriveService;
   let prisma: any;
-  let drive: any;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     prisma = {
       kurin: { findUnique: jest.fn(), update: jest.fn() },
     };
-    drive = {
-      files: {
-        list: jest.fn(),
-        create: jest.fn(),
-      },
-      permissions: {
-        create: jest.fn(),
-      },
-    };
-    service = new GoogleDriveService(drive, prisma);
+    service = new GoogleDriveService(prisma);
+    process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id';
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET = 'test-client-secret';
+    process.env.GOOGLE_OAUTH_REDIRECT_URI = 'https://example.com/callback';
   });
 
-  describe('ensureKurinFolder', () => {
-    it('returns the existing driveFolderId without calling Drive if already set', async () => {
-      prisma.kurin.findUnique.mockResolvedValue({ id: 'k1', name: 'Курінь 75', driveFolderId: 'existing-folder' });
+  describe('getAuthUrl', () => {
+    it('builds a Google consent URL with the drive.file scope and given state', () => {
+      mockOAuth2Instance.generateAuthUrl.mockReturnValue('https://accounts.google.com/mock-url');
 
-      const result = await service.ensureKurinFolder('k1');
+      const url = service.getAuthUrl('signed-state-123');
 
-      expect(result).toBe('existing-folder');
-      expect(drive.files.create).not.toHaveBeenCalled();
+      expect(url).toBe('https://accounts.google.com/mock-url');
+      expect(mockOAuth2Instance.generateAuthUrl).toHaveBeenCalledWith({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: ['https://www.googleapis.com/auth/drive.file'],
+        state: 'signed-state-123',
+      });
     });
+  });
 
-    it('creates a new folder and saves it when driveFolderId is null', async () => {
-      prisma.kurin.findUnique.mockResolvedValue({ id: 'k1', name: 'Курінь 75', driveFolderId: null });
-      drive.files.create.mockResolvedValue({ data: { id: 'new-folder-id' } });
+  describe('handleCallback', () => {
+    it('exchanges the code for tokens and saves refresh token + email on the kurin', async () => {
+      mockOAuth2Instance.getToken.mockResolvedValue({ tokens: { refresh_token: 'refresh-abc' } });
+      mockUserinfoGet.mockResolvedValue({ data: { email: 'zvyazkovyi@example.com' } });
 
-      const result = await service.ensureKurinFolder('k1');
+      const result = await service.handleCallback('kurin-1', 'auth-code-xyz');
 
-      expect(result).toBe('new-folder-id');
+      expect(result).toEqual({ email: 'zvyazkovyi@example.com' });
+      expect(mockOAuth2Instance.getToken).toHaveBeenCalledWith('auth-code-xyz');
+      expect(mockOAuth2Instance.setCredentials).toHaveBeenCalledWith({ refresh_token: 'refresh-abc' });
       expect(prisma.kurin.update).toHaveBeenCalledWith({
-        where: { id: 'k1' },
-        data: { driveFolderId: 'new-folder-id' },
+        where: { id: 'kurin-1' },
+        data: expect.objectContaining({
+          driveRefreshToken: 'refresh-abc',
+          driveConnectedEmail: 'zvyazkovyi@example.com',
+        }),
       });
     });
 
-    it('throws NotFoundException when the kurin does not exist', async () => {
-      prisma.kurin.findUnique.mockResolvedValue(null);
-      await expect(service.ensureKurinFolder('missing')).rejects.toThrow(NotFoundException);
+    it('throws ServiceUnavailableException when Google does not return a refresh token', async () => {
+      mockOAuth2Instance.getToken.mockResolvedValue({ tokens: {} });
+
+      await expect(service.handleCallback('kurin-1', 'auth-code-xyz')).rejects.toThrow(
+        ServiceUnavailableException,
+      );
     });
   });
 
-  describe('ensureSubfolder', () => {
-    it('returns an existing subfolder id without creating a new one', async () => {
-      drive.files.list.mockResolvedValue({ data: { files: [{ id: 'existing-sub' }] } });
+  describe('getPickerAccessToken', () => {
+    it('returns a fresh access token for a connected kurin', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockOAuth2Instance.getAccessToken.mockResolvedValue({ token: 'access-token-123' });
 
-      const result = await service.ensureSubfolder('parent-1', 'Реманент');
+      const token = await service.getPickerAccessToken('kurin-1');
 
-      expect(result).toBe('existing-sub');
-      expect(drive.files.create).not.toHaveBeenCalled();
+      expect(token).toBe('access-token-123');
+      expect(mockOAuth2Instance.setCredentials).toHaveBeenCalledWith({ refresh_token: 'refresh-abc' });
     });
 
-    it('creates a new subfolder when none is found', async () => {
-      drive.files.list.mockResolvedValue({ data: { files: [] } });
-      drive.files.create.mockResolvedValue({ data: { id: 'new-sub' } });
+    it('throws ServiceUnavailableException when the kurin has not connected Drive', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: null });
 
-      const result = await service.ensureSubfolder('parent-1', 'Реманент');
-
-      expect(result).toBe('new-sub');
+      await expect(service.getPickerAccessToken('kurin-1')).rejects.toThrow(ServiceUnavailableException);
     });
   });
 
   describe('uploadFile', () => {
     it('uploads the file, makes it link-viewable, and returns its id and url', async () => {
-      drive.files.create.mockResolvedValue({ data: { id: 'file-1' } });
-      drive.permissions.create.mockResolvedValue({});
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockFilesCreate.mockResolvedValue({ data: { id: 'file-1' } });
+      mockPermissionsCreate.mockResolvedValue({});
 
-      const result = await service.uploadFile('folder-1', Buffer.from('data'), 'photo.jpg', 'image/jpeg');
+      const result = await service.uploadFile('kurin-1', 'folder-1', Buffer.from('data'), 'photo.jpg', 'image/jpeg');
 
       expect(result).toEqual({ fileId: 'file-1', url: 'https://drive.google.com/uc?id=file-1' });
-      expect(drive.permissions.create).toHaveBeenCalledWith({
+      expect(mockPermissionsCreate).toHaveBeenCalledWith({
         fileId: 'file-1',
         requestBody: { role: 'reader', type: 'anyone' },
       });
     });
-  });
 
-  describe('when the Drive client is unavailable', () => {
-    it('throws ServiceUnavailableException instead of calling a null Drive client', async () => {
-      const unavailableService = new GoogleDriveService(null, prisma);
+    it('throws ServiceUnavailableException when the kurin has not connected Drive', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: null });
 
-      await expect(unavailableService.ensureSubfolder('parent-1', 'Реманент')).rejects.toThrow(
-        ServiceUnavailableException,
-      );
+      await expect(
+        service.uploadFile('kurin-1', 'folder-1', Buffer.from('data'), 'photo.jpg', 'image/jpeg'),
+      ).rejects.toThrow(ServiceUnavailableException);
     });
   });
 });

@@ -1,55 +1,66 @@
-import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { drive_v3 } from 'googleapis';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { google } from 'googleapis';
 import { Readable } from 'stream';
 import { PrismaService } from '../prisma/prisma.service';
-import { GOOGLE_DRIVE_CLIENT } from './google-drive-client.provider';
+
+const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 @Injectable()
 export class GoogleDriveService {
-  constructor(
-    @Inject(GOOGLE_DRIVE_CLIENT) private readonly drive: drive_v3.Drive | null,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  private requireDrive(): drive_v3.Drive {
-    if (!this.drive) {
-      throw new ServiceUnavailableException('Google Drive не налаштовано (GOOGLE_SERVICE_ACCOUNT_KEY відсутній або невалідний)');
-    }
-    return this.drive;
-  }
-
-  async ensureKurinFolder(kurinId: string): Promise<string> {
-    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
-    if (!kurin) {
-      throw new NotFoundException('Kurin not found');
-    }
-    if (kurin.driveFolderId) {
-      return kurin.driveFolderId;
-    }
-    const folderId = await this.createFolder(kurin.name, process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID as string);
-    await this.prisma.kurin.update({ where: { id: kurinId }, data: { driveFolderId: folderId } });
-    return folderId;
-  }
-
-  async ensureSubfolder(parentFolderId: string, name: string): Promise<string> {
-    const existing = await this.requireDrive().files.list({
-      q: `'${parentFolderId}' in parents and name = '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-      fields: 'files(id)',
+  getAuthUrl(state: string): string {
+    const client = this.createOAuthClient();
+    return client.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: [DRIVE_FILE_SCOPE],
+      state,
     });
-    const found = existing.data.files?.[0];
-    if (found?.id) {
-      return found.id;
+  }
+
+  async handleCallback(kurinId: string, code: string): Promise<{ email: string }> {
+    const client = this.createOAuthClient();
+    const { tokens } = await client.getToken(code);
+    if (!tokens.refresh_token) {
+      throw new ServiceUnavailableException(
+        'Google не повернув довгостроковий токен доступу — спробуйте підключити ще раз',
+      );
     }
-    return this.createFolder(name, parentFolderId);
+    client.setCredentials(tokens);
+    const oauth2 = google.oauth2({ version: 'v2', auth: client });
+    const { data } = await oauth2.userinfo.get();
+    const email = data.email ?? 'невідомо';
+    await this.prisma.kurin.update({
+      where: { id: kurinId },
+      data: {
+        driveRefreshToken: tokens.refresh_token,
+        driveConnectedEmail: email,
+        driveConnectedAt: new Date(),
+      },
+    });
+    return { email };
+  }
+
+  async getPickerAccessToken(kurinId: string): Promise<string> {
+    const client = await this.getAuthorizedClient(kurinId);
+    const { token } = await client.getAccessToken();
+    if (!token) {
+      throw new ServiceUnavailableException('Не вдалося отримати токен доступу до Google Drive');
+    }
+    return token;
   }
 
   async uploadFile(
+    kurinId: string,
     folderId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
   ): Promise<{ fileId: string; url: string }> {
-    const res = await this.requireDrive().files.create({
+    const client = await this.getAuthorizedClient(kurinId);
+    const drive = google.drive({ version: 'v3', auth: client });
+    const res = await drive.files.create({
       requestBody: { name: filename, parents: [folderId] },
       media: { mimeType, body: Readable.from(buffer) },
       fields: 'id',
@@ -58,22 +69,28 @@ export class GoogleDriveService {
     if (!fileId) {
       throw new Error('Failed to upload file to Drive');
     }
-    await this.requireDrive().permissions.create({
+    await drive.permissions.create({
       fileId,
       requestBody: { role: 'reader', type: 'anyone' },
     });
     return { fileId, url: `https://drive.google.com/uc?id=${fileId}` };
   }
 
-  private async createFolder(name: string, parentId: string): Promise<string> {
-    const res = await this.requireDrive().files.create({
-      requestBody: { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-      fields: 'id',
-    });
-    const id = res.data.id;
-    if (!id) {
-      throw new Error('Failed to create Drive folder');
+  private createOAuthClient() {
+    return new google.auth.OAuth2(
+      process.env.GOOGLE_OAUTH_CLIENT_ID,
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+      process.env.GOOGLE_OAUTH_REDIRECT_URI,
+    );
+  }
+
+  private async getAuthorizedClient(kurinId: string) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    if (!kurin?.driveRefreshToken) {
+      throw new ServiceUnavailableException('Курінь ще не підключив Google Drive');
     }
-    return id;
+    const client = this.createOAuthClient();
+    client.setCredentials({ refresh_token: kurin.driveRefreshToken });
+    return client;
   }
 }
