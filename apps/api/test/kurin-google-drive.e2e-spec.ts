@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
@@ -142,6 +142,26 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
     const updated = await prisma.kurin.findUnique({ where: { id: kurin.id } });
     expect(updated?.driveFolderId).toBe('folder-abc');
     expect(updated?.driveFolderName).toBe('Обозництво');
+  });
+
+  it('lets an intendant check status', async () => {
+    const { kurin } = await setup();
+    const intendant = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: PositionScope.KURIN,
+        positionType: PositionType.INTENDANT,
+        userId: intendant.id,
+        assignedById: intendant.id,
+      },
+    });
+    const token = issueTokenFor(jwtService, intendant);
+
+    await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/google-drive/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 
   it('forbids acting on a different kurin', async () => {

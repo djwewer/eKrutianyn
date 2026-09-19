@@ -2,6 +2,15 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { ProgressAction, ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+const KURIN_PUBLIC_SELECT = {
+  id: true,
+  name: true,
+  kurinNumber: true,
+  gender: true,
+  stanytsia: true,
+  probyProgram: { select: { version: true } },
+} as const;
+
 @Injectable()
 export class KurinsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -9,7 +18,7 @@ export class KurinsService {
   async findById(kurinId: string) {
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
-      include: { probyProgram: { select: { version: true } } },
+      select: KURIN_PUBLIC_SELECT,
     });
     if (!kurin) {
       throw new NotFoundException('Kurin not found');
@@ -18,7 +27,10 @@ export class KurinsService {
   }
 
   async changeKurinNumber(kurinId: string, newNumber: string) {
-    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: KURIN_PUBLIC_SELECT,
+    });
     if (!kurin) {
       throw new NotFoundException('Kurin not found');
     }
@@ -29,11 +41,18 @@ export class KurinsService {
     if (existing) {
       throw new ConflictException('This kurin number is already in use');
     }
-    return this.prisma.kurin.update({ where: { id: kurinId }, data: { kurinNumber: newNumber } });
+    return this.prisma.kurin.update({
+      where: { id: kurinId },
+      data: { kurinNumber: newNumber },
+      select: KURIN_PUBLIC_SELECT,
+    });
   }
 
   async changeProbyProgram(kurinId: string, version: ProbyProgramVersion, actorId: string) {
-    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { ...KURIN_PUBLIC_SELECT, probyProgramId: true },
+    });
     if (!kurin) throw new NotFoundException('Kurin not found');
 
     const newProgram = await this.prisma.probyProgram.findFirst({ where: { version } });
@@ -102,6 +121,7 @@ export class KurinsService {
     return this.prisma.kurin.update({
       where: { id: kurinId },
       data: { probyProgramId: newProgram.id },
+      select: KURIN_PUBLIC_SELECT,
     });
   }
 }

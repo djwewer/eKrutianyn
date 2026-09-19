@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useKurin, useChangeProbyProgram, useChangeKurinNumber } from '@/lib/queries/kurin';
 import { useSession } from '@/lib/session-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,14 @@ import { useGoogleDriveStatus, useConnectGoogleDrive, useSetGoogleDriveFolder, f
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 
 export default function KurinPage() {
+  return (
+    <Suspense fallback={<p>Завантаження...</p>}>
+      <KurinPageContent />
+    </Suspense>
+  );
+}
+
+function KurinPageContent() {
   const { data: kurin, isLoading } = useKurin();
   const { data: session } = useSession();
   const changeProgram = useChangeProbyProgram(kurin?.id ?? '');
@@ -23,13 +32,22 @@ export default function KurinPage() {
   const driveStatus = useGoogleDriveStatus(kurin?.id);
   const connectDrive = useConnectGoogleDrive(kurin?.id ?? '');
   const setDriveFolder = useSetGoogleDriveFolder(kurin?.id ?? '');
+  const searchParams = useSearchParams();
+  const driveConnected = searchParams.get('driveConnected') === '1';
+  const driveError = searchParams.get('driveError') === '1';
+  const [pickerError, setPickerError] = useState<string | null>(null);
 
   async function handlePickFolder() {
     if (!kurin) return;
-    const accessToken = await fetchGoogleDrivePickerToken(kurin.id);
-    await openGoogleDriveFolderPicker(accessToken, (folderId, folderName) => {
-      setDriveFolder.mutate({ folderId, folderName });
-    });
+    setPickerError(null);
+    try {
+      const accessToken = await fetchGoogleDrivePickerToken(kurin.id);
+      await openGoogleDriveFolderPicker(accessToken, (folderId, folderName) => {
+        setDriveFolder.mutate({ folderId, folderName });
+      });
+    } catch {
+      setPickerError('Не вдалося відкрити вибір папки. Спробуйте підключити Google Drive повторно.');
+    }
   }
 
   useEffect(() => {
@@ -137,6 +155,10 @@ export default function KurinPage() {
             <CardTitle>Google Drive</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
+            {driveConnected && <p className="text-sm text-green-600">Google Drive підключено.</p>}
+            {driveError && (
+              <p className="text-sm text-destructive">Не вдалося підключити Google Drive. Спробуйте ще раз.</p>
+            )}
             {driveStatus.data?.connected ? (
               <>
                 <p>Підключено як: {driveStatus.data.email}</p>
@@ -147,6 +169,7 @@ export default function KurinPage() {
                 <Button size="sm" variant="outline" onClick={handlePickFolder}>
                   {driveStatus.data.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
                 </Button>
+                {pickerError && <p className="text-sm text-destructive">{pickerError}</p>}
               </>
             ) : (
               <>

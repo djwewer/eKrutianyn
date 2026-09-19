@@ -57,7 +57,7 @@ describe('Kurin proby-program change (e2e)', () => {
       .send({ version: ProbyProgramVersion.NEW })
       .expect(200);
 
-    expect(response.body.probyProgramId).toBe(newTree.program.id);
+    expect(response.body.probyProgram.version).toBe(ProbyProgramVersion.NEW);
 
     const newProgress = await prisma.junakProgress.findUnique({
       where: { junakId_pointId: { junakId: junak.id, pointId: newTree.points[0].id } },

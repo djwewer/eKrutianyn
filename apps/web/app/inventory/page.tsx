@@ -195,7 +195,7 @@ export default function InventoryPage() {
   const driveStatus = useGoogleDriveStatus(kurinId);
   const driveReady = !!driveStatus.data?.folderId;
 
-  if (isLoading) return <p>Завантаження...</p>;
+  if (isLoading || driveStatus.isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
   if (!kurinId) return null;
 

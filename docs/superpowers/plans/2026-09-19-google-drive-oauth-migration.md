@@ -1455,4 +1455,8 @@ These cannot be done by an implementer and are not part of any task above:
 3. Create a separate "API key" (not an OAuth client) restricted to the Google Picker API, for `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY`.
 4. Set `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` in `apps/api/.env` on the VPS; remove the now-unused `GOOGLE_SERVICE_ACCOUNT_KEY`/`GOOGLE_DRIVE_ROOT_FOLDER_ID` lines.
 5. Set `NEXT_PUBLIC_GOOGLE_PICKER_API_KEY` in Vercel's environment variables for `apps/web`.
-6. Redeploy both sides; a zvyazkovyi then connects their kurin's Drive and picks a folder through the app itself.
+6. Before redeploying, run this SQL against the production database to clear any `driveFolderId` values set by the old, now-removed service-account auto-creation logic — those folder IDs live inside Andrii's personal Drive under the old scheme and are meaningless under the new per-kurin OAuth scheme (a `drive.file`-scoped OAuth client has no grant over a folder it neither created nor had explicitly picked, so leaving a stale ID would make the app believe a kurin is "ready" and then fail with an opaque Google API error on the first real upload attempt, instead of the friendly "not connected" message):
+   ```sql
+   UPDATE "Kurin" SET "driveFolderId" = NULL;
+   ```
+7. Redeploy both sides; a zvyazkovyi then connects their kurin's Drive and picks a folder through the app itself.

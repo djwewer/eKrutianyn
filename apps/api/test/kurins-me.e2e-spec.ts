@@ -43,11 +43,28 @@ describe('Kurins self-read (e2e)', () => {
 
     expect(response.body.id).toBe(kurin.id);
     expect(response.body.name).toBe('Курінь Орлів');
-    expect(response.body.probyProgramId).toBe(program.id);
     expect(response.body.probyProgram.version).toBe(ProbyProgramVersion.OLD);
   });
 
   it('returns 401 without a token', async () => {
     await request(app.getHttpServer()).get('/kurins/me').expect(401);
+  });
+
+  it('never includes driveRefreshToken or other Drive internals in the response', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, junak);
+
+    const response = await request(app.getHttpServer())
+      .get('/kurins/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).not.toHaveProperty('driveRefreshToken');
+    expect(response.body).not.toHaveProperty('driveFolderId');
+    expect(response.body).not.toHaveProperty('driveFolderName');
+    expect(response.body).not.toHaveProperty('driveConnectedEmail');
+    expect(response.body).not.toHaveProperty('driveConnectedAt');
   });
 });
