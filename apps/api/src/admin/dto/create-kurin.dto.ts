@@ -7,4 +7,5 @@ export class CreateKurinDto {
   @IsEnum(KurinGender) gender: KurinGender;
   @IsString() @IsNotEmpty() stanytsia: string;
   @IsUUID() probyProgramId: string;
+  @IsOptional() @IsString() driveFolderId?: string;
 }

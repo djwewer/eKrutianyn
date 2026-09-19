@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
+import { useGoogleDriveStatus, useConnectGoogleDrive, useSetGoogleDriveFolder, fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
+import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 
 export default function KurinPage() {
   const { data: kurin, isLoading } = useKurin();
@@ -18,6 +20,17 @@ export default function KurinPage() {
   const [newKurinNumber, setNewKurinNumber] = useState('');
   const [selectedVersion, setSelectedVersion] = useState<'OLD' | 'NEW'>('OLD');
   const canChangeProgram = session?.role === 'ZVYAZKOVYI';
+  const driveStatus = useGoogleDriveStatus(kurin?.id);
+  const connectDrive = useConnectGoogleDrive(kurin?.id ?? '');
+  const setDriveFolder = useSetGoogleDriveFolder(kurin?.id ?? '');
+
+  async function handlePickFolder() {
+    if (!kurin) return;
+    const accessToken = await fetchGoogleDrivePickerToken(kurin.id);
+    await openGoogleDriveFolderPicker(accessToken, (folderId, folderName) => {
+      setDriveFolder.mutate({ folderId, folderName });
+    });
+  }
 
   useEffect(() => {
     if (kurin) {
@@ -118,6 +131,34 @@ export default function KurinPage() {
           )}
         </CardContent>
       </Card>
+      {canChangeProgram && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Google Drive</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {driveStatus.data?.connected ? (
+              <>
+                <p>Підключено як: {driveStatus.data.email}</p>
+                <p>
+                  Папка для реманенту:{' '}
+                  {driveStatus.data.folderName ?? <span className="text-muted-foreground">не обрана</span>}
+                </p>
+                <Button size="sm" variant="outline" onClick={handlePickFolder}>
+                  {driveStatus.data.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">Google Drive не підключено.</p>
+                <Button size="sm" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
+                  Підключити Google Drive
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

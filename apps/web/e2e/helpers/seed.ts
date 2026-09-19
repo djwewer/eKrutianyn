@@ -37,7 +37,7 @@ export async function seedProbyProgram(pointDescriptions: string[] = ['Точк�
   return { program, stage, category, points };
 }
 
-export async function seedKurinWithZvyazkovyi(probyProgramId: string) {
+export async function seedKurinWithZvyazkovyi(probyProgramId: string, options?: { driveFolderId?: string }) {
   const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const kurinNumber = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const kurin = await adminPost<{ id: string; name: string; kurinNumber: string }>('/admin/kurins', {
@@ -46,6 +46,7 @@ export async function seedKurinWithZvyazkovyi(probyProgramId: string) {
     gender: 'MALE',
     stanytsia: 'Тестова станиця',
     probyProgramId,
+    ...(options?.driveFolderId ? { driveFolderId: options.driveFolderId } : {}),
   });
   const email = `zvyazkovyi-${uniqueSuffix}@example.com`;
   const password = 'password123';

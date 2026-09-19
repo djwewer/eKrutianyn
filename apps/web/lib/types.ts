@@ -172,3 +172,10 @@ export interface Kurin {
     version: 'OLD' | 'NEW';
   };
 }
+
+export interface GoogleDriveStatus {
+  connected: boolean;
+  email?: string;
+  folderId?: string;
+  folderName?: string;
+}

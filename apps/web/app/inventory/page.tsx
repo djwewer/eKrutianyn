@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
+import { useGoogleDriveStatus } from '@/lib/queries/google-drive';
 
 function PhotoCarousel({ item, canEdit, kurinId }: { item: InventoryItem; canEdit: boolean; kurinId: string }) {
   const [index, setIndex] = useState(0);
@@ -191,6 +192,8 @@ export default function InventoryPage() {
   const kurinId = session?.kurinId;
   const { data: items, isLoading, isError, error } = useInventory(kurinId);
   const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.positions.includes('INTENDANT');
+  const driveStatus = useGoogleDriveStatus(kurinId);
+  const driveReady = !!driveStatus.data?.folderId;
 
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
@@ -199,7 +202,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Облік реманенту</h1>
-      {canEdit && (
+      {canEdit && driveReady && (
         <Card>
           <CardHeader>
             <CardTitle>Додати річ</CardTitle>
@@ -208,6 +211,15 @@ export default function InventoryPage() {
             <AddItemForm kurinId={kurinId} />
           </CardContent>
         </Card>
+      )}
+      {canEdit && !driveReady && (
+        <p className="text-sm text-muted-foreground">
+          Спершу підключіть Google Drive і оберіть папку для реманенту у{' '}
+          <a href="/kurin" className="underline">
+            налаштуваннях куреня
+          </a>
+          .
+        </p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         {(items ?? []).map((item) => (
