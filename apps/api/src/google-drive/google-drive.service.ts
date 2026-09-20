@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { PrismaService } from '../prisma/prisma.service';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
 
 @Injectable()
 export class GoogleDriveService {
@@ -14,7 +15,7 @@ export class GoogleDriveService {
     return client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
-      scope: [DRIVE_FILE_SCOPE],
+      scope: [DRIVE_FILE_SCOPE, EMAIL_SCOPE],
       state,
     });
   }

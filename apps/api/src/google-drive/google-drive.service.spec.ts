@@ -50,7 +50,7 @@ describe('GoogleDriveService', () => {
       expect(mockOAuth2Instance.generateAuthUrl).toHaveBeenCalledWith({
         access_type: 'offline',
         prompt: 'consent',
-        scope: ['https://www.googleapis.com/auth/drive.file'],
+        scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email'],
         state: 'signed-state-123',
       });
     });
