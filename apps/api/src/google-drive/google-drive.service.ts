@@ -74,7 +74,7 @@ export class GoogleDriveService {
       fileId,
       requestBody: { role: 'reader', type: 'anyone' },
     });
-    return { fileId, url: `https://drive.google.com/uc?id=${fileId}` };
+    return { fileId, url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` };
   }
 
   private createOAuthClient() {

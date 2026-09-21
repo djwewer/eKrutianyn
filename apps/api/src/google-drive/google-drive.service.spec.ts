@@ -110,7 +110,7 @@ describe('GoogleDriveService', () => {
 
       const result = await service.uploadFile('kurin-1', 'folder-1', Buffer.from('data'), 'photo.jpg', 'image/jpeg');
 
-      expect(result).toEqual({ fileId: 'file-1', url: 'https://drive.google.com/uc?id=file-1' });
+      expect(result).toEqual({ fileId: 'file-1', url: 'https://drive.google.com/thumbnail?id=file-1&sz=w1000' });
       expect(mockPermissionsCreate).toHaveBeenCalledWith({
         fileId: 'file-1',
         requestBody: { role: 'reader', type: 'anyone' },
