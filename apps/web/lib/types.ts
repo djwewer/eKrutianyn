@@ -179,3 +179,12 @@ export interface GoogleDriveStatus {
   folderId?: string;
   folderName?: string;
 }
+
+export interface JunakImportStatus {
+  connectedSpreadsheetId?: string;
+  connectedSpreadsheetName?: string;
+  mapping?: {
+    columnMapping: { column: string; header: string; field: string }[];
+    positionValueMapping: { rawValue: string; positionType: string | null }[];
+  };
+}

@@ -47,3 +47,24 @@ export async function openGoogleDriveFolderPicker(
     .build();
   picker.setVisible(true);
 }
+
+export async function openGoogleSheetPicker(
+  accessToken: string,
+  onPicked: (spreadsheetId: string, spreadsheetName: string) => void,
+): Promise<void> {
+  await loadGooglePickerScript();
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PICKER_API_KEY as string;
+  const google = (window as any).google;
+  const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS);
+  const picker = new google.picker.PickerBuilder()
+    .setOAuthToken(accessToken)
+    .setDeveloperKey(apiKey)
+    .addView(view)
+    .setCallback((data: { action: string; docs?: { id: string; name: string }[] }) => {
+      if (data.action === google.picker.Action.PICKED && data.docs?.[0]) {
+        onPicked(data.docs[0].id, data.docs[0].name);
+      }
+    })
+    .build();
+  picker.setVisible(true);
+}

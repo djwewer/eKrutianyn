@@ -18,6 +18,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
     prisma.profileChangeLog.deleteMany(),
     prisma.inventoryItemPhoto.deleteMany(),
     prisma.inventoryItem.deleteMany(),
+    prisma.junakImportMapping.deleteMany(),
     prisma.user.deleteMany(),
     prisma.hurtok.deleteMany(),
     prisma.kurin.deleteMany(),

@@ -9,6 +9,8 @@ const mockOAuth2Instance = {
 const mockFilesCreate = jest.fn();
 const mockPermissionsCreate = jest.fn();
 const mockUserinfoGet = jest.fn();
+const mockSheetsValuesGet = jest.fn();
+const mockSheetsValuesAppend = jest.fn();
 
 jest.mock('googleapis', () => ({
   google: {
@@ -19,6 +21,9 @@ jest.mock('googleapis', () => ({
     })),
     oauth2: jest.fn().mockImplementation(() => ({
       userinfo: { get: mockUserinfoGet },
+    })),
+    sheets: jest.fn().mockImplementation(() => ({
+      spreadsheets: { values: { get: mockSheetsValuesGet, append: mockSheetsValuesAppend } },
     })),
   },
 }));
@@ -123,6 +128,40 @@ describe('GoogleDriveService', () => {
       await expect(
         service.uploadFile('kurin-1', 'folder-1', Buffer.from('data'), 'photo.jpg', 'image/jpeg'),
       ).rejects.toThrow(ServiceUnavailableException);
+    });
+  });
+
+  describe('readSheetValues', () => {
+    it('returns the sheet grid for a connected kurin', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockSheetsValuesGet.mockResolvedValue({ data: { values: [['A', 'B'], ['1', '2']] } });
+
+      const result = await service.readSheetValues('kurin-1', 'sheet-id-1');
+
+      expect(result).toEqual([['A', 'B'], ['1', '2']]);
+    });
+
+    it('throws ServiceUnavailableException when the kurin has not connected Drive', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: null });
+
+      await expect(service.readSheetValues('kurin-1', 'sheet-id-1')).rejects.toThrow(ServiceUnavailableException);
+    });
+  });
+
+  describe('appendSheetRow', () => {
+    it('appends a row to the connected sheet', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockSheetsValuesAppend.mockResolvedValue({});
+
+      await service.appendSheetRow('kurin-1', 'sheet-id-1', ['Іван', 'Петренко']);
+
+      expect(mockSheetsValuesAppend).toHaveBeenCalledWith({
+        spreadsheetId: 'sheet-id-1',
+        range: 'A:ZZ',
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        requestBody: { values: [['Іван', 'Петренко']] },
+      });
     });
   });
 });

@@ -12,6 +12,8 @@ import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
 import { useGoogleDriveStatus, useConnectGoogleDrive, useSetGoogleDriveFolder, fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
+import { useJunakImportStatus, useSetJunakImportSpreadsheet } from '@/lib/queries/junak-import';
+import { openGoogleSheetPicker } from '@/lib/google-picker';
 
 export default function KurinPage() {
   return (
@@ -36,6 +38,9 @@ function KurinPageContent() {
   const driveConnected = searchParams.get('driveConnected') === '1';
   const driveError = searchParams.get('driveError') === '1';
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const junakImportStatus = useJunakImportStatus(kurin?.id);
+  const setJunakImportSpreadsheet = useSetJunakImportSpreadsheet(kurin?.id ?? '');
+  const [bookConnectError, setBookConnectError] = useState<string | null>(null);
 
   async function handlePickFolder() {
     if (!kurin) return;
@@ -47,6 +52,19 @@ function KurinPageContent() {
       });
     } catch {
       setPickerError('Не вдалося відкрити вибір папки. Спробуйте підключити Google Drive повторно.');
+    }
+  }
+
+  async function handleConnectJudgeBook() {
+    if (!kurin) return;
+    setBookConnectError(null);
+    try {
+      const accessToken = await fetchGoogleDrivePickerToken(kurin.id);
+      await openGoogleSheetPicker(accessToken, (spreadsheetId, spreadsheetName) => {
+        setJunakImportSpreadsheet.mutate({ spreadsheetId, spreadsheetName });
+      });
+    } catch {
+      setBookConnectError('Не вдалося підключити таблицю. Спробуйте ще раз.');
     }
   }
 
@@ -179,6 +197,36 @@ function KurinPageContent() {
                 </Button>
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+      {canChangeProgram && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Книга судді</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {junakImportStatus.data?.connectedSpreadsheetId ? (
+              <>
+                <p>Підключена таблиця: {junakImportStatus.data.connectedSpreadsheetName}</p>
+                <Button size="sm" variant="outline" onClick={handleConnectJudgeBook}>
+                  Змінити таблицю
+                </Button>
+                <div>
+                  <a href="/kurin/junak-import" className="underline">
+                    Імпортувати юнаків з цієї таблиці
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">Книга судді не підключена.</p>
+                <Button size="sm" disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
+                  Підключити Книгу судді
+                </Button>
+              </>
+            )}
+            {bookConnectError && <p className="text-sm text-destructive">{bookConnectError}</p>}
           </CardContent>
         </Card>
       )}

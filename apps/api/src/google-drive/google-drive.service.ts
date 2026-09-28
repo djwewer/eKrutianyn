@@ -77,6 +77,28 @@ export class GoogleDriveService {
     return { fileId, url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` };
   }
 
+  async readSheetValues(kurinId: string, spreadsheetId: string): Promise<string[][]> {
+    const client = await this.getAuthorizedClient(kurinId);
+    const sheets = google.sheets({ version: 'v4', auth: client });
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'A:ZZ',
+    });
+    return (res.data.values ?? []) as string[][];
+  }
+
+  async appendSheetRow(kurinId: string, spreadsheetId: string, values: string[]): Promise<void> {
+    const client = await this.getAuthorizedClient(kurinId);
+    const sheets = google.sheets({ version: 'v4', auth: client });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'A:ZZ',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [values] },
+    });
+  }
+
   private createOAuthClient() {
     return new google.auth.OAuth2(
       process.env.GOOGLE_OAUTH_CLIENT_ID,
