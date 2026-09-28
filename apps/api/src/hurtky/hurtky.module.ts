@@ -7,5 +7,6 @@ import { HurtkyService } from './hurtky.service';
   imports: [AuthModule],
   controllers: [HurtkyController],
   providers: [HurtkyService],
+  exports: [HurtkyService],
 })
 export class HurtkyModule {}
