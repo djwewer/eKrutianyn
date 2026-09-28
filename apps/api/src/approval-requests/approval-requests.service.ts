@@ -1,21 +1,29 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ApprovalActionType, ApprovalStatus, Role, User } from '@prisma/client';
+import { ApprovalActionType, ApprovalStatus, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
+import { JunakImportRowProcessorService } from '../junak-import/junak-import-row-processor.service';
+import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 
 @Injectable()
 export class ApprovalRequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rowProcessor: JunakImportRowProcessorService,
+  ) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
-    if (!actor.isKurinniy) {
+    const canInitiateBulkImport =
+      dto.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY && actor.positions.includes(PositionType.SUDDIA);
+    if (!actor.isKurinniy && !canInitiateBulkImport) {
       throw new ForbiddenException('Only kurinniy can create approval requests');
     }
-    if (dto.actionType === ApprovalActionType.CREATE_JUNAK && dto.junakId) {
-      throw new BadRequestException('junakId must not be provided for CREATE_JUNAK');
+    const noJunakIdActionTypes = [ApprovalActionType.CREATE_JUNAK, ApprovalActionType.BULK_IMPORT_JUNAKY] as const;
+    if (noJunakIdActionTypes.includes(dto.actionType as any) && dto.junakId) {
+      throw new BadRequestException('junakId must not be provided for this action type');
     }
-    if (dto.actionType !== ApprovalActionType.CREATE_JUNAK && !dto.junakId) {
+    if (!noJunakIdActionTypes.includes(dto.actionType as any) && !dto.junakId) {
       throw new BadRequestException('junakId is required for this action type');
     }
 
@@ -63,7 +71,22 @@ export class ApprovalRequestsService {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
 
     return this.prisma.$transaction(async (tx) => {
-      if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+      if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
+        const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
+        const results = [];
+        for (let i = 0; i < data.rows.length; i++) {
+          results.push(await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor));
+        }
+        return tx.approvalRequest.update({
+          where: { id: requestId },
+          data: {
+            status: ApprovalStatus.APPROVED,
+            approvedById: actor.userId,
+            decidedAt: new Date(),
+            newData: { rows: data.rows, results } as any,
+          },
+        });
+      } else if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
         const data = req.newData as {
           firstName: string;
           lastName: string;

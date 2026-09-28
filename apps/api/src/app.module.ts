@@ -15,6 +15,7 @@ import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { JunakImportModule } from './junak-import/junak-import.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { InventoryModule } from './inventory/inventory.module';
     KurinPositionsModule,
     GuardianContactsModule,
     InventoryModule,
+    JunakImportModule,
   ],
   controllers: [HealthController],
 })
