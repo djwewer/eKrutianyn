@@ -7,5 +7,6 @@ import { KurinPositionsService } from './kurin-positions.service';
   imports: [AuthModule],
   controllers: [KurinPositionsController],
   providers: [KurinPositionsService],
+  exports: [KurinPositionsService],
 })
 export class KurinPositionsModule {}

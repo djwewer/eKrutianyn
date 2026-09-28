@@ -7,5 +7,6 @@ import { ProbyProgressService } from './proby-progress.service';
   imports: [AuthModule],
   controllers: [ProbyProgressController],
   providers: [ProbyProgressService],
+  exports: [ProbyProgressService],
 })
 export class ProbyProgressModule {}

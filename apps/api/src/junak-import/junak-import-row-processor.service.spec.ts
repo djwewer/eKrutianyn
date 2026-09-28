@@ -1,19 +1,27 @@
 import { JunakImportRowProcessorService } from './junak-import-row-processor.service';
 import { ResolvedJunakRow } from './junak-import-row.types';
 
+const ACTOR = { userId: 'zvyazkovyi-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1', isKurinniy: false, positions: [] } as any;
+
 describe('JunakImportRowProcessorService', () => {
   let service: JunakImportRowProcessorService;
   let prisma: any;
   let hurtky: any;
+  let kurinPositions: any;
+  let probyProgress: any;
 
   beforeEach(() => {
     prisma = {
       user: { create: jest.fn(), update: jest.fn() },
       guardianContact: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+      kurin: { findUnique: jest.fn() },
+      probyStage: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (fn: (tx: any) => Promise<unknown>) => fn(prisma)),
     };
     hurtky = { listForKurin: jest.fn().mockResolvedValue([]), create: jest.fn() };
-    service = new JunakImportRowProcessorService(prisma, hurtky);
+    kurinPositions = { assign: jest.fn() };
+    probyProgress = { getProgressFor: jest.fn(), confirm: jest.fn(), closeStage: jest.fn() };
+    service = new JunakImportRowProcessorService(prisma, hurtky, kurinPositions, probyProgress);
   });
 
   function baseRow(overrides: Partial<ResolvedJunakRow> = {}): ResolvedJunakRow {
@@ -23,7 +31,7 @@ describe('JunakImportRowProcessorService', () => {
   it('creates a new junak when no matchedUserId is given', async () => {
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
 
-    const result = await service.processRow('kurin-1', baseRow(), 0, 'actor-1');
+    const result = await service.processRow('kurin-1', baseRow(), 0, ACTOR);
 
     expect(result.junakId).toBe('user-1');
     expect(result.created).toBe(true);
@@ -38,7 +46,7 @@ describe('JunakImportRowProcessorService', () => {
       'kurin-1',
       baseRow({ matchedUserId: 'user-2', phone: undefined }),
       0,
-      'actor-1',
+      ACTOR,
     );
 
     expect(result.junakId).toBe('user-2');
@@ -54,7 +62,7 @@ describe('JunakImportRowProcessorService', () => {
     hurtky.create.mockResolvedValue({ id: 'h2' });
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
 
-    const result = await service.processRow('kurin-1', baseRow({ hurtokName: 'Орли' }), 0, 'actor-1');
+    const result = await service.processRow('kurin-1', baseRow({ hurtokName: 'Орли' }), 0, ACTOR);
 
     expect(hurtky.create).toHaveBeenCalledWith({ name: 'Орли', number: undefined }, 'kurin-1');
     expect(result.succeededSteps).toContain('hurtok');
@@ -64,7 +72,7 @@ describe('JunakImportRowProcessorService', () => {
     hurtky.listForKurin.mockResolvedValue([{ id: 'h1', name: 'Вовки' }]);
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
 
-    await service.processRow('kurin-1', baseRow({ hurtokName: 'Вовки' }), 0, 'actor-1');
+    await service.processRow('kurin-1', baseRow({ hurtokName: 'Вовки' }), 0, ACTOR);
 
     expect(hurtky.create).not.toHaveBeenCalled();
   });
@@ -77,7 +85,7 @@ describe('JunakImportRowProcessorService', () => {
       'kurin-1',
       baseRow({ guardians: [{ name: 'Марія Петренко', phone: '0501234567' }] }),
       0,
-      'actor-1',
+      ACTOR,
     );
 
     expect(prisma.guardianContact.create).toHaveBeenCalledWith({
@@ -94,7 +102,7 @@ describe('JunakImportRowProcessorService', () => {
       'kurin-1',
       baseRow({ guardians: [{ name: 'Марія Петренко', phone: '0501234567' }] }),
       0,
-      'actor-1',
+      ACTOR,
     );
 
     expect(prisma.guardianContact.update).toHaveBeenCalledWith({
@@ -107,9 +115,85 @@ describe('JunakImportRowProcessorService', () => {
   it('records the error and stops when user creation throws, without throwing itself', async () => {
     prisma.user.create.mockRejectedValue(new Error('email already in use'));
 
-    const result = await service.processRow('kurin-1', baseRow(), 0, 'actor-1');
+    const result = await service.processRow('kurin-1', baseRow(), 0, ACTOR);
 
     expect(result.error).toBe('email already in use');
     expect(result.junakId).toBeUndefined();
+  });
+
+  it('assigns a kurin-scope position via KurinPositionsService', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ kurinPositionTypes: ['SUDDIA' as any] }),
+      0,
+      ACTOR,
+    );
+
+    expect(kurinPositions.assign).toHaveBeenCalledWith(
+      { userId: 'user-1', scope: 'KURIN', positionType: 'SUDDIA', hurtokId: undefined },
+      ACTOR,
+    );
+    expect(result.succeededSteps).toContain('positions');
+  });
+
+  it('assigns a hurtok-scope position only when the row resolved a hurtokId', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    hurtky.listForKurin.mockResolvedValue([{ id: 'h1', name: 'Вовки' }]);
+
+    await service.processRow(
+      'kurin-1',
+      baseRow({ hurtokName: 'Вовки', hurtokPositionTypes: ['HURTKOVYI' as any] }),
+      0,
+      ACTOR,
+    );
+
+    expect(kurinPositions.assign).toHaveBeenCalledWith(
+      { userId: 'user-1', scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: 'h1' },
+      ACTOR,
+    );
+  });
+
+  it('backfills proba progress for a degree stage that is not yet closed, in stage order', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' });
+    prisma.probyStage.findMany.mockResolvedValue([
+      { id: 'stage-1', name: 'Проба прихильника (Відзнака прихильника)', order: 1, categories: [{ points: [{ id: 'p1' }, { id: 'p2' }] }] },
+      { id: 'stage-2', name: 'Проба учасника (Скобине крило)', order: 2, categories: [{ points: [{ id: 'p3' }] }] },
+    ]);
+    probyProgress.getProgressFor.mockResolvedValue({ points: [], stages: [{ stageId: 'stage-1', status: 'OPEN', hasDebt: false }] });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ degreeDates: { PRYHYLNYK: '2020-01-01' } }),
+      0,
+      ACTOR,
+    );
+
+    expect(probyProgress.confirm).toHaveBeenCalledWith('user-1', 'p1', ACTOR);
+    expect(probyProgress.confirm).toHaveBeenCalledWith('user-1', 'p2', ACTOR);
+    expect(probyProgress.closeStage).toHaveBeenCalledWith('user-1', 'stage-1', ACTOR);
+    expect(result.succeededSteps).toContain('proba-progress');
+  });
+
+  it('does not touch a stage that is already CLOSED', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' });
+    prisma.probyStage.findMany.mockResolvedValue([
+      { id: 'stage-1', name: 'Проба прихильника (Відзнака прихильника)', order: 1, categories: [{ points: [{ id: 'p1' }] }] },
+    ]);
+    probyProgress.getProgressFor.mockResolvedValue({ points: [], stages: [{ stageId: 'stage-1', status: 'CLOSED', hasDebt: false }] });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ degreeDates: { PRYHYLNYK: '2020-01-01' } }),
+      0,
+      ACTOR,
+    );
+
+    expect(probyProgress.confirm).not.toHaveBeenCalled();
+    expect(probyProgress.closeStage).not.toHaveBeenCalled();
+    expect(result.succeededSteps).not.toContain('proba-progress');
   });
 });
