@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 import { GoogleDriveService } from '../src/google-drive/google-drive.service';
 
 describe('Kurin Junak Import mapping (e2e)', () => {
@@ -66,6 +66,17 @@ describe('Kurin Junak Import mapping (e2e)', () => {
       .get(`/kurins/${kurin.id}/junak-import/status`)
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
+  });
+
+  it('allows a kurinniy to read import status (not just zvyazkovyi)', async () => {
+    const { kurin } = await setup();
+    const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, kurinnyi);
+
+    await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/junak-import/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 
   it('sets the connected spreadsheet and reflects it in status', async () => {

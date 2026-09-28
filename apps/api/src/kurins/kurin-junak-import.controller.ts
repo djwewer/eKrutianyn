@@ -1,16 +1,13 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Put, UseGuards } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { SaveJunakImportMappingDto } from './dto/save-junak-import-mapping.dto';
 import { SetJunakImportSpreadsheetDto } from './dto/set-junak-import-spreadsheet.dto';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ZVYAZKOVYI)
+@UseGuards(JwtAuthGuard)
 @Controller('kurins')
 export class KurinJunakImportController {
   constructor(
@@ -21,6 +18,7 @@ export class KurinJunakImportController {
   @Get(':kurinId/junak-import/status')
   async status(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
+    this.assertCanAccessWizard(user);
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
       select: { judgeBookSpreadsheetId: true, judgeBookSpreadsheetName: true },
@@ -42,6 +40,7 @@ export class KurinJunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
+    this.assertZvyazkovyi(user);
     await this.prisma.kurin.update({
       where: { id: kurinId },
       data: { judgeBookSpreadsheetId: dto.spreadsheetId, judgeBookSpreadsheetName: dto.spreadsheetName },
@@ -52,6 +51,7 @@ export class KurinJunakImportController {
   @Get(':kurinId/junak-import/sheet-data')
   async sheetData(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
+    this.assertCanAccessWizard(user);
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
       select: { judgeBookSpreadsheetId: true },
@@ -70,6 +70,7 @@ export class KurinJunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
+    this.assertCanAccessWizard(user);
     await this.prisma.junakImportMapping.upsert({
       where: { kurinId },
       create: { kurinId, columnMapping: dto.columnMapping, positionValueMapping: dto.positionValueMapping },
@@ -81,6 +82,20 @@ export class KurinJunakImportController {
   private assertOwnKurin(kurinId: string, user: CurrentUserPayload) {
     if (kurinId !== user.kurinId) {
       throw new ForbiddenException('Cross-tenant access denied');
+    }
+  }
+
+  private assertZvyazkovyi(user: CurrentUserPayload) {
+    if (user.role !== Role.ZVYAZKOVYI) {
+      throw new ForbiddenException('Only zvyazkovyi can perform this action');
+    }
+  }
+
+  private assertCanAccessWizard(user: CurrentUserPayload) {
+    const canAccess =
+      user.role === Role.ZVYAZKOVYI || user.isKurinniy || user.positions.includes(PositionType.SUDDIA);
+    if (!canAccess) {
+      throw new ForbiddenException('Only zvyazkovyi, kurinniy, or suddya can access the import wizard');
     }
   }
 }

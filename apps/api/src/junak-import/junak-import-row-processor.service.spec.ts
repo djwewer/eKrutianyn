@@ -12,7 +12,7 @@ describe('JunakImportRowProcessorService', () => {
 
   beforeEach(() => {
     prisma = {
-      user: { create: jest.fn(), update: jest.fn() },
+      user: { create: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
       guardianContact: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
       kurin: { findUnique: jest.fn() },
       probyStage: { findMany: jest.fn().mockResolvedValue([]) },
@@ -40,6 +40,7 @@ describe('JunakImportRowProcessorService', () => {
   });
 
   it('updates an existing junak when matchedUserId is given, only with non-blank fields', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
     prisma.user.update.mockResolvedValue({ id: 'user-2' });
 
     const result = await service.processRow(
@@ -55,6 +56,20 @@ describe('JunakImportRowProcessorService', () => {
       where: { id: 'user-2' },
       data: expect.not.objectContaining({ phone: expect.anything() }),
     });
+  });
+
+  it('rejects an update when matchedUserId does not belong to this kurin or is not a JUNAK', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'other-zvyazkovyi', role: 'ZVYAZKOVYI', kurinId: 'kurin-2' });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ matchedUserId: 'other-zvyazkovyi' }),
+      0,
+      ACTOR,
+    );
+
+    expect(result.error).toBeDefined();
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('creates a new hurtok when the named hurtok does not exist', async () => {

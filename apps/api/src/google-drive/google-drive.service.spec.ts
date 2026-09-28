@@ -158,7 +158,7 @@ describe('GoogleDriveService', () => {
       expect(mockSheetsValuesAppend).toHaveBeenCalledWith({
         spreadsheetId: 'sheet-id-1',
         range: 'A:ZZ',
-        valueInputOption: 'USER_ENTERED',
+        valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: { values: [['Іван', 'Петренко']] },
       });

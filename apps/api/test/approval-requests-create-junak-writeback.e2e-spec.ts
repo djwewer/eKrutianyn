@@ -105,4 +105,37 @@ describe('CREATE_JUNAK approval — Книга судді write-back (e2e)', () 
     const created = await prisma.user.findUnique({ where: { email } });
     expect(created).not.toBeNull();
   });
+
+  it('includes the hurtok name in the appended row when HURTOK is mapped', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await setup();
+    await prisma.kurin.update({ where: { id: kurin.id }, data: { judgeBookSpreadsheetId: 'sheet-1' } });
+    await prisma.junakImportMapping.create({
+      data: {
+        kurinId: kurin.id,
+        columnMapping: [
+          { column: 'A', header: 'ПІБ', field: 'FIRST_LAST_NAME' },
+          { column: 'B', header: 'Гурток', field: 'HURTOK' },
+        ],
+        positionValueMapping: [],
+      },
+    });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орли', kurinId: kurin.id } });
+    const email = `hurtok-writeback-${Date.now()}@example.com`;
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: { firstName: 'Іван', lastName: 'Петренко', email, hurtokId: hurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(fakeGoogleDrive.appendSheetRow).toHaveBeenCalledWith(kurin.id, 'sheet-1', ['Іван Петренко', 'Орли']);
+  });
 });

@@ -57,6 +57,10 @@ export class JunakImportRowProcessorService {
     const junakId = await this.prisma.$transaction(async (tx) => {
       let userId: string;
       if (row.matchedUserId) {
+        const target = await tx.user.findUnique({ where: { id: row.matchedUserId } });
+        if (!target || target.role !== Role.JUNAK || target.kurinId !== kurinId) {
+          throw new Error('Юнак для оновлення не знайдений у цьому курені');
+        }
         const updateData: Record<string, unknown> = {};
         if (row.firstName) updateData.firstName = row.firstName;
         if (row.lastName) updateData.lastName = row.lastName;

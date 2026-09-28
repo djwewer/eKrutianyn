@@ -93,7 +93,7 @@ export class GoogleDriveService {
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: 'A:ZZ',
-      valueInputOption: 'USER_ENTERED',
+      valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: [values] },
     });

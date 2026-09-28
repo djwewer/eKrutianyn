@@ -1,16 +1,13 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { JunakImportRowProcessorService } from './junak-import-row-processor.service';
 import { ImportJunakRowsDto } from './dto/import-junak-rows.dto';
 import { ResolvedJunakRow } from './junak-import-row.types';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ZVYAZKOVYI)
+@UseGuards(JwtAuthGuard)
 @Controller('kurins')
 export class JunakImportController {
   constructor(
@@ -26,6 +23,7 @@ export class JunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
+    this.assertCanAccessWizard(user);
     const candidates = await this.prisma.user.findMany({
       where: {
         kurinId,
@@ -45,6 +43,7 @@ export class JunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
+    this.assertZvyazkovyi(user);
     const results = [];
     for (let i = 0; i < dto.rows.length; i++) {
       results.push(await this.rowProcessor.processRow(kurinId, dto.rows[i] as ResolvedJunakRow, i, user));
@@ -55,6 +54,20 @@ export class JunakImportController {
   private assertOwnKurin(kurinId: string, user: CurrentUserPayload) {
     if (kurinId !== user.kurinId) {
       throw new ForbiddenException('Cross-tenant access denied');
+    }
+  }
+
+  private assertZvyazkovyi(user: CurrentUserPayload) {
+    if (user.role !== Role.ZVYAZKOVYI) {
+      throw new ForbiddenException('Only zvyazkovyi can perform this action');
+    }
+  }
+
+  private assertCanAccessWizard(user: CurrentUserPayload) {
+    const canAccess =
+      user.role === Role.ZVYAZKOVYI || user.isKurinniy || user.positions.includes(PositionType.SUDDIA);
+    if (!canAccess) {
+      throw new ForbiddenException('Only zvyazkovyi, kurinniy, or suddya can access the import wizard');
     }
   }
 }

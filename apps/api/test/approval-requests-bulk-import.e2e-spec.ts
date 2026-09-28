@@ -119,4 +119,27 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
     expect(created).not.toBeNull();
     expect(created?.kurinId).toBe(kurin.id);
   });
+
+  it('rejects approving a BULK_IMPORT_JUNAKY request a second time (already decided)', async () => {
+    const { kurinnyi, zvyazkovyi } = await baseSetup();
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
+        newData: { rows: [{ firstName: 'Одна', lastName: 'Особа', email: `once-${Date.now()}@example.com` }] },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+  });
 });

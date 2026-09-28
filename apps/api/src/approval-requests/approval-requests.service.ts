@@ -74,23 +74,16 @@ export class ApprovalRequestsService {
   async approve(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
 
-    return this.prisma.$transaction(async (tx) => {
-      if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
-        const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
-        const results = [];
-        for (let i = 0; i < data.rows.length; i++) {
-          results.push(await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor));
-        }
-        return tx.approvalRequest.update({
-          where: { id: requestId },
-          data: {
-            status: ApprovalStatus.APPROVED,
-            approvedById: actor.userId,
-            decidedAt: new Date(),
-            newData: { rows: data.rows, results } as any,
-          },
-        });
-      } else if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+    if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
+      return this.approveBulkImport(req, actor);
+    }
+
+    let createdJunak:
+      | { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null; hurtokName?: string }
+      | undefined;
+
+    const updatedRequest = await this.prisma.$transaction(async (tx) => {
+      if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
         const data = req.newData as {
           firstName: string;
           lastName: string;
@@ -110,7 +103,8 @@ export class ApprovalRequestsService {
             birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
           },
         });
-        await this.appendToJudgeBookIfConnected(actor.kurinId, created);
+        const hurtok = await tx.hurtok.findUnique({ where: { id: data.hurtokId }, select: { name: true } });
+        createdJunak = { ...created, hurtokName: hurtok?.name };
       } else {
         const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
         if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
@@ -123,6 +117,33 @@ export class ApprovalRequestsService {
         where: { id: requestId },
         data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
       });
+    });
+
+    if (createdJunak) {
+      await this.appendToJudgeBookIfConnected(actor.kurinId, createdJunak);
+    }
+
+    return updatedRequest;
+  }
+
+  private async approveBulkImport(req: { id: string; newData: unknown }, actor: CurrentUserPayload) {
+    const claim = await this.prisma.approvalRequest.updateMany({
+      where: { id: req.id, status: ApprovalStatus.PENDING },
+      data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+    });
+    if (claim.count === 0) {
+      throw new BadRequestException('Request already decided');
+    }
+
+    const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
+    const results = [];
+    for (let i = 0; i < data.rows.length; i++) {
+      results.push(await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor));
+    }
+
+    return this.prisma.approvalRequest.update({
+      where: { id: req.id },
+      data: { newData: { rows: data.rows, results } as any },
     });
   }
 
@@ -186,7 +207,15 @@ export class ApprovalRequestsService {
 
   private async appendToJudgeBookIfConnected(
     kurinId: string,
-    junak: { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null },
+    junak: {
+      firstName: string;
+      lastName: string;
+      nickname: string | null;
+      birthDate: Date | null;
+      email: string;
+      phone: string | null;
+      hurtokName?: string;
+    },
   ): Promise<void> {
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
@@ -210,7 +239,15 @@ export class ApprovalRequestsService {
 
   private buildSheetRow(
     columnMapping: { column: string; field: string }[],
-    junak: { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null },
+    junak: {
+      firstName: string;
+      lastName: string;
+      nickname: string | null;
+      birthDate: Date | null;
+      email: string;
+      phone: string | null;
+      hurtokName?: string;
+    },
   ): string[] {
     const columnIndex = (column: string): number => {
       let index = 0;
@@ -225,9 +262,16 @@ export class ApprovalRequestsService {
       let value = '';
       if (field === 'FIRST_LAST_NAME') value = `${junak.firstName} ${junak.lastName}`;
       else if (field === 'NICKNAME') value = junak.nickname ?? '';
-      else if (field === 'BIRTH_DATE') value = junak.birthDate ? junak.birthDate.toISOString().slice(0, 10) : '';
-      else if (field === 'EMAIL') value = junak.email;
+      else if (field === 'BIRTH_DATE') {
+        if (junak.birthDate) {
+          const d = junak.birthDate;
+          const day = String(d.getUTCDate()).padStart(2, '0');
+          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+          value = `${day}.${month}.${d.getUTCFullYear()}`;
+        }
+      } else if (field === 'EMAIL') value = junak.email;
       else if (field === 'PHONE') value = junak.phone ?? '';
+      else if (field === 'HURTOK') value = junak.hurtokName ?? '';
       while (values.length <= idx) values.push('');
       values[idx] = value;
     }

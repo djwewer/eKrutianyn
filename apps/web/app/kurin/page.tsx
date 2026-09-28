@@ -31,6 +31,8 @@ function KurinPageContent() {
   const [newKurinNumber, setNewKurinNumber] = useState('');
   const [selectedVersion, setSelectedVersion] = useState<'OLD' | 'NEW'>('OLD');
   const canChangeProgram = session?.role === 'ZVYAZKOVYI';
+  const canAccessJunakImportWizard =
+    canChangeProgram || !!session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA');
   const driveStatus = useGoogleDriveStatus(kurin?.id);
   const connectDrive = useConnectGoogleDrive(kurin?.id ?? '');
   const setDriveFolder = useSetGoogleDriveFolder(kurin?.id ?? '');
@@ -200,7 +202,7 @@ function KurinPageContent() {
           </CardContent>
         </Card>
       )}
-      {canChangeProgram && (
+      {canAccessJunakImportWizard && (
         <Card>
           <CardHeader>
             <CardTitle>Книга судді</CardTitle>
@@ -209,9 +211,11 @@ function KurinPageContent() {
             {junakImportStatus.data?.connectedSpreadsheetId ? (
               <>
                 <p>Підключена таблиця: {junakImportStatus.data.connectedSpreadsheetName}</p>
-                <Button size="sm" variant="outline" onClick={handleConnectJudgeBook}>
-                  Змінити таблицю
-                </Button>
+                {canChangeProgram && (
+                  <Button size="sm" variant="outline" onClick={handleConnectJudgeBook}>
+                    Змінити таблицю
+                  </Button>
+                )}
                 <div>
                   <a href="/kurin/junak-import" className="underline">
                     Імпортувати юнаків з цієї таблиці
@@ -221,9 +225,11 @@ function KurinPageContent() {
             ) : (
               <>
                 <p className="text-muted-foreground">Книга судді не підключена.</p>
-                <Button size="sm" disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
-                  Підключити Книгу судді
-                </Button>
+                {canChangeProgram && (
+                  <Button size="sm" disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
+                    Підключити Книгу судді
+                  </Button>
+                )}
               </>
             )}
             {bookConnectError && <p className="text-sm text-destructive">{bookConnectError}</p>}
