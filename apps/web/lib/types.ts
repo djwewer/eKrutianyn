@@ -145,7 +145,8 @@ export type ApprovalActionType =
   | 'CHANGE_BIRTH_DATE'
   | 'CHANGE_EMAIL'
   | 'CHANGE_HURTOK'
-  | 'CREATE_JUNAK';
+  | 'CREATE_JUNAK'
+  | 'BULK_IMPORT_JUNAKY';
 
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -187,4 +188,62 @@ export interface JunakImportStatus {
     columnMapping: { column: string; header: string; field: string }[];
     positionValueMapping: { rawValue: string; positionType: string | null }[];
   };
+}
+
+export type JunakImportField =
+  | 'FIRST_LAST_NAME'
+  | 'NICKNAME'
+  | 'BIRTH_DATE'
+  | 'HURTOK'
+  | 'EMAIL'
+  | 'PHONE'
+  | 'DEGREE_PRYHYLNYK_DATE'
+  | 'DEGREE_UCHASNYK_DATE'
+  | 'DEGREE_ROZVIDUVACH_DATE'
+  | 'HURTOK_POSITION'
+  | 'KURIN_POSITION'
+  | 'GUARDIAN_1_NAME'
+  | 'GUARDIAN_1_PHONE'
+  | 'GUARDIAN_1_EMAIL'
+  | 'GUARDIAN_2_NAME'
+  | 'GUARDIAN_2_PHONE'
+  | 'GUARDIAN_2_EMAIL';
+
+export const JUNAK_IMPORT_FIELD_LABELS: Record<JunakImportField, string> = {
+  FIRST_LAST_NAME: "Ім'я та прізвище",
+  NICKNAME: 'Псевдо',
+  BIRTH_DATE: 'Дата народження',
+  HURTOK: 'Гурток',
+  EMAIL: 'Email',
+  PHONE: 'Телефон',
+  DEGREE_PRYHYLNYK_DATE: 'Дата здобуття ступеня "Прихильник"',
+  DEGREE_UCHASNYK_DATE: 'Дата здобуття ступеня "Учасник"',
+  DEGREE_ROZVIDUVACH_DATE: 'Дата здобуття ступеня "Розвідувач"',
+  HURTOK_POSITION: 'Діловодство в гуртку',
+  KURIN_POSITION: 'Діловодство в курені',
+  GUARDIAN_1_NAME: "Контакт 1 — ім'я",
+  GUARDIAN_1_PHONE: 'Контакт 1 — телефон',
+  GUARDIAN_1_EMAIL: 'Контакт 1 — email',
+  GUARDIAN_2_NAME: "Контакт 2 — ім'я",
+  GUARDIAN_2_PHONE: 'Контакт 2 — телефон',
+  GUARDIAN_2_EMAIL: 'Контакт 2 — email',
+};
+
+export interface JunakImportColumnMapping {
+  column: string;
+  header: string;
+  field: JunakImportField;
+}
+
+export interface JunakImportPositionValueMapping {
+  rawValue: string;
+  positionType: string | null;
+}
+
+export interface JunakImportRowResult {
+  row: number;
+  junakId?: string;
+  created?: boolean;
+  succeededSteps: string[];
+  error?: string;
 }

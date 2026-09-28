@@ -16,6 +16,7 @@ const ACTION_LABELS: Record<string, string> = {
   CHANGE_EMAIL: 'Зміна email',
   CHANGE_HURTOK: 'Переведення в інший гурток',
   CREATE_JUNAK: 'Створення юнака',
+  BULK_IMPORT_JUNAKY: 'Масовий імпорт юнаків з Книги судді',
 };
 
 export default function ApprovalRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
