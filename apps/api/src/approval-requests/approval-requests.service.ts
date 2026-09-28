@@ -1,16 +1,20 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ApprovalActionType, ApprovalStatus, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { JunakImportRowProcessorService } from '../junak-import/junak-import-row-processor.service';
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
+import { GoogleDriveService } from '../google-drive/google-drive.service';
 
 @Injectable()
 export class ApprovalRequestsService {
+  private readonly logger = new Logger(ApprovalRequestsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly rowProcessor: JunakImportRowProcessorService,
+    private readonly googleDrive: GoogleDriveService,
   ) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
@@ -95,7 +99,7 @@ export class ApprovalRequestsService {
           birthDate?: string;
         };
         await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId);
-        await tx.user.create({
+        const created = await tx.user.create({
           data: {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -106,6 +110,7 @@ export class ApprovalRequestsService {
             birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
           },
         });
+        await this.appendToJudgeBookIfConnected(actor.kurinId, created);
       } else {
         const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
         if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
@@ -177,5 +182,55 @@ export class ApprovalRequestsService {
       default:
         return undefined;
     }
+  }
+
+  private async appendToJudgeBookIfConnected(
+    kurinId: string,
+    junak: { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null },
+  ): Promise<void> {
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { judgeBookSpreadsheetId: true },
+    });
+    if (!kurin?.judgeBookSpreadsheetId) {
+      return;
+    }
+    const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
+    if (!mapping) {
+      return;
+    }
+    try {
+      const columnMapping = mapping.columnMapping as { column: string; field: string }[];
+      const row = this.buildSheetRow(columnMapping, junak);
+      await this.googleDrive.appendSheetRow(kurinId, kurin.judgeBookSpreadsheetId, row);
+    } catch (error) {
+      this.logger.warn(`Failed to append new junak to Книга судді for kurin ${kurinId}: ${(error as Error).message}`);
+    }
+  }
+
+  private buildSheetRow(
+    columnMapping: { column: string; field: string }[],
+    junak: { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null },
+  ): string[] {
+    const columnIndex = (column: string): number => {
+      let index = 0;
+      for (const char of column) {
+        index = index * 26 + (char.charCodeAt(0) - 'A'.charCodeAt(0) + 1);
+      }
+      return index - 1;
+    };
+    const values: string[] = [];
+    for (const { column, field } of columnMapping) {
+      const idx = columnIndex(column);
+      let value = '';
+      if (field === 'FIRST_LAST_NAME') value = `${junak.firstName} ${junak.lastName}`;
+      else if (field === 'NICKNAME') value = junak.nickname ?? '';
+      else if (field === 'BIRTH_DATE') value = junak.birthDate ? junak.birthDate.toISOString().slice(0, 10) : '';
+      else if (field === 'EMAIL') value = junak.email;
+      else if (field === 'PHONE') value = junak.phone ?? '';
+      while (values.length <= idx) values.push('');
+      values[idx] = value;
+    }
+    return values;
   }
 }

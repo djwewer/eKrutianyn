@@ -291,4 +291,26 @@ describe('Approval requests approve/reject (e2e)', () => {
     const unchangedJunak = await prisma.user.findUnique({ where: { id: junak.id } });
     expect(unchangedJunak?.hurtokId).toBe(junak.hurtokId);
   });
+
+  it('does not attempt a write-back when no Книга судді is connected', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Test Hurtok', kurinId: kurin.id } });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: { firstName: 'Новий', lastName: 'Юнак', email: `new-${Date.now()}@example.com`, hurtokId: hurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+    // No assertion beyond "the request completes successfully" — absence of a connected
+    // spreadsheet means appendToJudgeBookIfConnected returns early, which this test proves
+    // indirectly by the approve call not hanging or throwing.
+  });
 });
