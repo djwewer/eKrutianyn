@@ -91,3 +91,33 @@ scope (дані вже приходять зі списку `/kurin-positions`),
 кандидата}", записуючи вибір у `rowOverrides[i].matchChoice`.
 
 ---
+
+## 🔴 approve()/reject() на запит "Масовий імпорт" — гонка при одночасному рішенні
+
+**Опис:** `reject()` в `ApprovalRequestsService` досі читає статус запиту
+й потім оновлює його двома окремими операціями (не однією умовною), на
+відміну від `approveBulkImport()`, який тепер атомарно "захоплює" запит
+через `updateMany({ where: { status: PENDING } })`. Якщо `approve()` і
+`reject()` виконуються одночасно на той самий запит, можливий стан, коли
+запит позначений REJECTED, хоча рядки вже застосовані через `approve()`.
+
+**Де копати:** `apps/api/src/approval-requests/approval-requests.service.ts`,
+метод `reject()` — замінити прямий `update` на умовний `updateMany({ where:
+{ id, status: PENDING }, data: {...} })` з перевіркою `count === 1`, як уже
+зроблено в `approveBulkImport()`.
+
+## 🔴 Масовий імпорт: збій під час обробки рядків залишає запит APPROVED без результатів
+
+**Опис:** `approveBulkImport()` спершу атомарно позначає запит APPROVED, а
+тоді обробляє рядки. Якщо сама обробка впаде з винятком поза
+`processRow`'s власним try/catch (наприклад, `newData.rows` пошкоджений,
+або впаде зʼєднання з БД), запит лишається APPROVED без `results` — і його
+вже не можна ні повторно підтвердити, ні відхилити.
+
+**Де копати:** `apps/api/src/approval-requests/approval-requests.service.ts`,
+метод `approveBulkImport()` — обгорнути цикл обробки рядків у try/catch,
+що при падінні записує `results` із поясненням помилки замість мовчазного
+"APPROVED без даних", або розглянути окремий статус на кшталt
+`PROCESSING_FAILED`.
+
+---

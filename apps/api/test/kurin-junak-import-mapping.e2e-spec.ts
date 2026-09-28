@@ -146,4 +146,34 @@ describe('Kurin Junak Import mapping (e2e)', () => {
     expect(status.body.mapping.columnMapping).toEqual(columnMapping);
     expect(status.body.mapping.positionValueMapping).toEqual(positionValueMapping);
   });
+
+  it('rejects a mapping with an invalid (oversized) column value', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .put(`/kurins/${kurin.id}/junak-import/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        columnMapping: [{ column: 'ZZZZZZZZ', header: 'ПІБ', field: 'FIRST_LAST_NAME' }],
+        positionValueMapping: [],
+      })
+      .expect(400);
+  });
+
+  it('rejects a mapping with an unknown field value', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .put(`/kurins/${kurin.id}/junak-import/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        columnMapping: [{ column: 'A', header: 'ПІБ', field: 'NOT_A_REAL_FIELD' }],
+        positionValueMapping: [],
+      })
+      .expect(400);
+  });
 });

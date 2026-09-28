@@ -15,6 +15,7 @@ describe('JunakImportRowProcessorService', () => {
       user: { create: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
       guardianContact: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
       kurin: { findUnique: jest.fn() },
+      kurinPosition: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
       probyStage: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (fn: (tx: any) => Promise<unknown>) => fn(prisma)),
     };
@@ -210,5 +211,62 @@ describe('JunakImportRowProcessorService', () => {
     expect(probyProgress.confirm).not.toHaveBeenCalled();
     expect(probyProgress.closeStage).not.toHaveBeenCalled();
     expect(result.succeededSteps).not.toContain('proba-progress');
+  });
+
+  it('rejects assigning the KURINNYI position through import, regardless of restrictProtectedTargets', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ kurinPositionTypes: ['KURINNYI' as any] }),
+      0,
+      ACTOR,
+    );
+
+    expect(result.error).toBeDefined();
+    expect(kurinPositions.assign).not.toHaveBeenCalled();
+  });
+
+  it('rejects updating a matched target who holds an active position, when restrictProtectedTargets is true', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
+    prisma.kurinPosition.findMany.mockResolvedValue([{ positionType: 'SUDDIA' }]);
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ matchedUserId: 'user-2' }),
+      0,
+      ACTOR,
+      { restrictProtectedTargets: true },
+    );
+
+    expect(result.error).toBeDefined();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects updating a matched target who is kurinniy, when restrictProtectedTargets is true', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
+    prisma.kurinPosition.findFirst.mockResolvedValue({ id: 'pos-1', positionType: 'KURINNYI' });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ matchedUserId: 'user-2' }),
+      0,
+      ACTOR,
+      { restrictProtectedTargets: true },
+    );
+
+    expect(result.error).toBeDefined();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('still allows updating a position-holding target when restrictProtectedTargets is not set (direct import)', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
+    prisma.user.update.mockResolvedValue({ id: 'user-2' });
+    prisma.kurinPosition.findMany.mockResolvedValue([{ positionType: 'SUDDIA' }]);
+
+    const result = await service.processRow('kurin-1', baseRow({ matchedUserId: 'user-2' }), 0, ACTOR);
+
+    expect(result.error).toBeUndefined();
+    expect(prisma.user.update).toHaveBeenCalled();
   });
 });

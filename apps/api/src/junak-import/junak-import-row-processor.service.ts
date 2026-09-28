@@ -6,12 +6,18 @@ import { KurinPositionsService } from '../kurin-positions/kurin-positions.servic
 import { ProbyProgressService } from '../proby-progress/proby-progress.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { ResolvedJunakRow, JunakImportRowResult } from './junak-import-row.types';
+import { isKurinniyForUser } from '../common/kurinniy.util';
+import { getActiveKurinPositions } from '../common/positions.util';
 
 const DEGREE_STAGE_PREFIXES: { key: keyof NonNullable<ResolvedJunakRow['degreeDates']>; prefix: string }[] = [
   { key: 'PRYHYLNYK', prefix: 'Проба прихильника' },
   { key: 'UCHASNYK', prefix: 'Проба учасника' },
   { key: 'ROZVIDUVACH', prefix: 'Проба розвідувача' },
 ];
+
+export interface ProcessRowOptions {
+  restrictProtectedTargets?: boolean;
+}
 
 @Injectable()
 export class JunakImportRowProcessorService {
@@ -27,10 +33,11 @@ export class JunakImportRowProcessorService {
     row: ResolvedJunakRow,
     rowIndex: number,
     actor: CurrentUserPayload,
+    options: ProcessRowOptions = {},
   ): Promise<JunakImportRowResult> {
     const result: JunakImportRowResult = { row: rowIndex, succeededSteps: [] };
     try {
-      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, result);
+      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, result, options);
       result.junakId = junakId;
 
       await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
@@ -45,6 +52,7 @@ export class JunakImportRowProcessorService {
     kurinId: string,
     row: ResolvedJunakRow,
     result: JunakImportRowResult,
+    options: ProcessRowOptions,
   ): Promise<{ junakId: string; hurtokId?: string }> {
     let hurtokId: string | undefined;
     if (row.hurtokName) {
@@ -60,6 +68,17 @@ export class JunakImportRowProcessorService {
         const target = await tx.user.findUnique({ where: { id: row.matchedUserId } });
         if (!target || target.role !== Role.JUNAK || target.kurinId !== kurinId) {
           throw new Error('Юнак для оновлення не знайдений у цьому курені');
+        }
+        if (options.restrictProtectedTargets) {
+          const [targetIsKurinniy, targetPositions] = await Promise.all([
+            isKurinniyForUser(this.prisma, target.id),
+            getActiveKurinPositions(this.prisma, target.id, kurinId),
+          ]);
+          if (targetIsKurinniy || targetPositions.length > 0) {
+            throw new Error(
+              'Не можна оновлювати дані курінного або посадової особи через запит на затвердження — це може зробити лише звʼязковий напряму',
+            );
+          }
         }
         const updateData: Record<string, unknown> = {};
         if (row.firstName) updateData.firstName = row.firstName;
@@ -123,6 +142,9 @@ export class JunakImportRowProcessorService {
     result: JunakImportRowResult,
   ): Promise<void> {
     for (const positionType of row.kurinPositionTypes ?? []) {
+      if (positionType === PositionType.KURINNYI) {
+        throw new Error('Посаду "Курінний" не можна призначити через імпорт з Книги судді');
+      }
       await this.kurinPositions.assign(
         { userId: junakId, scope: PositionScope.KURIN, positionType, hurtokId: undefined },
         actor,

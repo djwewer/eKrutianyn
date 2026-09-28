@@ -138,7 +138,11 @@ export class ApprovalRequestsService {
     const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
     const results = [];
     for (let i = 0; i < data.rows.length; i++) {
-      results.push(await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor));
+      results.push(
+        await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor, {
+          restrictProtectedTargets: true,
+        }),
+      );
     }
 
     return this.prisma.approvalRequest.update({

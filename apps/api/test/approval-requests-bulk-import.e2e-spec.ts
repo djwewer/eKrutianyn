@@ -142,4 +142,48 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
   });
+
+  it('does not let an approved bulk import overwrite the kurinniy or grant KURINNYI', async () => {
+    const { kurin, kurinnyi } = await baseSetup();
+    const suddya = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: PositionScope.KURIN,
+        positionType: PositionType.SUDDIA,
+        userId: suddya.id,
+        assignedById: suddya.id,
+      },
+    });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const originalKurinniyEmail = kurinnyi.email;
+
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: suddya.id,
+        actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
+        newData: {
+          rows: [
+            { matchedUserId: kurinnyi.id, firstName: kurinnyi.firstName, lastName: kurinnyi.lastName, email: 'evil@attacker.com' },
+            { matchedUserId: suddya.id, firstName: 'Attacker', lastName: 'Self', email: suddya.email, kurinPositionTypes: [PositionType.KURINNYI] },
+          ],
+        },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const kurinniyAfter = await prisma.user.findUnique({ where: { id: kurinnyi.id } });
+    expect(kurinniyAfter?.email).toBe(originalKurinniyEmail);
+
+    const suddyaKurinPosition = await prisma.kurinPosition.findFirst({
+      where: { userId: suddya.id, positionType: PositionType.KURINNYI, removedAt: null },
+    });
+    expect(suddyaKurinPosition).toBeNull();
+  });
 });

@@ -73,8 +73,8 @@ export class KurinJunakImportController {
     this.assertCanAccessWizard(user);
     await this.prisma.junakImportMapping.upsert({
       where: { kurinId },
-      create: { kurinId, columnMapping: dto.columnMapping, positionValueMapping: dto.positionValueMapping },
-      update: { columnMapping: dto.columnMapping, positionValueMapping: dto.positionValueMapping },
+      create: { kurinId, columnMapping: dto.columnMapping as any, positionValueMapping: dto.positionValueMapping as any },
+      update: { columnMapping: dto.columnMapping as any, positionValueMapping: dto.positionValueMapping as any },
     });
     return { success: true };
   }
