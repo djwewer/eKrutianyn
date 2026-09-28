@@ -61,6 +61,7 @@ enum ApprovalActionType {
   CHANGE_EMAIL
   CHANGE_HURTOK
   CREATE_JUNAK
+  BULK_IMPORT_JUNAKY
 }
 
 model Kurin {
@@ -78,11 +79,23 @@ model Kurin {
   driveRefreshToken    String?
   driveConnectedEmail  String?
   driveConnectedAt     DateTime?
+  judgeBookSpreadsheetId   String?
+  judgeBookSpreadsheetName String?
 
   hurtky Hurtok[]
   inventoryItems InventoryItem[]
   users  User[]
   positions KurinPosition[]
+  junakImportMapping JunakImportMapping?
+}
+
+model JunakImportMapping {
+  id                   String   @id @default(uuid())
+  kurinId              String   @unique
+  kurin                Kurin    @relation(fields: [kurinId], references: [id])
+  columnMapping        Json
+  positionValueMapping Json
+  updatedAt            DateTime @updatedAt
 }
 
 model Hurtok {
