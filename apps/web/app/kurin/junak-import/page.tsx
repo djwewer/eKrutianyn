@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useKurin } from '@/lib/queries/kurin';
+import { accessErrorMessage } from '@/lib/error-message';
 import {
   useJunakImportStatus,
   useJunakImportSheetData,
@@ -199,12 +200,16 @@ export default function JunakImportPage() {
       setSubmitError("У деяких рядках відсутній email — заповніть його перед імпортом.");
       return;
     }
-    if (isZvyazkovyi) {
-      const response = await importRows.mutateAsync(rows);
-      setResults(response.results);
-    } else {
-      await createApprovalRequest.mutateAsync({ actionType: 'BULK_IMPORT_JUNAKY', newData: { rows } });
-      setResults(null);
+    try {
+      if (isZvyazkovyi) {
+        const response = await importRows.mutateAsync(rows);
+        setResults(response.results);
+      } else {
+        await createApprovalRequest.mutateAsync({ actionType: 'BULK_IMPORT_JUNAKY', newData: { rows } });
+        setResults(null);
+      }
+    } catch (error) {
+      setSubmitError(accessErrorMessage(error));
     }
   }
 
@@ -277,6 +282,9 @@ export default function JunakImportPage() {
             <Button size="sm" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
               Далі
             </Button>
+            {saveMapping.isError && (
+              <p className="text-sm text-destructive">{accessErrorMessage(saveMapping.error)}</p>
+            )}
           </CardContent>
         </Card>
       )}
