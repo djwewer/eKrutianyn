@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useKurin } from '@/lib/queries/kurin';
 import { accessErrorMessage } from '@/lib/error-message';
@@ -9,7 +9,7 @@ import {
   useJunakImportSheetData,
   useSaveJunakImportMapping,
 } from '@/lib/queries/junak-import';
-import { useImportJunakRows } from '@/lib/queries/junak-import-rows';
+import { useImportJunakRows, useMatchCandidates } from '@/lib/queries/junak-import-rows';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import {
   JUNAK_IMPORT_FIELD_LABELS,
@@ -50,6 +50,51 @@ interface WizardRow {
   lastName: string;
   matchedUserId?: string;
   matchChoice: 'new' | string;
+}
+
+function WizardRowMatchPicker({
+  kurinId,
+  firstName,
+  lastName,
+  value,
+  onChange,
+}: {
+  kurinId: string;
+  firstName: string;
+  lastName: string;
+  value: string | undefined;
+  onChange: (value: string) => void;
+}) {
+  const matches = useMatchCandidates(kurinId, firstName, lastName);
+  const candidates = matches.data?.candidates ?? [];
+  const soleCandidateId = candidates.length === 1 ? candidates[0].id : undefined;
+
+  useEffect(() => {
+    if (soleCandidateId && value === undefined) {
+      onChange(soleCandidateId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soleCandidateId, value]);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return (
+    <select
+      className="rounded border p-1 text-xs"
+      value={value ?? (soleCandidateId ? soleCandidateId : 'new')}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="new">Новий юнак</option>
+      {candidates.map((c) => (
+        <option key={c.id} value={c.id}>
+          Оновити {c.firstName} {c.lastName}
+          {c.birthDate ? ` (нар. ${c.birthDate})` : ''}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export default function JunakImportPage() {
@@ -307,6 +352,13 @@ export default function JunakImportPage() {
                   placeholder="Email"
                   defaultValue={rowOverrides[i]?.email}
                   onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}
+                />
+                <WizardRowMatchPicker
+                  kurinId={kurinId}
+                  firstName={row.firstName}
+                  lastName={row.lastName}
+                  value={rowOverrides[i]?.matchChoice}
+                  onChange={(v) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], matchChoice: v } }))}
                 />
               </div>
             ))}
