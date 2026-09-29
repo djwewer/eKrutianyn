@@ -26,6 +26,17 @@ const HURTOK_POSITION_TYPES: { value: PositionType; label: string }[] = [
   { value: 'SKARBNYK', label: 'Скарбник' },
 ];
 
+const POSITION_TYPE_LABELS: Record<PositionType, string> = {
+  KURINNYI: 'Курінний',
+  SUDDIA: 'Суддя',
+  PYSAR: 'Писар',
+  SKARBNYK: 'Скарбник',
+  INTENDANT: 'Інтендант',
+  KHORUNZHYI: 'Хорунжий',
+  SMM: 'СММник',
+  HURTKOVYI: 'Гуртковий',
+};
+
 function PositionSlot({
   label,
   positionType,
@@ -33,6 +44,7 @@ function PositionSlot({
   hurtokId,
   current,
   candidates,
+  positionsInScope,
 }: {
   label: string;
   positionType: PositionType;
@@ -40,6 +52,7 @@ function PositionSlot({
   hurtokId?: string;
   current: KurinPosition | undefined;
   candidates: { id: string; firstName: string; lastName: string }[];
+  positionsInScope: KurinPosition[];
 }) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const assign = useAssignPosition();
@@ -78,9 +91,19 @@ function PositionSlot({
             <Button
               size="sm"
               disabled={!selectedUserId || assign.isPending}
-              onClick={() =>
-                assign.mutate({ userId: selectedUserId, scope, positionType, hurtokId }, { onSuccess: () => setSelectedUserId('') })
-              }
+              onClick={() => {
+                const conflicting = positionsInScope.find((kp) => kp.user.id === selectedUserId);
+                if (conflicting) {
+                  const candidate = candidates.find((c) => c.id === selectedUserId);
+                  const candidateName = candidate ? `${candidate.lastName} ${candidate.firstName}` : 'Цей юнак';
+                  const confirmed = window.confirm(
+                    `${candidateName} вже займає посаду «${POSITION_TYPE_LABELS[conflicting.positionType]}». ` +
+                      `Призначення на «${label}» автоматично зніме поточну посаду. Продовжити?`,
+                  );
+                  if (!confirmed) return;
+                }
+                assign.mutate({ userId: selectedUserId, scope, positionType, hurtokId }, { onSuccess: () => setSelectedUserId('') });
+              }}
             >
               Призначити
             </Button>
@@ -122,6 +145,7 @@ export default function PositionsPage() {
               scope="KURIN"
               current={kurinPositions.find((kp) => kp.scope === 'KURIN' && kp.positionType === p.value)}
               candidates={candidates}
+              positionsInScope={kurinPositions.filter((kp) => kp.scope === 'KURIN')}
             />
           ))}
         </CardContent>
@@ -144,6 +168,7 @@ export default function PositionsPage() {
                   (kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id && kp.positionType === p.value,
                 )}
                 candidates={candidates.filter((c) => c.hurtokId === h.id)}
+                positionsInScope={kurinPositions.filter((kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id)}
               />
             ))}
           </CardContent>
