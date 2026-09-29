@@ -45,6 +45,7 @@ function PositionSlot({
   current,
   candidates,
   positionsInScope,
+  hurtokNameById,
 }: {
   label: string;
   positionType: PositionType;
@@ -53,6 +54,7 @@ function PositionSlot({
   current: KurinPosition | undefined;
   candidates: { id: string; firstName: string; lastName: string }[];
   positionsInScope: KurinPosition[];
+  hurtokNameById: Record<string, string>;
 }) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const assign = useAssignPosition();
@@ -96,8 +98,13 @@ function PositionSlot({
                 if (conflicting) {
                   const candidate = candidates.find((c) => c.id === selectedUserId);
                   const candidateName = candidate ? `${candidate.lastName} ${candidate.firstName}` : 'Цей юнак';
+                  const conflictingLabel = POSITION_TYPE_LABELS[conflicting.positionType];
+                  const inOtherHurtok =
+                    conflicting.scope === 'HURTOK' && conflicting.hurtokId && conflicting.hurtokId !== hurtokId
+                      ? ` у гуртку «${hurtokNameById[conflicting.hurtokId] ?? '?'}»`
+                      : '';
                   const confirmed = window.confirm(
-                    `${candidateName} вже займає посаду «${POSITION_TYPE_LABELS[conflicting.positionType]}». ` +
+                    `${candidateName} вже займає посаду «${conflictingLabel}»${inOtherHurtok}. ` +
                       `Призначення на «${label}» автоматично зніме поточну посаду. Продовжити?`,
                   );
                   if (!confirmed) return;
@@ -127,6 +134,7 @@ export default function PositionsPage() {
 
   const candidates = junaky ?? [];
   const kurinPositions = positions ?? [];
+  const hurtokNameById = Object.fromEntries((hurtky ?? []).map((h) => [h.id, h.name]));
 
   return (
     <div className="space-y-6">
@@ -146,6 +154,7 @@ export default function PositionsPage() {
               current={kurinPositions.find((kp) => kp.scope === 'KURIN' && kp.positionType === p.value)}
               candidates={candidates}
               positionsInScope={kurinPositions.filter((kp) => kp.scope === 'KURIN')}
+              hurtokNameById={hurtokNameById}
             />
           ))}
         </CardContent>
@@ -168,7 +177,8 @@ export default function PositionsPage() {
                   (kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id && kp.positionType === p.value,
                 )}
                 candidates={candidates.filter((c) => c.hurtokId === h.id)}
-                positionsInScope={kurinPositions.filter((kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id)}
+                positionsInScope={kurinPositions.filter((kp) => kp.scope === 'HURTOK')}
+                hurtokNameById={hurtokNameById}
               />
             ))}
           </CardContent>
