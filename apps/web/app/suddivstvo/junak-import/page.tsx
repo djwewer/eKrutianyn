@@ -379,7 +379,10 @@ export default function JunakImportPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-muted-foreground">Рядків до імпорту: {wizardRows.length}</p>
-            {wizardRows.map((row, i) => (
+            {wizardRows.map((row, i) => {
+              const emailColIndex = colIndexFor('EMAIL');
+              const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
+              return (
               <div key={i} className="flex items-center gap-2 border-b pb-1 text-sm">
                 <span className="w-40 truncate">
                   {row.firstName} {row.lastName}
@@ -388,7 +391,7 @@ export default function JunakImportPage() {
                 <Input
                   className="w-56"
                   placeholder="Email"
-                  defaultValue={rowOverrides[i]?.email}
+                  defaultValue={rowOverrides[i]?.email ?? (emailFromSheet || undefined)}
                   onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}
                 />
                 <WizardRowMatchPicker
@@ -399,7 +402,8 @@ export default function JunakImportPage() {
                   onChange={(v) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], matchChoice: v } }))}
                 />
               </div>
-            ))}
+              );
+            })}
             {submitError && <p className="text-sm text-destructive">{submitError}</p>}
             <Button onClick={handleImport} disabled={importRows.isPending || createApprovalRequest.isPending}>
               {isZvyazkovyi ? 'Імпортувати' : 'Надіслати на затвердження звʼязковому'}
