@@ -6,6 +6,7 @@ import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { JunakImportRowProcessorService } from '../junak-import/junak-import-row-processor.service';
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ApprovalRequestsService {
@@ -15,12 +16,15 @@ export class ApprovalRequestsService {
     private readonly prisma: PrismaService,
     private readonly rowProcessor: JunakImportRowProcessorService,
     private readonly googleDrive: GoogleDriveService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
     const canInitiateBulkImport =
       dto.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY && actor.positions.includes(PositionType.SUDDIA);
-    if (!actor.isKurinniy && !canInitiateBulkImport) {
+    const canInitiateArchive =
+      dto.actionType === ApprovalActionType.ARCHIVE_JUNAK && actor.positions.includes(PositionType.SUDDIA);
+    if (!actor.isKurinniy && !canInitiateBulkImport && !canInitiateArchive) {
       throw new ForbiddenException('Only kurinniy can create approval requests');
     }
     const noJunakIdActionTypes = [ApprovalActionType.CREATE_JUNAK, ApprovalActionType.BULK_IMPORT_JUNAKY] as const;
@@ -76,6 +80,13 @@ export class ApprovalRequestsService {
 
     if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
       return this.approveBulkImport(req, actor);
+    }
+    if (req.actionType === ApprovalActionType.ARCHIVE_JUNAK) {
+      await this.usersService.archiveUser(req.junakId!, actor);
+      return this.prisma.approvalRequest.update({
+        where: { id: requestId },
+        data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
+      });
     }
 
     let createdJunak:
@@ -204,6 +215,8 @@ export class ApprovalRequestsService {
         return { email: junak.email };
       case ApprovalActionType.CHANGE_HURTOK:
         return { hurtokId: junak.hurtokId };
+      case ApprovalActionType.ARCHIVE_JUNAK:
+        return {};
       default:
         return undefined;
     }
