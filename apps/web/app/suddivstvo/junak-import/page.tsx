@@ -121,11 +121,11 @@ export default function JunakImportPage() {
   const dataRows = rawRows.slice(1);
 
   useEffect(() => {
-    if (header.length > 0 && Object.keys(columnMapping).length === 0) {
+    if (header.length > 0 && !status.isLoading && Object.keys(columnMapping).length === 0) {
       setColumnMapping(autoMapColumns(header, status.data?.mapping?.columnMapping));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [header]);
+  }, [header, status.isLoading]);
 
   const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
 
@@ -144,11 +144,11 @@ export default function JunakImportPage() {
   }, [columnMapping, dataRows]);
 
   useEffect(() => {
-    if (uniquePositionValues.length > 0 && Object.keys(positionValueMapping).length === 0) {
+    if (uniquePositionValues.length > 0 && !status.isLoading && Object.keys(positionValueMapping).length === 0) {
       setPositionValueMapping(autoMapPositionValues(uniquePositionValues, status.data?.mapping?.positionValueMapping));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniquePositionValues]);
+  }, [uniquePositionValues, status.isLoading]);
 
   const wizardRows: WizardRow[] = useMemo(() => {
     let lastHurtok = '';
