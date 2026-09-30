@@ -11,7 +11,7 @@
 
 ---
 
-## 🟡 Picker не реєструє доступ до вибраного файлу (`drive.file`) — "File not found" після вибору
+## 🟢 Picker не реєструє доступ до вибраного файлу (`drive.file`) — "File not found" після вибору
 
 **Опис:** звʼязковий підключав Книгу судді через Google Picker (`/suddivstvo`)
 — файл реальний, обраний саме через Picker, доступний йому в Drive — але
@@ -22,17 +22,11 @@
 спрацьовує), але фактичний грант доступу для OAuth-токена на цей конкретний
 файл не реєструється, і будь-який наступний виклик Drive API повертає 404.
 
-**Що зроблено:** `apps/web/lib/google-picker.ts` — обидва picker-и
-(`openGoogleDriveFolderPicker`, `openGoogleSheetPicker`) тепер викликають
-`.setAppId(NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER)`, якщо цей env заданий. Додано
-`NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER` в `apps/web/.env.local.example`.
-
-**Залишається (ручний крок, Андрій):** знайти "Project number" (не Client
-ID) того GCP-проєкту, де створено `GOOGLE_OAUTH_CLIENT_ID` (GCP Console →
-Dashboard проєкту), і задати його як `NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER` у
-Vercel env для `apps/web`, після чого передеплоїти фронтенд. Уже підключені
-раніше (без `setAppId`) таблиці/папки, ймовірно, доведеться перепідключити
-через Picker ще раз — старий грант так і не був виданий.
+**Що зроблено:** `apps/web/lib/google-picker.ts` (комміт `ec911d2`) — обидва
+picker-и (`openGoogleDriveFolderPicker`, `openGoogleSheetPicker`) тепер
+викликають `.setAppId(NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER)`. Андрій задав
+`NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER` у Vercel і перепідключив таблицю —
+підтверджено живим тестом: Книга судді читається (2026-09-30).
 
 ---
 
@@ -214,8 +208,6 @@ ingress ще до завершення обробки на сервері (са�
   BadRequest вже ПІСЛЯ створення юнака.
 - Нумерація рядків у результатах (`Рядок {r.row + 1}`) рахується після
   фільтрації порожніх рядків, не за номером у самій таблиці.
-- `JunakImportStatus.mapping` не використовується для перезаповнення
-  майстра — мапінг доводиться переробляти щоразу.
 - Немає Playwright-покриття для курінного/судді шляху майстра (лише
   "не підключено"), і немає regression-тесту саме на блок KURINNYI через
   ЗАТВЕРДЖЕНИЙ (не прямий) імпорт — обидва варто додати.
