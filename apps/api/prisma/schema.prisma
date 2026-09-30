@@ -62,6 +62,7 @@ enum ApprovalActionType {
   CHANGE_HURTOK
   CREATE_JUNAK
   BULK_IMPORT_JUNAKY
+  ARCHIVE_JUNAK
 }
 
 model Kurin {
@@ -105,6 +106,9 @@ model Hurtok {
   name    String
   slug    String?
   number  String?
+  archivedAt   DateTime?
+  archivedById String?
+  archivedBy   User?     @relation("HurtokArchivedBy", fields: [archivedById], references: [id])
 
   junaky               User[]            @relation("JunakHurtok")
   vykhovnykAssignments VykhovnykHurtok[]
@@ -129,6 +133,11 @@ model User {
   hurtok       Hurtok?   @relation("JunakHurtok", fields: [hurtokId], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  archivedById String?
+  archivedBy   User?     @relation("UserArchivedBy", fields: [archivedById], references: [id])
+  archivedUsers User[]   @relation("UserArchivedBy")
+  hurtokArchivedByMe Hurtok[] @relation("HurtokArchivedBy")
 
   vykhovnykAssignments VykhovnykHurtok[]  @relation("VykhovnykAssignments")
   progressEntries      JunakProgress[]    @relation("JunakProgressEntries")

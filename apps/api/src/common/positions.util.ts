@@ -12,3 +12,8 @@ export async function getActiveKurinPositions(
   });
   return rows.map((row) => row.positionType);
 }
+
+export async function hasAnyActivePosition(prisma: PrismaService, userId: string): Promise<boolean> {
+  const active = await prisma.kurinPosition.findFirst({ where: { userId, removedAt: null } });
+  return !!active;
+}
