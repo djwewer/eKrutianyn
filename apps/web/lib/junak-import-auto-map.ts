@@ -66,3 +66,34 @@ export function autoMapColumns(
 
   return result;
 }
+
+const POSITION_VALUE_KEYWORDS: Record<string, string> = {
+  'суддя': 'SUDDIA',
+  'писар': 'PYSAR',
+  'скарбник': 'SKARBNYK',
+  'інтендант': 'INTENDANT',
+  'хорунжий': 'KHORUNZHYI',
+  'смм': 'SMM',
+  'гуртковий': 'HURTKOVYI',
+};
+
+export function autoMapPositionValues(
+  rawValues: string[],
+  savedMapping?: { rawValue: string; positionType: string | null }[],
+): Record<string, string> {
+  const savedByValue = new Map<string, string>();
+  for (const entry of savedMapping ?? []) {
+    if (entry.positionType) savedByValue.set(entry.rawValue, entry.positionType);
+  }
+
+  const result: Record<string, string> = {};
+  for (const rawValue of rawValues) {
+    const saved = savedByValue.get(rawValue);
+    if (saved) {
+      result[rawValue] = saved;
+      continue;
+    }
+    result[rawValue] = POSITION_VALUE_KEYWORDS[normalize(rawValue)] ?? '';
+  }
+  return result;
+}

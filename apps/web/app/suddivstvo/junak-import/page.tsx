@@ -19,7 +19,7 @@ import {
   type JunakImportPositionValueMapping,
   type JunakImportRowResult,
 } from '@/lib/types';
-import { autoMapColumns } from '@/lib/junak-import-auto-map';
+import { autoMapColumns, autoMapPositionValues } from '@/lib/junak-import-auto-map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,6 +142,13 @@ export default function JunakImportPage() {
     }
     return Array.from(values);
   }, [columnMapping, dataRows]);
+
+  useEffect(() => {
+    if (uniquePositionValues.length > 0 && Object.keys(positionValueMapping).length === 0) {
+      setPositionValueMapping(autoMapPositionValues(uniquePositionValues, status.data?.mapping?.positionValueMapping));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniquePositionValues]);
 
   const wizardRows: WizardRow[] = useMemo(() => {
     let lastHurtok = '';
