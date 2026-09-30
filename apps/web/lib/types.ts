@@ -19,6 +19,7 @@ export interface UserSummary {
   birthDate: string | null;
   kurinId: string;
   hurtokId: string | null;
+  archivedAt: string | null;
 }
 
 export interface UserDetail extends UserSummary {
@@ -146,7 +147,8 @@ export type ApprovalActionType =
   | 'CHANGE_EMAIL'
   | 'CHANGE_HURTOK'
   | 'CREATE_JUNAK'
-  | 'BULK_IMPORT_JUNAKY';
+  | 'BULK_IMPORT_JUNAKY'
+  | 'ARCHIVE_JUNAK';
 
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 

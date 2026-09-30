@@ -51,3 +51,14 @@ export function useUpdateHurtok(id: string) {
     },
   });
 }
+
+export function useArchiveUser(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<UserDetail>(`/users/${id}/archive`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', id] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
