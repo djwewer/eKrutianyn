@@ -1,4 +1,15 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Logger,
+  Param,
+  Patch,
+  Put,
+  ServiceUnavailableException,
+  UseGuards,
+} from '@nestjs/common';
 import { PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -10,6 +21,8 @@ import { SetJunakImportSpreadsheetDto } from './dto/set-junak-import-spreadsheet
 @UseGuards(JwtAuthGuard)
 @Controller('kurins')
 export class KurinJunakImportController {
+  private readonly logger = new Logger(KurinJunakImportController.name);
+
   constructor(
     private readonly googleDrive: GoogleDriveService,
     private readonly prisma: PrismaService,
@@ -59,8 +72,14 @@ export class KurinJunakImportController {
     if (!kurin?.judgeBookSpreadsheetId) {
       throw new ForbiddenException('Книга судді ще не підключена');
     }
-    const rows = await this.googleDrive.readSheetValues(kurinId, kurin.judgeBookSpreadsheetId);
-    return { rows };
+    try {
+      const rows = await this.googleDrive.readSheetValues(kurinId, kurin.judgeBookSpreadsheetId);
+      return { rows };
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`Failed to read Книга судді sheet for kurin ${kurinId}: ${message}`, (error as Error).stack);
+      throw new ServiceUnavailableException(`Не вдалося прочитати таблицю з Google Sheets: ${message}`);
+    }
   }
 
   @Put(':kurinId/junak-import/mapping')

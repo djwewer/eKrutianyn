@@ -125,6 +125,23 @@ describe('Kurin Junak Import mapping (e2e)', () => {
     expect(response.body.rows).toEqual([['ПІБ', 'Псевдо'], ['Іван Петренко', 'Сокіл']]);
   });
 
+  it('surfaces the real Google API error instead of a generic 500 when readSheetValues throws', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+    await prisma.kurin.update({ where: { id: kurin.id }, data: { judgeBookSpreadsheetId: 'sheet-1' } });
+    fakeGoogleDrive.readSheetValues.mockRejectedValue(
+      new Error('Google Sheets API has not been used in project 123 before or it is disabled'),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/junak-import/sheet-data`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(503);
+
+    expect(response.body.message).toContain('Google Sheets API has not been used in project 123');
+  });
+
   it('saves and returns the mapping', async () => {
     const { kurin } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
