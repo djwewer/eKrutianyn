@@ -12,6 +12,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { USER_SELECT } from './user-select.const';
+import { hasAnyActivePosition } from '../common/positions.util';
 
 @Injectable()
 export class UsersService {
@@ -103,6 +104,36 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: junakId },
       data: { hurtokId: dto.hurtokId ?? null },
+      select: USER_SELECT,
+    });
+  }
+
+  async archiveUser(userId: string, actor: CurrentUserPayload) {
+    const target = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!target || target.kurinId !== actor.kurinId) {
+      throw new NotFoundException('User not found');
+    }
+    if (target.archivedAt) {
+      throw new BadRequestException('Уже архівовано');
+    }
+    if (target.role === Role.VYKHOVNYK) {
+      const activeAssignment = await this.prisma.vykhovnykHurtok.findFirst({
+        where: { vykhovnykId: userId },
+      });
+      if (activeAssignment) {
+        throw new BadRequestException('Спершу зніміть виховника з гуртка(ів)');
+      }
+    } else if (target.role === Role.JUNAK) {
+      const hasPosition = await hasAnyActivePosition(this.prisma, userId);
+      if (hasPosition || target.hurtokId !== null) {
+        throw new BadRequestException('Спершу зніміть юнака з гуртка та всіх посад');
+      }
+    } else {
+      throw new BadRequestException('Цю роль не можна архівувати');
+    }
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { archivedAt: new Date(), archivedById: actor.userId },
       select: USER_SELECT,
     });
   }

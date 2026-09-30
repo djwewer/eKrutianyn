@@ -74,4 +74,10 @@ export class UsersController {
   ) {
     return this.service.updateHurtok(id, dto, user);
   }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Patch(':id/archive')
+  archive(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.archiveUser(id, user);
+  }
 }

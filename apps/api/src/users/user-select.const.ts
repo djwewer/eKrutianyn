@@ -8,4 +8,5 @@ export const USER_SELECT = {
   birthDate: true,
   kurinId: true,
   hurtokId: true,
+  archivedAt: true,
 } as const;
