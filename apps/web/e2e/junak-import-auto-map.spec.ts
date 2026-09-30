@@ -82,3 +82,37 @@ test('auto-maps exact position values on Крок 2, leaves deputy roles and typ
     page.locator('span', { hasText: 'Скарбиник' }).locator('xpath=following-sibling::select'),
   ).toHaveValue('');
 });
+
+test('does not crash when a real sheet returns a null header cell', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  await fetch(`${API_URL}/kurins/${kurin.id}/junak-import/spreadsheet`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spreadsheetId: 'fake-sheet-id-3', spreadsheetName: 'Fake Sheet 3' }),
+  });
+
+  await page.route('**/api/backend/kurins/*/junak-import/sheet-data', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        rows: [
+          ['ПІБ', null, 'Email'],
+          ['Іван Петренко', 'xyz', 'ivan@example.com'],
+        ],
+      }),
+    }),
+  );
+
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await page.goto('/suddivstvo/junak-import');
+
+  await expect(page.getByText('Крок 1: Мапінг стовпчиків')).toBeVisible();
+  const selects = page.locator('select');
+  await expect(selects.nth(0)).toHaveValue('FIRST_LAST_NAME');
+  await expect(selects.nth(1)).toHaveValue('');
+  await expect(selects.nth(2)).toHaveValue('EMAIL');
+});

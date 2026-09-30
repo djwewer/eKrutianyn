@@ -25,12 +25,12 @@ const COLUMN_FIELD_KEYWORDS: ColumnFieldRule[] = [
   { field: 'FIRST_LAST_NAME', andGroups: [['піб'], ["ім'я"], ['імя'], ['прізвище']] },
 ];
 
-function normalize(text: string): string {
-  return text.toLowerCase().trim().replace(/\s+/g, ' ');
+function normalize(text: string | null | undefined): string {
+  return (text ?? '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
 export function autoMapColumns(
-  headers: string[],
+  headers: (string | null | undefined)[],
   savedMapping?: { header: string; field: string }[],
 ): Record<number, JunakImportField | ''> {
   const savedByHeader = new Map<string, JunakImportField>();
@@ -42,7 +42,7 @@ export function autoMapColumns(
   const takenFields = new Set<JunakImportField>();
 
   headers.forEach((rawHeader, index) => {
-    const saved = savedByHeader.get(rawHeader);
+    const saved = rawHeader == null ? undefined : savedByHeader.get(rawHeader);
     if (saved) {
       result[index] = saved;
       takenFields.add(saved);
@@ -78,7 +78,7 @@ const POSITION_VALUE_KEYWORDS: Record<string, string> = {
 };
 
 export function autoMapPositionValues(
-  rawValues: string[],
+  rawValues: (string | null | undefined)[],
   savedMapping?: { rawValue: string; positionType: string | null }[],
 ): Record<string, string> {
   const savedByValue = new Map<string, string>();
@@ -88,6 +88,7 @@ export function autoMapPositionValues(
 
   const result: Record<string, string> = {};
   for (const rawValue of rawValues) {
+    if (rawValue == null) continue;
     const saved = savedByValue.get(rawValue);
     if (saved) {
       result[rawValue] = saved;
