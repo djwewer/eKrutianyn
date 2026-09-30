@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useKurin } from '@/lib/queries/kurin';
 import { accessErrorMessage } from '@/lib/error-message';
+import { ApiError } from '@/lib/api-client';
 import {
   useJunakImportStatus,
   useJunakImportSheetData,
@@ -271,6 +272,20 @@ export default function JunakImportPage() {
     );
   }
   if (sheetData.isLoading) return <p>Завантаження таблиці...</p>;
+  if (sheetData.isError) {
+    const detail =
+      sheetData.error instanceof ApiError && typeof sheetData.error.body === 'object' && sheetData.error.body
+        ? (sheetData.error.body as { message?: string }).message
+        : undefined;
+    return (
+      <div className="max-w-3xl space-y-1">
+        <p className="text-sm text-destructive">
+          {accessErrorMessage(sheetData.error) ?? 'Не вдалося завантажити таблицю з Google Sheets.'}
+        </p>
+        {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl space-y-4">
