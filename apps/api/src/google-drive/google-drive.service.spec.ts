@@ -1,4 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 
 const mockOAuth2Instance = {
   generateAuthUrl: jest.fn(),
@@ -7,6 +8,8 @@ const mockOAuth2Instance = {
   getAccessToken: jest.fn(),
 };
 const mockFilesCreate = jest.fn();
+const mockFilesGet = jest.fn();
+const mockFilesUpdate = jest.fn();
 const mockPermissionsCreate = jest.fn();
 const mockUserinfoGet = jest.fn();
 const mockSheetsValuesGet = jest.fn();
@@ -16,7 +19,7 @@ jest.mock('googleapis', () => ({
   google: {
     auth: { OAuth2: jest.fn().mockImplementation(() => mockOAuth2Instance) },
     drive: jest.fn().mockImplementation(() => ({
-      files: { create: mockFilesCreate },
+      files: { create: mockFilesCreate, get: mockFilesGet, update: mockFilesUpdate },
       permissions: { create: mockPermissionsCreate },
     })),
     oauth2: jest.fn().mockImplementation(() => ({
@@ -29,6 +32,15 @@ jest.mock('googleapis', () => ({
 }));
 
 import { GoogleDriveService } from './google-drive.service';
+
+const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+async function buildXlsxBuffer(rows: string[][]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Sheet1');
+  rows.forEach((row) => sheet.addRow(row));
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
 
 describe('GoogleDriveService', () => {
   let service: GoogleDriveService;
@@ -43,6 +55,9 @@ describe('GoogleDriveService', () => {
     process.env.GOOGLE_OAUTH_CLIENT_ID = 'test-client-id';
     process.env.GOOGLE_OAUTH_CLIENT_SECRET = 'test-client-secret';
     process.env.GOOGLE_OAUTH_REDIRECT_URI = 'https://example.com/callback';
+    // Default: a native Google Sheet, so existing tests exercise the Sheets API path
+    // unchanged. Tests for the xlsx path override this with mockImplementation.
+    mockFilesGet.mockResolvedValue({ data: { mimeType: 'application/vnd.google-apps.spreadsheet' } });
   });
 
   describe('getAuthUrl', () => {
@@ -146,6 +161,27 @@ describe('GoogleDriveService', () => {
 
       await expect(service.readSheetValues('kurin-1', 'sheet-id-1')).rejects.toThrow(ServiceUnavailableException);
     });
+
+    it('reads values from an uploaded .xlsx file instead of calling the Sheets API', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      const buffer = await buildXlsxBuffer([
+        ['ПІБ', 'Псевдо'],
+        ['Іван Петренко', 'Сокіл'],
+      ]);
+      mockFilesGet.mockImplementation((params: { fields?: string; alt?: string }) => {
+        if (params.fields === 'mimeType') return Promise.resolve({ data: { mimeType: XLSX_MIME_TYPE } });
+        if (params.alt === 'media') return Promise.resolve({ data: buffer });
+        throw new Error(`unexpected files.get call: ${JSON.stringify(params)}`);
+      });
+
+      const result = await service.readSheetValues('kurin-1', 'file-id-1');
+
+      expect(result).toEqual([
+        ['ПІБ', 'Псевдо'],
+        ['Іван Петренко', 'Сокіл'],
+      ]);
+      expect(mockSheetsValuesGet).not.toHaveBeenCalled();
+    });
   });
 
   describe('appendSheetRow', () => {
@@ -162,6 +198,39 @@ describe('GoogleDriveService', () => {
         insertDataOption: 'INSERT_ROWS',
         requestBody: { values: [['Іван', 'Петренко']] },
       });
+    });
+
+    it('appends a row to an uploaded .xlsx file by re-uploading the modified workbook', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      const buffer = await buildXlsxBuffer([['ПІБ', 'Псевдо']]);
+      mockFilesGet.mockImplementation((params: { fields?: string; alt?: string }) => {
+        if (params.fields === 'mimeType') return Promise.resolve({ data: { mimeType: XLSX_MIME_TYPE } });
+        if (params.alt === 'media') return Promise.resolve({ data: buffer });
+        throw new Error(`unexpected files.get call: ${JSON.stringify(params)}`);
+      });
+      mockFilesUpdate.mockResolvedValue({});
+
+      await service.appendSheetRow('kurin-1', 'file-id-1', ['Іван Петренко', 'Сокіл']);
+
+      expect(mockSheetsValuesAppend).not.toHaveBeenCalled();
+      expect(mockFilesUpdate).toHaveBeenCalledTimes(1);
+      const updateCall = mockFilesUpdate.mock.calls[0][0];
+      expect(updateCall.fileId).toBe('file-id-1');
+      expect(updateCall.media.mimeType).toBe(XLSX_MIME_TYPE);
+
+      // Confirm the re-uploaded workbook actually contains the appended row.
+      const chunks: Buffer[] = [];
+      for await (const chunk of updateCall.media.body) {
+        chunks.push(chunk as Buffer);
+      }
+      const uploadedWorkbook = new ExcelJS.Workbook();
+      await uploadedWorkbook.xlsx.load(Buffer.concat(chunks) as any);
+      const rows: string[][] = [];
+      uploadedWorkbook.worksheets[0].eachRow((row) => rows.push((row.values as unknown[]).slice(1).map(String)));
+      expect(rows).toEqual([
+        ['ПІБ', 'Псевдо'],
+        ['Іван Петренко', 'Сокіл'],
+      ]);
     });
   });
 });
