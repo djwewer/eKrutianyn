@@ -260,7 +260,15 @@ export default function JunakImportPage() {
 
   if (!kurinId) return <p>Завантаження...</p>;
   if (!status.data?.connectedSpreadsheetId) {
-    return <p className="text-sm text-destructive">Спершу підключіть Книгу судді на сторінці налаштувань куреня.</p>;
+    return (
+      <p className="text-sm text-destructive">
+        Спершу підключіть Книгу судді на сторінці{' '}
+        <a href="/suddivstvo" className="underline">
+          «Суддівство»
+        </a>
+        .
+      </p>
+    );
   }
   if (sheetData.isLoading) return <p>Завантаження таблиці...</p>;
 

@@ -26,7 +26,10 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   ],
 };
 
-const DILOVODY_PAGES = [{ href: '/inventory', label: 'Облік реманенту' }];
+const DILOVODY_PAGES = [
+  { href: '/inventory', label: 'Облік реманенту' },
+  { href: '/suddivstvo', label: 'Суддівство' },
+];
 
 export function Nav() {
   const router = useRouter();
@@ -48,6 +51,9 @@ export function Nav() {
   }
   if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('INTENDANT') || session.isKurinniy)) {
     links.push({ href: '/inventory', label: 'Облік реманенту' });
+  }
+  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('SUDDIA') || session.isKurinniy)) {
+    links.push({ href: '/suddivstvo', label: 'Суддівство' });
   }
 
   return (
