@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useUser, useUpdateContactInfo, useUpdateHurtok } from '@/lib/queries/users';
+import { useUser, useUpdateContactInfo, useUpdateHurtok, useArchiveUser } from '@/lib/queries/users';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
@@ -19,7 +19,7 @@ import {
   useCloseStage,
   useReopenStage,
 } from '@/lib/queries/proby';
-import type { GuardianContact, ProbyCategory } from '@/lib/types';
+import type { GuardianContact, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -191,6 +191,86 @@ function ProbyCategorySection({
         </ul>
       )}
     </div>
+  );
+}
+
+function ArchiveUserCard({
+  user,
+  session,
+}: {
+  user: UserDetail;
+  session: CurrentUserPayload | null | undefined;
+}) {
+  const archiveUser = useArchiveUser(user.id);
+  const createRequest = useCreateApprovalRequest();
+  const [requestSent, setRequestSent] = useState(false);
+
+  if (user.archivedAt) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          Архівовано {new Date(user.archivedAt).toLocaleDateString('uk-UA')}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
+  const canRequestArchive =
+    user.role === 'JUNAK' && (session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA'));
+  if (!isZvyazkovyi && !canRequestArchive) {
+    return null;
+  }
+
+  if (user.role === 'JUNAK' && user.hurtokId !== null) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          Спершу зніміть юнака з гуртка та посад
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (requestSent) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-sm text-muted-foreground">
+          Запит на архівацію надіслано, очікує затвердження зв&apos;язковим.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-2 pt-6">
+        <Button
+          variant="outline"
+          disabled={archiveUser.isPending || createRequest.isPending}
+          onClick={() => {
+            if (!window.confirm(`Архівувати ${user.firstName} ${user.lastName}? Втратить доступ до входу.`)) {
+              return;
+            }
+            if (isZvyazkovyi) {
+              archiveUser.mutate();
+            } else {
+              createRequest.mutate(
+                { actionType: 'ARCHIVE_JUNAK', junakId: user.id, newData: {} },
+                { onSuccess: () => setRequestSent(true) },
+              );
+            }
+          }}
+        >
+          Архівувати
+        </Button>
+        {archiveUser.isError && (
+          <p className="text-sm text-destructive">
+            {accessErrorMessage(archiveUser.error) ?? 'Не вдалося архівувати.'}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -471,6 +551,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
       )}
+      <ArchiveUserCard user={user} session={session} />
     </div>
   );
 }
