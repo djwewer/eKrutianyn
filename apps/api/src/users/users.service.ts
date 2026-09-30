@@ -179,6 +179,7 @@ export class UsersService {
             kurinId: actor.kurinId,
             role: Role.JUNAK,
             hurtokId: filters.hurtokId,
+            archivedAt: null,
           },
           select: USER_SELECT,
           orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
@@ -189,6 +190,7 @@ export class UsersService {
         where: {
           kurinId: actor.kurinId,
           role: Role.JUNAK,
+          archivedAt: null,
           OR: [{ hurtokId: { in: assignedHurtokIds } }, { hurtokId: null }],
         },
         select: USER_SELECT,
@@ -201,6 +203,7 @@ export class UsersService {
         where: {
           kurinId: actor.kurinId,
           role: filters.role ?? Role.JUNAK,
+          archivedAt: null,
           ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
         },
         select: USER_SELECT,
@@ -212,6 +215,7 @@ export class UsersService {
     return this.prisma.user.findMany({
       where: {
         kurinId: actor.kurinId,
+        archivedAt: null,
         ...(filters.role ? { role: filters.role } : {}),
         ...(filters.hurtokId ? { hurtokId: filters.hurtokId } : {}),
       },

@@ -42,7 +42,7 @@ export class HurtkyService {
   }
 
   listForKurin(kurinId: string) {
-    return this.prisma.hurtok.findMany({ where: { kurinId } });
+    return this.prisma.hurtok.findMany({ where: { kurinId, archivedAt: null } });
   }
 
   async getMembersBySlug(slug: string, actor: CurrentUserPayload) {
