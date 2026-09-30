@@ -321,7 +321,7 @@ describe('User archival (e2e)', () => {
 
 - [ ] **Step 2: Run to confirm the tests fail**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive.e2e-spec.ts`
 Expected: FAIL — `404 Not Found` (route doesn't exist yet) on every test.
 
 - [ ] **Step 3: Add `archivedAt` to `USER_SELECT`**
@@ -399,7 +399,7 @@ In `apps/api/src/users/users.controller.ts`, add this method to the class (after
 
 - [ ] **Step 6: Run the tests to confirm they pass**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive.e2e-spec.ts`
 Expected: PASS (9/9)
 
 - [ ] **Step 7: Typecheck**
@@ -564,7 +564,7 @@ describe('Hurtok archival (e2e)', () => {
 
 - [ ] **Step 2: Run to confirm the tests fail**
 
-Run: `cd apps/api && npm run test:e2e -- hurtky-archive.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-archive.e2e-spec.ts`
 Expected: FAIL — `404 Not Found` on every test (route doesn't exist).
 
 - [ ] **Step 3: Add `archiveHurtok` to `HurtkyService`**
@@ -625,7 +625,7 @@ Then add this method to the class (after `create`):
 
 - [ ] **Step 5: Run the tests to confirm they pass**
 
-Run: `cd apps/api && npm run test:e2e -- hurtky-archive.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-archive.e2e-spec.ts`
 Expected: PASS (6/6)
 
 - [ ] **Step 6: Typecheck**
@@ -797,7 +797,7 @@ describe('Login blocked for archived accounts (e2e)', () => {
 
 - [ ] **Step 6: Run to confirm it fails**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive-login.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-login.e2e-spec.ts`
 Expected: FAIL — currently returns 201 with a valid token.
 
 - [ ] **Step 7: Block login for archived accounts in `AuthService`**
@@ -820,12 +820,12 @@ In `loginWithGoogle`, right after the existing `if (!user) { throw new Unauthori
 
 - [ ] **Step 8: Run the e2e test to confirm it passes**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive-login.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-login.e2e-spec.ts`
 Expected: PASS (1/1)
 
 - [ ] **Step 9: Run the full existing e2e suite for regressions**
 
-Run: `cd apps/api && npm run test:e2e`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass — no other spec relies on `JwtStrategy` skipping the DB lookup.
 
 - [ ] **Step 10: Typecheck**
@@ -929,7 +929,7 @@ describe('Archived rows excluded from lists (e2e)', () => {
 
 - [ ] **Step 2: Run to confirm the tests fail**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive-lists.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-lists.e2e-spec.ts`
 Expected: FAIL — the archived rows currently show up in both lists.
 
 - [ ] **Step 3: Filter `users.service.ts`'s `list()`**
@@ -972,12 +972,12 @@ with:
 
 - [ ] **Step 5: Run the tests to confirm they pass**
 
-Run: `cd apps/api && npm run test:e2e -- users-archive-lists.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-lists.e2e-spec.ts`
 Expected: PASS (2/2)
 
 - [ ] **Step 6: Run the full existing e2e suite for regressions**
 
-Run: `cd apps/api && npm run test:e2e`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass
 
 - [ ] **Step 7: Typecheck**
@@ -1146,7 +1146,7 @@ describe('ARCHIVE_JUNAK approval flow (e2e)', () => {
 
 - [ ] **Step 2: Run to confirm the tests fail**
 
-Run: `cd apps/api && npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
 Expected: FAIL — `create()` rejects `ARCHIVE_JUNAK` as an unknown case in `extractRelevantFields`, and `approve()` has no branch for it.
 
 - [ ] **Step 3: Export `UsersService` and wire the module import**
@@ -1253,12 +1253,12 @@ In `extractRelevantFields()`, add a case (before the `default` line):
 
 - [ ] **Step 5: Run the tests to confirm they pass**
 
-Run: `cd apps/api && npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
 Expected: PASS (4/4)
 
 - [ ] **Step 6: Run the full existing e2e suite for regressions**
 
-Run: `cd apps/api && npm run test:e2e`
+Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass
 
 - [ ] **Step 7: Typecheck**
