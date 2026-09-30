@@ -86,7 +86,7 @@ export class HurtkyService {
     }
 
     return {
-      hurtok: { id: hurtok.id, name: hurtok.name, slug: hurtok.slug, number: hurtok.number },
+      hurtok: { id: hurtok.id, name: hurtok.name, slug: hurtok.slug, number: hurtok.number, archivedAt: hurtok.archivedAt },
       members: members.map((m) => ({
         ...m,
         positions: (positionsByUserId.get(m.id) ?? []).map((p) => ({
