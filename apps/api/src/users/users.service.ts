@@ -95,6 +95,9 @@ export class UsersService {
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
+    if (junak.archivedAt) {
+      throw new BadRequestException('Юнак архівований');
+    }
     if (dto.hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });
       if (!hurtok || hurtok.kurinId !== actor.kurinId) {

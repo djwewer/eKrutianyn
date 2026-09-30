@@ -50,6 +50,9 @@ export class KurinPositionsService {
     if (!target || target.role !== Role.JUNAK || target.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found in this kurin');
     }
+    if (target.archivedAt) {
+      throw new BadRequestException('Юнак архівований');
+    }
     if (dto.scope === PositionScope.HURTOK && target.hurtokId !== dto.hurtokId) {
       throw new BadRequestException('This junak does not belong to that hurtok');
     }

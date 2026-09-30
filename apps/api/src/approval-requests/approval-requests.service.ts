@@ -83,10 +83,14 @@ export class ApprovalRequestsService {
     }
     if (req.actionType === ApprovalActionType.ARCHIVE_JUNAK) {
       await this.usersService.archiveUser(req.junakId!, actor);
-      return this.prisma.approvalRequest.update({
-        where: { id: requestId },
+      const claim = await this.prisma.approvalRequest.updateMany({
+        where: { id: requestId, status: ApprovalStatus.PENDING },
         data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
       });
+      if (claim.count === 0) {
+        throw new BadRequestException('Request already decided');
+      }
+      return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
     }
 
     let createdJunak:
@@ -216,7 +220,7 @@ export class ApprovalRequestsService {
       case ApprovalActionType.CHANGE_HURTOK:
         return { hurtokId: junak.hurtokId };
       case ApprovalActionType.ARCHIVE_JUNAK:
-        return {};
+        return { firstName: junak.firstName, lastName: junak.lastName };
       default:
         return undefined;
     }

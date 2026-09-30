@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -18,6 +24,9 @@ export class VykhovnykAssignmentsService {
     }
     if (!hurtok || hurtok.kurinId !== actorKurinId) {
       throw new NotFoundException('Hurtok not found in this kurin');
+    }
+    if (vykhovnyk.archivedAt) {
+      throw new BadRequestException('Виховник архівований');
     }
     try {
       return await this.prisma.vykhovnykHurtok.create({

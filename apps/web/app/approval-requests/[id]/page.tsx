@@ -9,6 +9,7 @@ import {
 } from '@/lib/queries/approval-requests-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { accessErrorMessage } from '@/lib/error-message';
 
 const ACTION_LABELS: Record<string, string> = {
   CHANGE_FULL_NAME: 'Зміна ПІБ',
@@ -75,6 +76,16 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
               Відхилити
             </Button>
           </div>
+        )}
+        {approve.isError && (
+          <p className="text-sm text-destructive">
+            {accessErrorMessage(approve.error) ?? 'Не вдалося затвердити.'}
+          </p>
+        )}
+        {reject.isError && (
+          <p className="text-sm text-destructive">
+            {accessErrorMessage(reject.error) ?? 'Не вдалося відхилити.'}
+          </p>
         )}
       </CardContent>
     </Card>

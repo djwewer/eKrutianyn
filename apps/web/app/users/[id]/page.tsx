@@ -215,7 +215,7 @@ function ArchiveUserCard({
     );
   }
 
-  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
+  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI' && user.role !== 'ZVYAZKOVYI';
   const canRequestArchive =
     user.role === 'JUNAK' && (session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA'));
   if (!isZvyazkovyi && !canRequestArchive) {
@@ -287,7 +287,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [nameRequestSent, setNameRequestSent] = useState(false);
 
   const canEditContactInfo =
-    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && user?.role === 'JUNAK';
+    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) &&
+    user?.role === 'JUNAK' &&
+    !user?.archivedAt;
   const {
     data: guardianContacts,
     isError,
@@ -307,7 +309,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const reopenStage = useReopenStage(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
 
-  const canMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak;
+  const canMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak && !user?.archivedAt;
   const { data: hurtky } = useHurtky();
   const updateHurtok = useUpdateHurtok(id);
   const [selectedHurtokId, setSelectedHurtokId] = useState('');
@@ -499,7 +501,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </CardContent>
         </Card>
       )}
-      {session?.isKurinniy && user.role === 'JUNAK' && (
+      {session?.isKurinniy && user.role === 'JUNAK' && !user.archivedAt && (
         <Card>
           <CardHeader>
             <CardTitle>Змінити ПІБ (потребує затвердження)</CardTitle>
