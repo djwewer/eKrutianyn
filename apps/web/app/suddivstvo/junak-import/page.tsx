@@ -19,6 +19,7 @@ import {
   type JunakImportPositionValueMapping,
   type JunakImportRowResult,
 } from '@/lib/types';
+import { autoMapColumns } from '@/lib/junak-import-auto-map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +119,13 @@ export default function JunakImportPage() {
   const rawRows = sheetData.data?.rows ?? [];
   const header = rawRows[0] ?? [];
   const dataRows = rawRows.slice(1);
+
+  useEffect(() => {
+    if (header.length > 0 && Object.keys(columnMapping).length === 0) {
+      setColumnMapping(autoMapColumns(header, status.data?.mapping?.columnMapping));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [header]);
 
   const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
 
