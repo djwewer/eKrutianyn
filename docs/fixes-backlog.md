@@ -11,6 +11,31 @@
 
 ---
 
+## 🟡 Picker не реєструє доступ до вибраного файлу (`drive.file`) — "File not found" після вибору
+
+**Опис:** звʼязковий підключав Книгу судді через Google Picker (`/suddivstvo`)
+— файл реальний, обраний саме через Picker, доступний йому в Drive — але
+бекенд одразу падав з `File not found: <fileId>` при першому ж читанні
+(`GoogleDriveService.readSheetValues`). Причина: `google-picker.ts` ніколи
+не викликав `PickerBuilder.setAppId(...)`. Для `drive.file`-скоупу цей
+виклик обовʼязковий — без нього Picker візуально дає вибрати файл (callback
+спрацьовує), але фактичний грант доступу для OAuth-токена на цей конкретний
+файл не реєструється, і будь-який наступний виклик Drive API повертає 404.
+
+**Що зроблено:** `apps/web/lib/google-picker.ts` — обидва picker-и
+(`openGoogleDriveFolderPicker`, `openGoogleSheetPicker`) тепер викликають
+`.setAppId(NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER)`, якщо цей env заданий. Додано
+`NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER` в `apps/web/.env.local.example`.
+
+**Залишається (ручний крок, Андрій):** знайти "Project number" (не Client
+ID) того GCP-проєкту, де створено `GOOGLE_OAUTH_CLIENT_ID` (GCP Console →
+Dashboard проєкту), і задати його як `NEXT_PUBLIC_GOOGLE_PROJECT_NUMBER` у
+Vercel env для `apps/web`, після чого передеплоїти фронтенд. Уже підключені
+раніше (без `setAppId`) таблиці/папки, ймовірно, доведеться перепідключити
+через Picker ще раз — старий грант так і не був виданий.
+
+---
+
 ## 🟢 Одна роль в курені на юнака
 
 **Опис:** юнака можна було одночасно призначити на кілька позицій — і на
