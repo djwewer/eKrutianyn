@@ -8,7 +8,7 @@ describe('JwtStrategy', () => {
   beforeEach(() => {
     process.env.JWT_SECRET = 'test-secret';
     prisma = {
-      user: { findUnique: jest.fn() },
+      user: { findUnique: jest.fn().mockResolvedValue({ archivedAt: null }) },
       kurinPosition: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
     };
     strategy = new JwtStrategy(prisma);
@@ -32,5 +32,21 @@ describe('JwtStrategy', () => {
       isKurinniy: false,
       positions: [],
     });
+  });
+
+  it('rejects a token for a user that no longer exists', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token for an archived user, even before the JWT expires', async () => {
+    prisma.user.findUnique.mockResolvedValue({ archivedAt: new Date('2026-01-01') });
+
+    await expect(
+      strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any),
+    ).rejects.toThrow(UnauthorizedException);
   });
 });

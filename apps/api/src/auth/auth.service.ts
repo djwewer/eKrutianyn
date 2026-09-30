@@ -52,6 +52,9 @@ export class AuthService {
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (user.archivedAt) {
+      throw new UnauthorizedException('Account archived');
+    }
     const valid = await this.validatePassword(password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -70,6 +73,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email: verified.email } });
     if (!user) {
       throw new UnauthorizedException('No account found for this email');
+    }
+    if (user.archivedAt) {
+      throw new UnauthorizedException('Account archived');
     }
     if (!user.googleId) {
       await this.prisma.user.update({ where: { id: user.id }, data: { googleId: verified.sub } });

@@ -2,12 +2,14 @@ import { Test } from '@nestjs/testing';
 import { Controller, Get, INestApplication, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as request from 'supertest';
-import { Role } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { RolesGuard } from '../src/common/guards/roles.guard';
 import { Roles } from '../src/common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../src/common/decorators/current-user.decorator';
+import { cleanDatabase } from './utils/clean-db';
+import { createProbyProgramTree, createKurin, createUser } from './utils/fixtures';
 
 @Controller('test-protected')
 class TestProtectedController {
@@ -28,6 +30,7 @@ class TestProtectedController {
 describe('Auth guards (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
+  const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -40,7 +43,13 @@ describe('Auth guards (e2e)', () => {
   });
 
   afterAll(async () => {
+    await cleanDatabase(prisma);
+    await prisma.$disconnect();
     await app.close();
+  });
+
+  beforeEach(async () => {
+    await cleanDatabase(prisma);
   });
 
   it('returns 401 with no token', async () => {
@@ -48,7 +57,15 @@ describe('Auth guards (e2e)', () => {
   });
 
   it('returns 200 with any valid token on a route with no @Roles', async () => {
-    const token = jwtService.sign({ sub: 'user-1', role: Role.JUNAK, kurinId: 'kurin-1' });
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const user = await createUser(prisma, {
+      role: Role.JUNAK,
+      kurinId: kurin.id,
+      email: 'user1@example.com',
+    });
+
+    const token = jwtService.sign({ sub: user.id, role: Role.JUNAK, kurinId: kurin.id });
     await request(app.getHttpServer())
       .get('/test-protected/any-role')
       .set('Authorization', `Bearer ${token}`)
@@ -56,7 +73,15 @@ describe('Auth guards (e2e)', () => {
   });
 
   it('returns 403 when the role does not match @Roles', async () => {
-    const token = jwtService.sign({ sub: 'user-1', role: Role.JUNAK, kurinId: 'kurin-1' });
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const user = await createUser(prisma, {
+      role: Role.JUNAK,
+      kurinId: kurin.id,
+      email: 'user1@example.com',
+    });
+
+    const token = jwtService.sign({ sub: user.id, role: Role.JUNAK, kurinId: kurin.id });
     await request(app.getHttpServer())
       .get('/test-protected/zvyazkovyi-only')
       .set('Authorization', `Bearer ${token}`)
@@ -64,12 +89,20 @@ describe('Auth guards (e2e)', () => {
   });
 
   it('returns 200 and the decoded user when the role matches @Roles', async () => {
-    const token = jwtService.sign({ sub: 'user-1', role: Role.ZVYAZKOVYI, kurinId: 'kurin-1' });
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const user = await createUser(prisma, {
+      role: Role.ZVYAZKOVYI,
+      kurinId: kurin.id,
+      email: 'user1@example.com',
+    });
+
+    const token = jwtService.sign({ sub: user.id, role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const response = await request(app.getHttpServer())
       .get('/test-protected/zvyazkovyi-only')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toEqual({ userId: 'user-1', role: Role.ZVYAZKOVYI, kurinId: 'kurin-1' });
+    expect(response.body).toEqual({ userId: user.id, role: Role.ZVYAZKOVYI, kurinId: kurin.id });
   });
 });

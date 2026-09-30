@@ -20,6 +20,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
     }
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || user.archivedAt) {
+      throw new UnauthorizedException('Account not found or archived');
+    }
     const isKurinniy = await isKurinniyForUser(this.prisma, payload.sub);
     const positions = await getActiveKurinPositions(this.prisma, payload.sub, payload.kurinId);
     return { userId: payload.sub, role: payload.role, kurinId: payload.kurinId, isKurinniy, positions };
