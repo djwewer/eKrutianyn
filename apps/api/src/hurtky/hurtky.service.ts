@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -13,6 +13,32 @@ export class HurtkyService {
   async create(dto: CreateHurtokDto, kurinId: string) {
     const slug = await generateUniqueSlug(this.prisma, kurinId, dto.name);
     return this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId, slug } });
+  }
+
+  async archiveHurtok(hurtokId: string, actor: CurrentUserPayload) {
+    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+    if (!hurtok || hurtok.kurinId !== actor.kurinId) {
+      throw new NotFoundException('Hurtok not found in this kurin');
+    }
+    if (hurtok.archivedAt) {
+      throw new BadRequestException('Уже архівовано');
+    }
+    const activeJunak = await this.prisma.user.findFirst({ where: { hurtokId } });
+    if (activeJunak) {
+      throw new BadRequestException('У гуртку ще є юнаки');
+    }
+    const activeVykhovnyk = await this.prisma.vykhovnykHurtok.findFirst({ where: { hurtokId } });
+    if (activeVykhovnyk) {
+      throw new BadRequestException('До гуртка ще прикріплені виховники');
+    }
+    const activePosition = await this.prisma.kurinPosition.findFirst({ where: { hurtokId, removedAt: null } });
+    if (activePosition) {
+      throw new BadRequestException('У гуртку є активна посада');
+    }
+    return this.prisma.hurtok.update({
+      where: { id: hurtokId },
+      data: { archivedAt: new Date(), archivedById: actor.userId },
+    });
   }
 
   listForKurin(kurinId: string) {

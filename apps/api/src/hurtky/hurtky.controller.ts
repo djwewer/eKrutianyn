@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -16,6 +16,12 @@ export class HurtkyController {
   @Post()
   create(@Body() dto: CreateHurtokDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.create(dto, user.kurinId);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Patch(':id/archive')
+  archive(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.archiveHurtok(id, user);
   }
 
   @Get()
