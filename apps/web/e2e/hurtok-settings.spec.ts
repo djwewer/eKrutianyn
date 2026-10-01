@@ -158,3 +158,57 @@ test('disables disbanding a hurtok that still has a junak, enables it once empty
 
   await expect(page.getByText(/Архівовано/)).toBeVisible();
 });
+
+test('lets a KURIN-scope suddia open and use the hurtok settings dialog', async ({ page, request }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
+  const suddiaEmail = `suddia-${Date.now()}@example.com`;
+  const suddia = await createUserAs(zvyazkovyiToken, {
+    firstName: 'Суд',
+    lastName: 'Дя',
+    email: suddiaEmail,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+  await request.post('http://localhost:3001/kurin-positions', {
+    headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
+    data: { userId: suddia.id, scope: 'KURIN', positionType: 'SUDDIA' },
+  });
+
+  await loginAs(page, suddiaEmail, 'password123');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
+  await page.getByText('Орлики').click();
+  await page.getByRole('button', { name: 'Налаштування' }).click();
+  await page.getByLabel('Дата заснування').fill('2020-05-01');
+  await page.getByRole('button', { name: 'Зберегти дату' }).click();
+  await expect(page.getByText('Засновано')).toBeVisible();
+});
+
+test('a plain member sees hurtok info read-only, with no settings button', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const hurtok = await createHurtok(zvyazkovyiToken, 'Соколи');
+  const plainJunakEmail = `plain-${Date.now()}@example.com`;
+  await createUserAs(zvyazkovyiToken, {
+    firstName: 'Прост',
+    lastName: 'Юнак',
+    email: plainJunakEmail,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+
+  await loginAs(page, plainJunakEmail, 'password123');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
+  await page.getByText('Соколи').click();
+  await expect(page.getByRole('button', { name: 'Налаштування' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Додати юнака/чку' })).toHaveCount(0);
+});

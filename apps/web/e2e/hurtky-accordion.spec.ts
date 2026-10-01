@@ -17,11 +17,12 @@ test('expands a hurtok row inline to show its members, without navigating away',
   });
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/hurtky');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
 
   await expect(page.getByText(`${junak.lastName} ${junak.firstName}`)).not.toBeVisible();
   await page.getByText('Орлики').click();
-  await expect(page).toHaveURL('/hurtky');
+  await expect(page).toHaveURL('/kurin');
   await expect(page.getByText(`${junak.lastName} ${junak.firstName}`)).toBeVisible();
 });
 
@@ -33,7 +34,8 @@ test('keeps two rows expanded at the same time', async ({ page }) => {
   await createHurtok(zvyazkovyiToken, 'Соколи');
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/hurtky');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
 
   await page.getByText('Орлики').click();
   await page.getByText('Соколи').click();

@@ -19,10 +19,11 @@ test('lets zvyazkovyi expand a hurtok row and navigate to a member profile', asy
   });
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/hurtky');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
   await page.getByText('Вовки').click();
 
-  await expect(page).toHaveURL('/hurtky');
+  await expect(page).toHaveURL('/kurin');
   await expect(page.getByText('Петренко Петро')).toBeVisible();
 
   await page.getByText('Петренко Петро').click();

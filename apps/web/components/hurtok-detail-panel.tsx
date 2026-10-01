@@ -20,7 +20,8 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
   if (!data) return <p>Гурток не знайдено.</p>;
 
   const canAddJunak = (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && !data.hurtok.archivedAt;
-  const canConfigure = session?.role === 'ZVYAZKOVYI' && !data.hurtok.archivedAt;
+  const canConfigure =
+    (session?.role === 'ZVYAZKOVYI' || (session?.positions ?? []).includes('SUDDIA')) && !data.hurtok.archivedAt;
 
   return (
     <div className="space-y-4">

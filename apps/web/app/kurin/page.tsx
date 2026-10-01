@@ -5,6 +5,7 @@ import { useSession } from '@/lib/session-client';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KurinInfoSection } from '@/components/kurin-info-section';
 import { KurinProvidSection } from '@/components/kurin-provid-section';
+import { KurinHurtkySection } from '@/components/kurin-hurtky-section';
 
 type SectionKey = 'info' | 'provid' | 'hurtky' | 'vykhovnyky' | 'junatstvo';
 
@@ -38,6 +39,7 @@ function KurinPageContent() {
   const sections: { key: SectionKey; title: string; render: () => React.ReactNode }[] = [
     { key: 'info', title: 'Інформація по куреню', render: () => <KurinInfoSection /> },
     { key: 'provid', title: 'Провід куреня', render: () => <KurinProvidSection /> },
+    { key: 'hurtky', title: 'Гуртки', render: () => <KurinHurtkySection /> },
   ];
 
   return (

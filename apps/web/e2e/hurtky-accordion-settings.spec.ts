@@ -10,7 +10,8 @@ test('opens the settings dialog from an accordion row and saves the founding dat
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/hurtky');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
   await page.getByText('Орлики').click();
 
   await page.getByRole('button', { name: 'Налаштування' }).click();
@@ -19,5 +20,5 @@ test('opens the settings dialog from an accordion row and saves the founding dat
 
   await expect(page.getByText('Засновано 10.05.2021')).toBeVisible();
   // Рядок лишається розгорнутим — сторінка не перезавантажилась і не згорнулась.
-  await expect(page).toHaveURL('/hurtky');
+  await expect(page).toHaveURL('/kurin');
 });
