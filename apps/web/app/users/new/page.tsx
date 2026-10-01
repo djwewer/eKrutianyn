@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Role, UserSummary } from '@/lib/types';
 
-function ZvyazkovyiDirectCreateForm() {
+function ZvyazkovyiDirectCreateForm({ initialHurtokId }: { initialHurtokId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: hurtky } = useHurtky();
@@ -21,7 +21,7 @@ function ZvyazkovyiDirectCreateForm() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('JUNAK');
-  const [hurtokId, setHurtokId] = useState('');
+  const [hurtokId, setHurtokId] = useState(initialHurtokId);
   const [password, setPassword] = useState('');
 
   const createUser = useMutation({
@@ -115,14 +115,14 @@ function ZvyazkovyiDirectCreateForm() {
   );
 }
 
-function KurinnyiApprovalRequestForm() {
+function KurinnyiApprovalRequestForm({ initialHurtokId }: { initialHurtokId: string }) {
   const router = useRouter();
   const { data: hurtky } = useHurtky();
   const createRequest = useCreateApprovalRequest();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [hurtokId, setHurtokId] = useState('');
+  const [hurtokId, setHurtokId] = useState(initialHurtokId);
   const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -197,13 +197,23 @@ function KurinnyiApprovalRequestForm() {
 }
 
 export default function NewUserPage() {
+  return (
+    <Suspense fallback={<p>Завантаження...</p>}>
+      <NewUserPageContent />
+    </Suspense>
+  );
+}
+
+function NewUserPageContent() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const initialHurtokId = searchParams.get('hurtokId') ?? '';
 
   if (session?.role === 'ZVYAZKOVYI') {
-    return <ZvyazkovyiDirectCreateForm />;
+    return <ZvyazkovyiDirectCreateForm initialHurtokId={initialHurtokId} />;
   }
   if (session?.isKurinniy) {
-    return <KurinnyiApprovalRequestForm />;
+    return <KurinnyiApprovalRequestForm initialHurtokId={initialHurtokId} />;
   }
   return null;
 }
