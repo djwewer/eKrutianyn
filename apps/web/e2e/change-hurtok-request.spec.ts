@@ -45,7 +45,7 @@ test('lets kurinniy request a hurtok change, zvyazkovyi approves it', async ({ p
   await page.getByRole('button', { name: 'Затвердити' }).click();
 
   await page.goto(`/users/${target.id}`);
-  await page.getByRole('heading', { name: 'Дані' }).locator('..').getByText('Соколи');
+  await expect(page.getByLabel('Гурток')).toHaveValue(hurtokB.id);
 });
 
 test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, request }) => {
@@ -90,5 +90,5 @@ test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, req
   await page.getByRole('button', { name: 'Затвердити' }).click();
 
   await page.goto(`/users/${target.id}`);
-  await page.getByRole('heading', { name: 'Дані' }).locator('..').getByText('Соколи');
+  await expect(page.getByLabel('Гурток')).toHaveValue(hurtokB.id);
 });
