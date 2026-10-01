@@ -6,6 +6,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { HurtkyService } from './hurtky.service';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
+import { UpdateHurtokDto } from './dto/update-hurtok.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('hurtky')
@@ -16,6 +17,12 @@ export class HurtkyController {
   @Post()
   create(@Body() dto: CreateHurtokDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.create(dto, user.kurinId);
+  }
+
+  @Roles(Role.ZVYAZKOVYI)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateHurtokDto, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.update(id, dto, user);
   }
 
   @Roles(Role.ZVYAZKOVYI)

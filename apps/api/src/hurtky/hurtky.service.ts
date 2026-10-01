@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
+import { UpdateHurtokDto } from './dto/update-hurtok.dto';
 import { USER_SELECT } from '../users/user-select.const';
 import { generateUniqueSlug } from './slug.util';
 
@@ -13,6 +14,17 @@ export class HurtkyService {
   async create(dto: CreateHurtokDto, kurinId: string) {
     const slug = await generateUniqueSlug(this.prisma, kurinId, dto.name);
     return this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId, slug } });
+  }
+
+  async update(hurtokId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload) {
+    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+    if (!hurtok || hurtok.kurinId !== actor.kurinId) {
+      throw new NotFoundException('Hurtok not found in this kurin');
+    }
+    return this.prisma.hurtok.update({
+      where: { id: hurtokId },
+      data: { foundedAt: dto.foundedAt ? new Date(dto.foundedAt) : null },
+    });
   }
 
   async archiveHurtok(hurtokId: string, actor: CurrentUserPayload) {
@@ -86,7 +98,14 @@ export class HurtkyService {
     }
 
     return {
-      hurtok: { id: hurtok.id, name: hurtok.name, slug: hurtok.slug, number: hurtok.number, archivedAt: hurtok.archivedAt },
+      hurtok: {
+        id: hurtok.id,
+        name: hurtok.name,
+        slug: hurtok.slug,
+        number: hurtok.number,
+        foundedAt: hurtok.foundedAt,
+        archivedAt: hurtok.archivedAt,
+      },
       members: members.map((m) => ({
         ...m,
         positions: (positionsByUserId.get(m.id) ?? []).map((p) => ({
