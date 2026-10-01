@@ -2128,10 +2128,11 @@ test('lets kurinniy request a hurtok change, zvyazkovyi approves it', async ({ p
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/approval-requests');
-  await page.getByRole('button', { name: 'Затвердити' }).first().click();
+  await page.getByText('Переведення в інший гурток').first().click();
+  await page.getByRole('button', { name: 'Затвердити' }).click();
 
   await page.goto(`/users/${target.id}`);
-  await page.getByRole('heading', { name: 'Дані' }).locator('..').getByText('Соколи');
+  await expect(page.getByLabel('Гурток')).toHaveValue(hurtokB.id);
 });
 
 test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, request }) => {
@@ -2171,10 +2172,11 @@ test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, req
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/approval-requests');
-  await page.getByRole('button', { name: 'Затвердити' }).first().click();
+  await page.getByText('Переведення в інший гурток').first().click();
+  await page.getByRole('button', { name: 'Затвердити' }).click();
 
   await page.goto(`/users/${target.id}`);
-  await page.getByRole('heading', { name: 'Дані' }).locator('..').getByText('Соколи');
+  await expect(page.getByLabel('Гурток')).toHaveValue(hurtokB.id);
 });
 ```
 
@@ -2364,20 +2366,20 @@ test('zvyazkovyi sees and can use all 5 sections of the Курінь accordion',
   await page.goto('/kurin');
 
   for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки', 'Кадра виховників', 'Список юнацтва']) {
-    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+    await expect(page.getByText(title)).toBeVisible();
   }
 
-  await page.getByRole('heading', { name: 'Інформація по куреню' }).click();
+  await page.getByText('Інформація по куреню').click();
   await expect(page.getByText(/Номер:/)).toBeVisible();
 
-  await page.getByRole('heading', { name: 'Гуртки' }).click();
+  await page.getByText('Гуртки').click();
   await page.getByText('Орлики').click();
   await expect(page.getByText('Петренко Петро')).toBeVisible();
 
-  await page.getByRole('heading', { name: 'Кадра виховників' }).click();
+  await page.getByText('Кадра виховників').click();
   await expect(page.getByText('Овник Вих')).toBeVisible();
 
-  await page.getByRole('heading', { name: 'Список юнацтва' }).click();
+  await page.getByText('Список юнацтва').click();
   await expect(page.getByText('Петренко Петро')).toBeVisible();
 });
 ```
