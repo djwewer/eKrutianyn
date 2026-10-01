@@ -783,6 +783,54 @@ test('lets zvyazkovyi assign and then remove a hurtok position', async ({ page }
   await expect(hurtkovyiRow.getByText(`${junak.lastName} ${junak.firstName}`)).not.toBeVisible();
 });
 
+test('warns before reassigning a junak who already holds a position in another hurtok', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+  const hurtokA = await createHurtok(zvyazkovyiToken, 'Орлики');
+  const hurtokB = await createHurtok(zvyazkovyiToken, 'Вовки');
+  const junak = await createUserAs(zvyazkovyiToken, {
+    firstName: 'Олег',
+    lastName: 'Олененко',
+    email: `junak-${Date.now()}@example.com`,
+    role: 'JUNAK',
+    hurtokId: hurtokA.id,
+  });
+  await fetch(`${API_URL}/kurin-positions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zvyazkovyiToken}` },
+    body: JSON.stringify({ userId: junak.id, scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: hurtokA.id }),
+  });
+  // Move the junak to hurtokB — this does NOT clear his original position
+  // (UsersService.updateHurtok only updates User.hurtokId), so he now shows
+  // up as a HURTOK-position candidate in hurtokB while still holding
+  // Hurtkovyi back in hurtokA.
+  await fetch(`${API_URL}/users/${junak.id}/hurtok`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zvyazkovyiToken}` },
+    body: JSON.stringify({ hurtokId: hurtokB.id }),
+  });
+
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtokB.slug}`);
+  await page.getByRole('button', { name: 'Налаштування' }).click();
+
+  let dialogMessage = '';
+  page.once('dialog', (dialog) => {
+    dialogMessage = dialog.message();
+    void dialog.dismiss();
+  });
+  await page.getByLabel('Писар').selectOption(junak.id);
+  await expect.poll(() => dialogMessage).toContain('Гуртковий');
+  await expect.poll(() => dialogMessage).toContain('Орлики');
+
+  // Declined — Олег's original Гуртковий position in Орлики must stay intact.
+  await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtokA.slug}`);
+  await page.getByRole('button', { name: 'Налаштування' }).click();
+  const hurtkovyiRow = page.getByTestId('position-row-HURTKOVYI');
+  await expect(hurtkovyiRow.getByText('Олененко Олег')).toBeVisible();
+});
+
 test('disables disbanding a hurtok that still has a junak, enables it once empty', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
@@ -879,7 +927,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { accessErrorMessage } from '@/lib/error-message';
 import { POSITION_LABELS } from '@/lib/role-labels';
-import { useUpdateHurtok, useArchiveHurtok } from '@/lib/queries/hurtky';
+import { useHurtky, useUpdateHurtok, useArchiveHurtok } from '@/lib/queries/hurtky';
 import { useKurinPositions, useAssignPosition, useRemovePosition } from '@/lib/queries/positions';
 import {
   useVykhovnykAssignments,
@@ -917,8 +965,12 @@ export function HurtokSettingsDialog({
   const assignVykhovnyk = useAssignVykhovnyk();
   const unassignVykhovnyk = useUnassignVykhovnyk();
 
+  const { data: allHurtky } = useHurtky();
+  const hurtokNameById = Object.fromEntries((allHurtky ?? []).map((h) => [h.id, h.name]));
+
   const junakMembers = members.filter((m) => m.role === 'JUNAK');
-  const hurtokPositions = (allPositions ?? []).filter((p) => p.scope === 'HURTOK' && p.hurtokId === hurtok.id);
+  const hurtokScopePositions = (allPositions ?? []).filter((p) => p.scope === 'HURTOK');
+  const hurtokPositions = hurtokScopePositions.filter((p) => p.hurtokId === hurtok.id);
   const currentVykhovnykAssignment = (vykhovnykAssignments ?? [])[0];
 
   function invalidateHurtok() {
@@ -944,6 +996,18 @@ export function HurtokSettingsDialog({
 
   async function handlePositionChange(positionType: PositionType, userId: string) {
     if (!userId) return;
+    const conflicting = hurtokScopePositions.find((p) => p.user.id === userId);
+    if (conflicting) {
+      const candidate = junakMembers.find((m) => m.id === userId);
+      const candidateName = candidate ? `${candidate.lastName} ${candidate.firstName}` : 'Цей юнак';
+      const conflictingLabel = POSITION_LABELS[conflicting.positionType];
+      const conflictingHurtokName = conflicting.hurtokId ? (hurtokNameById[conflicting.hurtokId] ?? '?') : '?';
+      const confirmed = window.confirm(
+        `${candidateName} вже займає посаду «${conflictingLabel}» у гуртку «${conflictingHurtokName}». ` +
+          `Призначення автоматично зніме поточну посаду. Продовжити?`,
+      );
+      if (!confirmed) return;
+    }
     await assignPosition.mutateAsync({ userId, scope: 'HURTOK', positionType, hurtokId: hurtok.id });
     invalidateHurtok();
   }
@@ -1167,7 +1231,7 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
 - [ ] **Step 6: Прогнати тести, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-settings.spec.ts --workers=1`
-Expected: PASS (4/4)
+Expected: PASS (5/5)
 
 - [ ] **Step 7: Оновити `hurtok-archive.spec.ts` під нову поведінку**
 
@@ -1267,7 +1331,158 @@ git commit -m "feat: add hurtok settings dialog (vykhovnyk, positions, founding 
 
 ---
 
-### Task 7: `/hurtky` — перетворення на акордеон
+### Task 7: Прибрати застарілі сторінки/посилання, що тепер дублюються модалкою
+
+**Files:**
+- Delete: `apps/web/app/vykhovnyk-assignments/page.tsx`
+- Delete: `apps/web/e2e/vykhovnyk-assignments.spec.ts`
+- Modify: `apps/web/components/nav.tsx`
+- Modify: `apps/web/app/positions/page.tsx`
+- Modify: `apps/web/e2e/positions.spec.ts`
+
+**Interfaces:**
+- Consumes: `HurtokSettingsDialog` з Task 6 (повністю покриває функціонал, що видаляється).
+
+Призначення виховника на `/vykhovnyk-assignments` і призначення HURTOK-посад
+на `/positions` тепер повністю дублюються модалкою "Налаштування гуртка" з
+Task 6. `apps/web/lib/queries/vykhovnyk-assignments.ts` (хуки) НЕ
+видаляється — його й далі використовують `HurtokSettingsDialog` і
+VYKHOVNYK-фільтр на `/hurtky` (`useVykhovnykAssignments` для списку "Мої
+гуртки").
+
+- [ ] **Step 1: Видалити сторінку і тест призначення виховників**
+
+```bash
+rm apps/web/app/vykhovnyk-assignments/page.tsx
+rm apps/web/e2e/vykhovnyk-assignments.spec.ts
+```
+
+(Якщо папка `apps/web/app/vykhovnyk-assignments/` після цього порожня —
+видалити й саму папку.)
+
+- [ ] **Step 2: Прибрати пункти навігації**
+
+У `apps/web/components/nav.tsx`, у `LINKS_BY_ROLE.ZVYAZKOVYI`, видалити
+рядок `{ href: '/vykhovnyk-assignments', label: 'Призначення' },`:
+
+```ts
+  ZVYAZKOVYI: [
+    { href: '/approval-requests', label: 'Запити' },
+    { href: '/users', label: 'Люди' },
+    { href: '/hurtky', label: 'Гуртки' },
+    { href: '/kurin', label: 'Курінь' },
+    { href: '/positions', label: 'Діловоди' },
+    { href: '/settings', label: 'Налаштування' },
+  ],
+```
+
+У функції `Nav()`, у блоці для курінного, замінити:
+
+```ts
+  if (session.isKurinniy) {
+    links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/vykhovnyk-assignments', label: 'Виховники' });
+  }
+```
+
+на:
+
+```ts
+  if (session.isKurinniy) {
+    links.splice(1, 0, { href: '/users', label: 'Юнаки' });
+  }
+```
+
+- [ ] **Step 3: Прибрати HURTOK-секцію з `/positions`**
+
+У `apps/web/app/positions/page.tsx`, видалити константу
+`HURTOK_POSITION_TYPES` (вона більше ніде не використовується після цього
+кроку):
+
+```ts
+const HURTOK_POSITION_TYPES: { value: PositionType; label: string }[] = [
+  { value: 'HURTKOVYI', label: 'Гуртковий' },
+  { value: 'SUDDIA', label: 'Суддя' },
+  { value: 'PYSAR', label: 'Писар' },
+  { value: 'SKARBNYK', label: 'Скарбник' },
+];
+```
+
+У `PositionsPage()`, видалити блок, що рендерить картки "Посади гуртка
+«...»" (увесь `{(hurtky ?? []).map((h) => ( ... ))}` в кінці `return`):
+
+```tsx
+      {(hurtky ?? []).map((h) => (
+        <Card key={h.id}>
+          <CardHeader>
+            <CardTitle>Посади гуртка &laquo;{h.name}&raquo;</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {HURTOK_POSITION_TYPES.map((p) => (
+              <PositionSlot
+                key={p.value}
+                label={p.label}
+                positionType={p.value}
+                scope="HURTOK"
+                hurtokId={h.id}
+                current={kurinPositions.find(
+                  (kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id && kp.positionType === p.value,
+                )}
+                candidates={candidates.filter((c) => c.hurtokId === h.id)}
+                positionsInScope={kurinPositions.filter((kp) => kp.scope === 'HURTOK')}
+                hurtokNameById={hurtokNameById}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+```
+
+`useHurtky()`, `hurtkyLoading`/`hurtkyError`/`hurtkyErrorObj` і
+`hurtokNameById` ЛИШАЮТЬСЯ без змін — `hurtokNameById` і далі потрібен
+`PositionSlot`'у для KURIN-слотів (якщо кандидат на KURIN-посаду вже
+займає якусь HURTOK-посаду в конкретному гуртку, попередження називає цей
+гурток). `PositionSlot`-компонент і `KURIN_POSITION_TYPES`-блок лишаються
+без змін.
+
+- [ ] **Step 4: Оновити `positions.spec.ts` — прибрати HURTOK-сценарій**
+
+У `apps/web/e2e/positions.spec.ts`, видалити третій тест цілком (`'warns
+before reassigning a hurtok position even when the conflicting position is
+in a different hurtok'` — використовує `orlykyCard`/`vovkyCard`, перевіряє
+функціонал, якого на цій сторінці більше нема; еквівалентне покриття тепер
+у `hurtok-settings.spec.ts`'s `'warns before reassigning a junak who
+already holds a position in another hurtok'` з Task 6). Лишаються лише
+перші два тести файлу (`'lets zvyazkovyi assign and remove kurin
+positions'` і `'warns before reassigning a junak who already holds another
+position in the same scope'`) — обидва вже коректно обмежені
+`kurinCard`-локатором і без змін проходитимуть далі.
+
+- [ ] **Step 5: Прогнати Playwright-тести на позиції й регресію**
+
+Run: `cd apps/web && npx playwright test e2e/positions.spec.ts --workers=1`
+Expected: PASS (2/2)
+
+Run: `cd apps/web && npx playwright test --workers=1`
+Expected: усі проходять (зокрема `hurtok-settings.spec.ts` з Task 6 — новий
+тест на конфлікт посад має вже проходити, якщо Task 6 реалізовано
+правильно).
+
+- [ ] **Step 6: Typecheck**
+
+Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
+Expected: без помилок
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add apps/web/components/nav.tsx apps/web/app/positions/page.tsx apps/web/e2e/positions.spec.ts
+git add -u apps/web/app/vykhovnyk-assignments apps/web/e2e/vykhovnyk-assignments.spec.ts
+git commit -m "refactor: remove vykhovnyk-assignments page and HURTOK positions from /positions, superseded by the hurtok settings dialog"
+```
+
+---
+
+### Task 8: `/hurtky` — перетворення на акордеон
 
 **Files:**
 - Modify: `apps/web/app/hurtky/page.tsx`
@@ -1496,13 +1711,13 @@ git commit -m "feat: turn /hurtky into an accordion with inline member tables"
 
 ---
 
-### Task 8: Інтеграційний тест (налаштування з акордеону) і фінальна регресія
+### Task 9: Інтеграційний тест (налаштування з акордеону) і фінальна регресія
 
 **Files:**
 - Test: `apps/web/e2e/hurtky-accordion-settings.spec.ts` (new file)
 
 **Interfaces:**
-- Consumes: усе з Tasks 1–7.
+- Consumes: усе з Tasks 1–8.
 
 - [ ] **Step 1: Написати тест на використання модалки налаштувань прямо з розгорнутого рядка акордеону**
 
