@@ -7,7 +7,7 @@ test('redirects to /login when the session token becomes invalid', async ({ page
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/users');
+  await page.goto('/approval-requests');
   await expect(page).not.toHaveURL(/\/login$/);
 
   await page.context().addCookies([

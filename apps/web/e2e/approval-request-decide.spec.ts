@@ -44,6 +44,7 @@ test('lets zvyazkovyi approve a pending request and the change takes effect', as
   await page.getByRole('button', { name: 'Затвердити' }).click();
   await expect(page).toHaveURL(/\/approval-requests$/);
 
-  await page.goto('/users');
+  await page.goto('/kurin');
+  await page.getByText('Список юнацтва').click();
   await expect(page.getByText('Юнак Схвалений')).toBeVisible();
 });

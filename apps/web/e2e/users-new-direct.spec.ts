@@ -15,6 +15,7 @@ test('lets zvyazkovyi create a vykhovnyk directly, no approval needed', async ({
   await page.getByLabel('Email').fill(`new-vykhovnyk-${Date.now()}@example.com`);
   await page.getByRole('button', { name: 'Створити' }).click();
 
-  await expect(page).toHaveURL(/\/users$/);
+  await expect(page).toHaveURL(/\/kurin$/);
+  await page.getByText('Кадра виховників').click();
   await expect(page.getByText('Виховник Новий')).toBeVisible();
 });

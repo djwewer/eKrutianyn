@@ -45,7 +45,7 @@ function ZvyazkovyiDirectCreateForm({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      router.push('/users');
+      router.push('/kurin');
     },
   });
 
@@ -149,7 +149,7 @@ function KurinnyiApprovalRequestForm({ initialHurtokId }: { initialHurtokId: str
       <Card className="max-w-md">
         <CardContent className="p-6">
           <p>Запит створено. Юнак з&apos;явиться після затвердження зв&apos;язковим.</p>
-          <Button className="mt-4" onClick={() => router.push('/users')}>
+          <Button className="mt-4" onClick={() => router.push('/kurin')}>
             До списку
           </Button>
         </CardContent>

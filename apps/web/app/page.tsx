@@ -6,7 +6,7 @@ import { useSession } from '@/lib/session-client';
 
 const HOME_BY_ROLE: Record<string, string> = {
   JUNAK: '/proby',
-  VYKHOVNYK: '/hurtky',
+  VYKHOVNYK: '/kurin',
   ZVYAZKOVYI: '/approval-requests',
 };
 
