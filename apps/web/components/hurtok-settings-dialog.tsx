@@ -37,7 +37,7 @@ export function HurtokSettingsDialog({
   const updateHurtok = useUpdateHurtok(hurtok.id, hurtok.slug ?? undefined);
   const archiveHurtok = useArchiveHurtok(hurtok.id, hurtok.slug ?? undefined);
 
-  const { data: allPositions } = useKurinPositions();
+  const { data: allPositions, isLoading: positionsLoading } = useKurinPositions();
   const assignPosition = useAssignPosition();
   const removePosition = useRemovePosition();
 
@@ -48,6 +48,7 @@ export function HurtokSettingsDialog({
 
   const { data: allHurtky, isLoading: hurtkyLoading } = useHurtky();
   const hurtokNameById = Object.fromEntries((allHurtky ?? []).map((h) => [h.id, h.name]));
+  const positionSelectsDisabled = hurtkyLoading || positionsLoading;
 
   const junakMembers = members.filter((m) => m.role === 'JUNAK');
   const hurtokScopePositions = (allPositions ?? []).filter((p) => p.scope === 'HURTOK');
@@ -158,7 +159,7 @@ export function HurtokSettingsDialog({
                   id={`position-${positionType}`}
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   value={current?.user.id ?? ''}
-                  disabled={hurtkyLoading}
+                  disabled={positionSelectsDisabled}
                   onChange={(e) => handlePositionChange(positionType, e.target.value)}
                 >
                   <option value="">— немає —</option>
