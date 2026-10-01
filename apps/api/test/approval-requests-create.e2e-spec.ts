@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, ApprovalActionType, ApprovalStatus } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('Approval requests create (e2e)', () => {
   let app: INestApplication;
@@ -145,5 +145,35 @@ describe('Approval requests create (e2e)', () => {
         newData: { firstName: 'Новий', lastName: 'Юнак', email: 'new@example.com' },
       })
       .expect(400);
+  });
+
+  it('lets a KURIN-scope suddia create a CHANGE_HURTOK request', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    await request(app.getHttpServer())
+      .post('/approval-requests')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ actionType: 'CHANGE_HURTOK', junakId: junak.id, newData: { hurtokId: hurtok.id } })
+      .expect(201);
+  });
+
+  it('still forbids a plain junak from creating a CHANGE_HURTOK request', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const plainJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const target = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, plainJunak);
+
+    await request(app.getHttpServer())
+      .post('/approval-requests')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ actionType: 'CHANGE_HURTOK', junakId: target.id, newData: { hurtokId: hurtok.id } })
+      .expect(403);
   });
 });

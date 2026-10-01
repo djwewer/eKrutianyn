@@ -24,7 +24,9 @@ export class ApprovalRequestsService {
       dto.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY && actor.positions.includes(PositionType.SUDDIA);
     const canInitiateArchive =
       dto.actionType === ApprovalActionType.ARCHIVE_JUNAK && actor.positions.includes(PositionType.SUDDIA);
-    if (!actor.isKurinniy && !canInitiateBulkImport && !canInitiateArchive) {
+    const canInitiateChangeHurtok =
+      dto.actionType === ApprovalActionType.CHANGE_HURTOK && actor.positions.includes(PositionType.SUDDIA);
+    if (!actor.isKurinniy && !canInitiateBulkImport && !canInitiateArchive && !canInitiateChangeHurtok) {
       throw new ForbiddenException('Only kurinniy can create approval requests');
     }
     const noJunakIdActionTypes = [ApprovalActionType.CREATE_JUNAK, ApprovalActionType.BULK_IMPORT_JUNAKY] as const;
