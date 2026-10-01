@@ -3,7 +3,7 @@ import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
 
-test('a junak with the kurinniy position sees the extended nav and can list users', async ({ page, request }) => {
+test('a junak with the kurinniy position sees the Курінь nav link', async ({ page, request }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
