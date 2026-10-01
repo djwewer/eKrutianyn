@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PositionScope, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -26,6 +26,12 @@ export class KurinPositionsService {
   }
 
   async assign(dto: AssignPositionDto, actor: CurrentUserPayload) {
+    const isKurinScopeKurinniyAssignment = dto.scope === PositionScope.KURIN && dto.positionType === 'KURINNYI';
+    if (actor.role !== Role.ZVYAZKOVYI) {
+      if (!actor.isKurinniy || isKurinScopeKurinniyAssignment) {
+        throw new ForbiddenException('Insufficient permissions to assign this position');
+      }
+    }
     if (dto.scope === PositionScope.KURIN) {
       if (!KURIN_POSITIONS.includes(dto.positionType)) {
         throw new BadRequestException('This position is not valid at kurin scope');
@@ -97,6 +103,11 @@ export class KurinPositionsService {
     const position = await this.prisma.kurinPosition.findUnique({ where: { id } });
     if (!position || position.kurinId !== actor.kurinId || position.removedAt) {
       throw new NotFoundException('Position not found');
+    }
+    if (actor.role !== Role.ZVYAZKOVYI) {
+      if (!actor.isKurinniy || position.positionType === 'KURINNYI') {
+        throw new ForbiddenException('Insufficient permissions to remove this position');
+      }
     }
     await this.prisma.kurinPosition.update({
       where: { id },
