@@ -24,7 +24,7 @@ export default function NewHurtokPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hurtky'] });
-      router.push('/hurtky');
+      router.push('/kurin');
     },
   });
 
