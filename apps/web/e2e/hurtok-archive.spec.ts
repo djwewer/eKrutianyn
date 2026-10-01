@@ -5,7 +5,7 @@ import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed'
 
 const API_URL = 'http://localhost:3001';
 
-test('zvyazkovyi archives an empty hurtok', async ({ page }) => {
+test('zvyazkovyi disbands an empty hurtok from the settings dialog', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
@@ -13,14 +13,15 @@ test('zvyazkovyi archives an empty hurtok', async ({ page }) => {
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtok.slug}`);
+  await page.getByRole('button', { name: 'Налаштування' }).click();
 
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Архівувати гурток' }).click();
+  await page.getByRole('button', { name: 'Розформувати гурток' }).click();
 
   await expect(page.getByText(/Архівовано/)).toBeVisible();
 });
 
-test('archive button is hidden while the hurtok still has a junak', async ({ page }) => {
+test('disband button is disabled while the hurtok still has a junak', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
@@ -35,11 +36,12 @@ test('archive button is hidden while the hurtok still has a junak', async ({ pag
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtok.slug}`);
+  await page.getByRole('button', { name: 'Налаштування' }).click();
 
-  await expect(page.getByRole('button', { name: 'Архівувати гурток' })).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Розформувати гурток' })).toBeDisabled();
 });
 
-test('a vykhovnyk does not see the archive button', async ({ page }) => {
+test('a vykhovnyk does not see the settings button at all', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
@@ -61,5 +63,5 @@ test('a vykhovnyk does not see the archive button', async ({ page }) => {
   await loginAs(page, vykhovnykEmail, 'password123');
   await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtok.slug}`);
 
-  await expect(page.getByRole('button', { name: 'Архівувати гурток' })).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Налаштування' })).not.toBeVisible();
 });

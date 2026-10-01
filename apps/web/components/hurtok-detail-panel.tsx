@@ -1,24 +1,26 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { useHurtokBySlug, useArchiveHurtok } from '@/lib/queries/hurtky';
+import { useHurtokBySlug } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
 import { ROLE_LABELS, POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
+import { HurtokSettingsDialog } from '@/components/hurtok-settings-dialog';
 
 export function HurtokDetailPanel({ slug }: { slug: string }) {
   const { data, isLoading, isError, error } = useHurtokBySlug(slug);
   const { data: session } = useSession();
-  const archiveHurtok = useArchiveHurtok(data?.hurtok.id ?? '', slug);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Гурток не знайдено.'}</p>;
   if (!data) return <p>Гурток не знайдено.</p>;
 
-  const canArchive = session?.role === 'ZVYAZKOVYI' && !data.hurtok.archivedAt && data.members.length === 0;
   const canAddJunak = session?.role === 'ZVYAZKOVYI' || session?.isKurinniy;
+  const canConfigure = session?.role === 'ZVYAZKOVYI' && !data.hurtok.archivedAt;
 
   return (
     <div className="space-y-4">
@@ -44,31 +46,19 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
             </Button>
           </Link>
         )}
-        {session?.role === 'ZVYAZKOVYI' && !data.hurtok.archivedAt && (
-          <Button size="sm" variant="outline" disabled>
+        {canConfigure && (
+          <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)}>
             Налаштування
           </Button>
         )}
       </div>
-      {canArchive && (
-        <div>
-          <Button
-            variant="outline"
-            disabled={archiveHurtok.isPending}
-            onClick={() => {
-              if (window.confirm(`Архівувати гурток «${data.hurtok.name}»?`)) {
-                archiveHurtok.mutate();
-              }
-            }}
-          >
-            Архівувати гурток
-          </Button>
-          {archiveHurtok.isError && (
-            <p className="text-sm text-destructive">
-              {accessErrorMessage(archiveHurtok.error) ?? 'Не вдалося архівувати гурток.'}
-            </p>
-          )}
-        </div>
+      {canConfigure && (
+        <HurtokSettingsDialog
+          hurtok={data.hurtok}
+          members={data.members}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
       )}
       <div className="space-y-2">
         {data.members.map((member) => (
