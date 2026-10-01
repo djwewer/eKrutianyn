@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
@@ -7,6 +8,7 @@ import { useSession } from '@/lib/session-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
+import { HurtokDetailPanel } from '@/components/hurtok-detail-panel';
 import type { Hurtok } from '@/lib/types';
 
 export default function HurtkyPage() {
@@ -24,6 +26,7 @@ export default function HurtkyPage() {
     isError: assignmentsIsError,
     error: assignmentsError,
   } = useVykhovnykAssignments(undefined, { enabled: isVykhovnyk });
+  const [expandedSlugs, setExpandedSlugs] = useState<Set<string>>(new Set());
 
   const isLoading = isVykhovnyk ? hurtkyLoading || assignmentsLoading : hurtkyLoading;
   const isError = isVykhovnyk ? hurtkyIsError || assignmentsIsError : hurtkyIsError;
@@ -44,6 +47,18 @@ export default function HurtkyPage() {
         .filter((h): h is Hurtok => !!h)
     : (hurtky ?? []);
 
+  function toggle(slug: string) {
+    setExpandedSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Гуртки</h1>
@@ -52,23 +67,28 @@ export default function HurtkyPage() {
           <Button size="sm">Новий гурток</Button>
         </Link>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {displayedHurtky.map((h) => (
-          <Link
-            key={h.id}
-            href={`/${session?.kurinNumber ? encodeURIComponent(session.kurinNumber) : 'kurin'}/hurtky/${h.slug}`}
-          >
-            <Card>
-              <CardHeader>
+      <div className="space-y-2">
+        {displayedHurtky.map((h) => {
+          const isExpanded = !!h.slug && expandedSlugs.has(h.slug);
+          return (
+            <Card key={h.id}>
+              <CardHeader
+                className="cursor-pointer"
+                onClick={() => h.slug && toggle(h.slug)}
+              >
                 <CardTitle>
                   {h.name}
                   {h.number ? ` №${h.number}` : ''}
                 </CardTitle>
               </CardHeader>
-              <CardContent />
+              {isExpanded && h.slug && (
+                <CardContent>
+                  <HurtokDetailPanel slug={h.slug} />
+                </CardContent>
+              )}
             </Card>
-          </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
