@@ -106,6 +106,7 @@ model Hurtok {
   name    String
   slug    String?
   number  String?
+  foundedAt    DateTime?
   archivedAt   DateTime?
   archivedById String?
   archivedBy   User?     @relation("HurtokArchivedBy", fields: [archivedById], references: [id])
