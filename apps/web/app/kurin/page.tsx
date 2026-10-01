@@ -6,6 +6,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/componen
 import { KurinInfoSection } from '@/components/kurin-info-section';
 import { KurinProvidSection } from '@/components/kurin-provid-section';
 import { KurinHurtkySection } from '@/components/kurin-hurtky-section';
+import { KurinRosterSection } from '@/components/kurin-roster-section';
 
 type SectionKey = 'info' | 'provid' | 'hurtky' | 'vykhovnyky' | 'junatstvo';
 
@@ -40,6 +41,12 @@ function KurinPageContent() {
     { key: 'info', title: 'Інформація по куреню', render: () => <KurinInfoSection /> },
     { key: 'provid', title: 'Провід куреня', render: () => <KurinProvidSection /> },
     { key: 'hurtky', title: 'Гуртки', render: () => <KurinHurtkySection /> },
+    ...(hasFullAccess
+      ? [
+          { key: 'vykhovnyky' as const, title: 'Кадра виховників', render: () => <KurinRosterSection role="VYKHOVNYK" /> },
+          { key: 'junatstvo' as const, title: 'Список юнацтва', render: () => <KurinRosterSection role="JUNAK" /> },
+        ]
+      : []),
   ];
 
   return (

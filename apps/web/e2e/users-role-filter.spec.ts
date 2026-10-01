@@ -32,10 +32,35 @@ test('lets kurinniy view vykhovnyk contacts read-only', async ({ page, request }
 
   await loginAs(page, kurinnyiEmail, 'password123');
   await page.goto('/kurin');
-  await page.getByRole('button', { name: 'Виховники' }).click();
+  await page.getByText('Кадра виховників').click();
 
   await expect(page.getByText(`${vykhovnyk.lastName} ${vykhovnyk.firstName}`)).toBeVisible();
 
   await page.getByText(`${vykhovnyk.lastName} ${vykhovnyk.firstName}`).click();
   await expect(page.getByLabel('Телефон')).toBeDisabled();
+});
+
+test('a plain member does not see Кадра виховників or Список юнацтва at all', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const hurtok = await createHurtok(zvyazkovyiToken, 'Соколи');
+  const plainJunakEmail = `plain-${Date.now()}@example.com`;
+  await createUserAs(zvyazkovyiToken, {
+    firstName: 'Прост',
+    lastName: 'Юнак',
+    email: plainJunakEmail,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+
+  await loginAs(page, plainJunakEmail, 'password123');
+  await page.goto('/kurin');
+  for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки']) {
+    await expect(page.getByText(title)).toBeVisible();
+  }
+  await expect(page.getByText('Кадра виховників')).toHaveCount(0);
+  await expect(page.getByText('Список юнацтва')).toHaveCount(0);
 });

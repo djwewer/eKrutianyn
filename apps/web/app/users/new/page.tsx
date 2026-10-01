@@ -13,14 +13,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Role, UserSummary } from '@/lib/types';
 
-function ZvyazkovyiDirectCreateForm({ initialHurtokId }: { initialHurtokId: string }) {
+function ZvyazkovyiDirectCreateForm({
+  initialHurtokId,
+  initialRole,
+}: {
+  initialHurtokId: string;
+  initialRole: Role;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: hurtky } = useHurtky();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('JUNAK');
+  const [role, setRole] = useState<Role>(initialRole);
   const [hurtokId, setHurtokId] = useState(initialHurtokId);
   const [password, setPassword] = useState('');
 
@@ -208,9 +214,10 @@ function NewUserPageContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const initialHurtokId = searchParams.get('hurtokId') ?? '';
+  const initialRole = (searchParams.get('role') as Role) ?? 'JUNAK';
 
   if (session?.role === 'ZVYAZKOVYI') {
-    return <ZvyazkovyiDirectCreateForm initialHurtokId={initialHurtokId} />;
+    return <ZvyazkovyiDirectCreateForm initialHurtokId={initialHurtokId} initialRole={initialRole} />;
   }
   if (session?.isKurinniy) {
     return <KurinnyiApprovalRequestForm initialHurtokId={initialHurtokId} />;
