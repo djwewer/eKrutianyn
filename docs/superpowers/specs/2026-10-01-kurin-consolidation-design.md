@@ -121,23 +121,27 @@ kurinniy or a KURIN-scope position.
    existing patterns elsewhere in the codebase (`findUnique` + kurinId
    match, reject if `archivedAt` set where relevant).
 
-"KURIN-scope SUDDIA" is determined the same way everywhere: the actor has an
-active `KurinPosition` with `positionType === SUDDIA && scope === KURIN`.
-`CurrentUserPayload.positions` (`auth.service.ts`) is a flat `PositionType[]`
-with no scope attached, baked into the JWT at login via `signToken(...)`
-alongside `isKurinniy` (itself computed once at login time by
-`isKurinniyForUser`, `common/kurinniy.util.ts`) — changing `positions`'
-shape would break every existing `positions.includes(X)` call site
-(`nav.tsx`, `approval-requests.service.ts`, `hurtok-detail-panel.tsx`,
-etc.). Instead, this plan adds one new boolean, `isSuddiaKurin`, computed by
-a new `isSuddiaKurinForUser` helper mirroring `isKurinniyForUser` exactly
-(same query shape, `positionType: SUDDIA, scope: KURIN, removedAt: null`),
-threaded through `signToken`/`JwtPayload`/`CurrentUserPayload` the same way
-`isKurinniy` already is. Like `isKurinniy`, this is a login-time snapshot —
-a user who gains or loses the KURIN-scope SUDDIA position mid-session sees
-it reflected only after their next login, matching existing behavior for
-`isKurinniy` and `positions` today (no new staleness class, just the
-existing one extended to one more field).
+**Correction after re-reading the actual auth code (no new session claim
+needed):** `CurrentUserPayload.positions` is populated by
+`getActiveKurinPositions` (`common/positions.util.ts`), which already
+filters to `scope: PositionScope.KURIN` — a HURTOK-scope position can never
+appear in `positions` at all. So `positions.includes(PositionType.SUDDIA)`
+(backend) / `session.positions.includes('SUDDIA')` (frontend) is *already*
+exactly "KURIN-scope suddia," with no ambiguity — this is the same check
+`/users/[id]/page.tsx:220` and `approval-requests.service.ts`'s
+`canInitiateArchive`/`canInitiateBulkImport` already use today. No new
+`isSuddiaKurin` claim, no `JwtPayload`/`CurrentUserPayload` shape change, no
+schema change. Everywhere this spec says "KURIN-scope suddia," the
+implementation is simply `actor.positions.includes(PositionType.SUDDIA)` /
+`session.positions.includes('SUDDIA')`.
+
+Also worth correcting: `isKurinniy` and `positions` are not a login-time
+snapshot baked into a potentially-stale JWT. `JwtStrategy.validate()`
+(`auth/strategies/jwt.strategy.ts:19-30`) re-fetches both fresh from the
+database on **every request** (the values embedded in the JWT payload at
+sign time are present but effectively unused after that first request) —
+so a user who gains or loses `KURINNYI`/`SUDDIA` mid-session sees it
+reflected on their very next API call, no re-login required.
 
 ## Frontend changes
 
