@@ -8,6 +8,7 @@ test('lets zvyazkovyi change their kurin number from the settings page', async (
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
+  await page.getByText('Інформація по куреню').click();
 
   // Get the current kurin number from the page
   const currentNumberText = await page.getByText(/Номер:/).textContent();

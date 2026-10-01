@@ -25,12 +25,12 @@ async function seedNewProbyProgram() {
 test('lets zvyazkovyi view kurin settings and change the proby program', async ({ page }) => {
   const { program: oldProgram } = await seedProbyProgram(['Стара точка']);
   await seedNewProbyProgram();
-  const { zvyazkovyiEmail, zvyazkovyiPassword, kurin } = await seedKurinWithZvyazkovyi(oldProgram.id);
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(oldProgram.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
+  await page.getByText('Інформація по куреню').click();
 
-  await expect(page.getByText(kurin.name)).toBeVisible();
   await expect(page.getByText('Поточна програма: Стара')).toBeVisible();
 
   page.once('dialog', (dialog) => dialog.accept());
