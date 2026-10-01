@@ -43,6 +43,9 @@ export class ApprovalRequestsService {
       if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
         throw new NotFoundException('Junak not found');
       }
+      if (dto.actionType === ApprovalActionType.CHANGE_HURTOK && junak.archivedAt) {
+        throw new BadRequestException('Юнак архівований');
+      }
       oldData = this.extractRelevantFields(dto.actionType, junak);
     }
 
@@ -125,7 +128,13 @@ export class ApprovalRequestsService {
       } else {
         const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
         if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
-          await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
+          const junak = await tx.user.findUnique({ where: { id: req.junakId! } });
+          if (junak?.archivedAt) {
+            throw new BadRequestException('Юнак архівований');
+          }
+          if (updateData.hurtokId) {
+            await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
+          }
         }
         await tx.user.update({ where: { id: req.junakId! }, data: updateData });
       }

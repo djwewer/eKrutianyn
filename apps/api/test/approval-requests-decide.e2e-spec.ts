@@ -292,6 +292,60 @@ describe('Approval requests approve/reject (e2e)', () => {
     expect(unchangedJunak?.hurtokId).toBe(junak.hurtokId);
   });
 
+  it('approves a CHANGE_HURTOK request moving a junak out of a hurtok entirely (hurtokId: null)', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        junakId: junak.id,
+        actionType: ApprovalActionType.CHANGE_HURTOK,
+        oldData: { hurtokId: junak.hurtokId },
+        newData: { hurtokId: null },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const updatedJunak = await prisma.user.findUnique({ where: { id: junak.id } });
+    expect(updatedJunak?.hurtokId).toBeNull();
+  });
+
+  it('leaves a CHANGE_HURTOK request PENDING if the junak was archived after the request was created', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const otherHurtok = await prisma.hurtok.create({ data: { name: 'Соколи', kurinId: kurin.id } });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        junakId: junak.id,
+        actionType: ApprovalActionType.CHANGE_HURTOK,
+        oldData: { hurtokId: junak.hurtokId },
+        newData: { hurtokId: otherHurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    await prisma.user.update({ where: { id: junak.id }, data: { archivedAt: new Date() } });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    const stillPending = await prisma.approvalRequest.findUnique({ where: { id: pending.id } });
+    expect(stillPending?.status).toBe('PENDING');
+    const unchangedJunak = await prisma.user.findUnique({ where: { id: junak.id } });
+    expect(unchangedJunak?.hurtokId).toBe(hurtok.id);
+  });
+
   it('does not attempt a write-back when no Книга судді is connected', async () => {
     const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
     const hurtok = await prisma.hurtok.create({ data: { name: 'Test Hurtok', kurinId: kurin.id } });

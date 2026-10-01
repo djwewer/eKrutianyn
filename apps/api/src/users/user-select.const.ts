@@ -10,3 +10,10 @@ export const USER_SELECT = {
   hurtokId: true,
   archivedAt: true,
 } as const;
+
+export const USER_SELECT_PUBLIC = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+} as const;

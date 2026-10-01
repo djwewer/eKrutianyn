@@ -61,6 +61,9 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
     expect(junakMember.positions).toHaveLength(1);
     expect(junakMember.positions[0].positionType).toBe('HURTKOVYI');
     expect(junakMember.passwordHash).toBeUndefined();
+    expect(junakMember.email).toBeUndefined();
+    const vykhovnykMember = response.body.members.find((m: any) => m.id === vykhovnyk.id);
+    expect(vykhovnykMember.email).toBeUndefined();
   });
 
   it('includes a kurinnyi among junaky, alongside regular junaky', async () => {

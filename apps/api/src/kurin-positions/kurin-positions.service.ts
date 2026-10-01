@@ -1,8 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PositionScope, Role } from '@prisma/client';
+import { PositionScope, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { USER_SELECT } from '../users/user-select.const';
+import { USER_SELECT_PUBLIC } from '../users/user-select.const';
 import { AssignPositionDto } from './dto/assign-position.dto';
 import { KURIN_POSITIONS, HURTOK_POSITIONS } from './position-rules';
 
@@ -19,17 +19,33 @@ export class KurinPositionsService {
         positionType: true,
         hurtokId: true,
         assignedAt: true,
-        user: { select: USER_SELECT },
+        user: { select: USER_SELECT_PUBLIC },
       },
       orderBy: [{ scope: 'asc' }, { positionType: 'asc' }],
     });
   }
 
   async assign(dto: AssignPositionDto, actor: CurrentUserPayload) {
-    const isKurinScopeKurinniyAssignment = dto.scope === PositionScope.KURIN && dto.positionType === 'KURINNYI';
     if (actor.role !== Role.ZVYAZKOVYI) {
-      if (!actor.isKurinniy || isKurinScopeKurinniyAssignment) {
-        throw new ForbiddenException('Insufficient permissions to assign this position');
+      if (dto.scope === PositionScope.KURIN) {
+        if (!actor.isKurinniy || dto.positionType === 'KURINNYI') {
+          throw new ForbiddenException('Insufficient permissions to assign this position');
+        }
+        const targetHoldsKurinniy = await this.prisma.kurinPosition.findFirst({
+          where: {
+            userId: dto.userId,
+            scope: PositionScope.KURIN,
+            positionType: 'KURINNYI',
+            removedAt: null,
+          },
+        });
+        if (targetHoldsKurinniy) {
+          throw new ForbiddenException('Cannot reassign the current Курінний to another position');
+        }
+      } else {
+        if (!actor.positions.includes(PositionType.SUDDIA)) {
+          throw new ForbiddenException('Insufficient permissions to assign this position');
+        }
       }
     }
     if (dto.scope === PositionScope.KURIN) {
@@ -93,7 +109,7 @@ export class KurinPositionsService {
           positionType: true,
           hurtokId: true,
           assignedAt: true,
-          user: { select: USER_SELECT },
+          user: { select: USER_SELECT_PUBLIC },
         },
       });
     });
@@ -105,8 +121,14 @@ export class KurinPositionsService {
       throw new NotFoundException('Position not found');
     }
     if (actor.role !== Role.ZVYAZKOVYI) {
-      if (!actor.isKurinniy || position.positionType === 'KURINNYI') {
-        throw new ForbiddenException('Insufficient permissions to remove this position');
+      if (position.scope === PositionScope.KURIN) {
+        if (!actor.isKurinniy || position.positionType === 'KURINNYI') {
+          throw new ForbiddenException('Insufficient permissions to remove this position');
+        }
+      } else {
+        if (!actor.positions.includes(PositionType.SUDDIA)) {
+          throw new ForbiddenException('Insufficient permissions to remove this position');
+        }
       }
     }
     await this.prisma.kurinPosition.update({

@@ -5,7 +5,14 @@ import * as request from 'supertest';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import {
+  createProbyProgramTree,
+  createKurin,
+  createUser,
+  createKurinniyUser,
+  createKurinSuddiaUser,
+  issueTokenFor,
+} from './utils/fixtures';
 
 describe('kurin-positions (e2e)', () => {
   let app: INestApplication;
@@ -305,7 +312,7 @@ describe('kurin-positions (e2e)', () => {
       .expect(403);
   });
 
-  it('forbids kurinniy from removing any other Курінний position record', async () => {
+  it('lets kurinniy remove another junak’s non-Курінний position record', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
@@ -327,6 +334,119 @@ describe('kurin-positions (e2e)', () => {
       .delete(`/kurin-positions/${otherKurinniyPosition.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect((res) => expect([200, 201]).toContain(res.status));
+  });
+
+  it('forbids kurinniy from removing any other Курінний position record', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    // Created directly via Prisma, bypassing the API, which would never let two
+    // KURINNYI records coexist. This is fine for exercising the authorization check.
+    const otherKurinniyHolder = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const otherKurinniyPosition = await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: 'KURIN',
+        positionType: 'KURINNYI',
+        userId: otherKurinniyHolder.id,
+        assignedById: zvyazkovyi.id,
+      },
+    });
+    const token = issueTokenFor(jwtService, kurinniy);
+
+    await request(app.getHttpServer())
+      .delete(`/kurin-positions/${otherKurinniyPosition.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  it('forbids a kurinniy from vacating his own Курінний slot via a side-effect assignment', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, kurinniy);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: kurinniy.id, scope: 'KURIN', positionType: 'SUDDIA' })
+      .expect(403);
+
+    const stillHoldsKurinnyi = await prisma.kurinPosition.findFirst({
+      where: { userId: kurinniy.id, positionType: 'KURINNYI', removedAt: null },
+    });
+    expect(stillHoldsKurinnyi).not.toBeNull();
+  });
+
+  it('forbids a kurinniy from assigning a HURTOK-scoped position', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, kurinniy);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: hurtok.id })
+      .expect(403);
+  });
+
+  it('lets a KURIN-scoped suddia assign and remove a HURTOK-scoped position', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    const created = await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'HURTOK', positionType: 'HURTKOVYI', hurtokId: hurtok.id })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .delete(`/kurin-positions/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+  });
+
+  it('forbids a KURIN-scoped suddia from assigning a KURIN-scoped position', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'KURIN', positionType: 'PYSAR' })
+      .expect(403);
+  });
+
+  it('does not expose email on position holders in the list response', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: junak.id, scope: 'KURIN', positionType: 'KURINNYI' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const list = await request(app.getHttpServer())
+      .get('/kurin-positions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(list.body[0].user.email).toBeUndefined();
   });
 
   it('still forbids a plain junak (no kurinniy) from assigning any kurin position', async () => {

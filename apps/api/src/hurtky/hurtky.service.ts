@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
 import { UpdateHurtokDto } from './dto/update-hurtok.dto';
-import { USER_SELECT } from '../users/user-select.const';
+import { USER_SELECT_PUBLIC } from '../users/user-select.const';
 import { generateUniqueSlug } from './slug.util';
 
 @Injectable()
@@ -71,11 +71,11 @@ export class HurtkyService {
 
     const junaky = await this.prisma.user.findMany({
       where: { hurtokId: hurtok.id, role: Role.JUNAK, kurinId: actor.kurinId },
-      select: USER_SELECT,
+      select: USER_SELECT_PUBLIC,
     });
     const vykhovnykAssignments = await this.prisma.vykhovnykHurtok.findMany({
       where: { hurtokId: hurtok.id },
-      include: { vykhovnyk: { select: USER_SELECT } },
+      include: { vykhovnyk: { select: USER_SELECT_PUBLIC } },
     });
     const vykhovnyky = vykhovnykAssignments.map((a) => a.vykhovnyk);
 
