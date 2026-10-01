@@ -19,7 +19,7 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Гурток не знайдено.'}</p>;
   if (!data) return <p>Гурток не знайдено.</p>;
 
-  const canAddJunak = session?.role === 'ZVYAZKOVYI' || session?.isKurinniy;
+  const canAddJunak = (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) && !data.hurtok.archivedAt;
   const canConfigure = session?.role === 'ZVYAZKOVYI' && !data.hurtok.archivedAt;
 
   return (
@@ -30,7 +30,7 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
       </h1>
       {data.hurtok.foundedAt && (
         <p className="text-sm text-muted-foreground">
-          Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA')}
+          Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA', { timeZone: 'UTC' })}
         </p>
       )}
       {data.hurtok.archivedAt && (

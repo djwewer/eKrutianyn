@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
+import { useUsers } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
 import { HurtokDetailPanel } from '@/components/hurtok-detail-panel';
@@ -26,6 +27,8 @@ export default function HurtkyPage() {
     isError: assignmentsIsError,
     error: assignmentsError,
   } = useVykhovnykAssignments(undefined, { enabled: isVykhovnyk });
+  const { data: allVykhovnykAssignments } = useVykhovnykAssignments();
+  const { data: vykhovnykUsers } = useUsers({ role: 'VYKHOVNYK' });
   const [expandedSlugs, setExpandedSlugs] = useState<Set<string>>(new Set());
 
   const isLoading = isVykhovnyk ? hurtkyLoading || assignmentsLoading : hurtkyLoading;
@@ -46,6 +49,13 @@ export default function HurtkyPage() {
         .map((a) => hurtokById.get(a.hurtokId))
         .filter((h): h is Hurtok => !!h)
     : (hurtky ?? []);
+
+  const vykhovnykNameByHurtokId = Object.fromEntries(
+    (allVykhovnykAssignments ?? []).map((a) => {
+      const v = (vykhovnykUsers ?? []).find((u) => u.id === a.vykhovnykId);
+      return [a.hurtokId, v ? `${v.lastName} ${v.firstName}` : null];
+    }),
+  );
 
   function toggle(slug: string) {
     setExpandedSlugs((prev) => {
@@ -79,7 +89,13 @@ export default function HurtkyPage() {
                 <CardTitle>
                   {h.name}
                   {h.number ? ` №${h.number}` : ''}
+                  {vykhovnykNameByHurtokId[h.id] && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      · {vykhovnykNameByHurtokId[h.id]}
+                    </span>
+                  )}
                 </CardTitle>
+                <CardAction className="text-muted-foreground">{isExpanded ? '▾' : '▸'}</CardAction>
               </CardHeader>
               {isExpanded && h.slug && (
                 <CardContent>
