@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /vykhovnyk-assignments (e2e)', () => {
   let app: INestApplication;
