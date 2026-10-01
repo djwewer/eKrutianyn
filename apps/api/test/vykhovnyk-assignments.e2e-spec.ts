@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('Vykhovnyk assignments (e2e)', () => {
   let app: INestApplication;
@@ -125,5 +125,40 @@ describe('Vykhovnyk assignments (e2e)', () => {
 
     const remaining = await prisma.vykhovnykHurtok.findUnique({ where: { id: assignment.id } });
     expect(remaining).toBeNull();
+  });
+
+  it('lets a KURIN-scope suddia assign and unassign a vykhovnyk', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    const created = await request(app.getHttpServer())
+      .post('/vykhovnyk-assignments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .delete(`/vykhovnyk-assignments/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+  });
+
+  it('still forbids a plain junak from assigning a vykhovnyk', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const plainJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, plainJunak);
+
+    await request(app.getHttpServer())
+      .post('/vykhovnyk-assignments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id })
+      .expect(403);
   });
 });

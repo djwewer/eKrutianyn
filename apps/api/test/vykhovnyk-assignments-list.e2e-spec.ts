@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /vykhovnyk-assignments (e2e)', () => {
   let app: INestApplication;
@@ -102,15 +102,16 @@ describe('GET /vykhovnyk-assignments (e2e)', () => {
     expect(response.body[0].id).toBe(assignmentA.id);
   });
 
-  it('forbids a junak from listing assignments', async () => {
+  it('lets a plain junak (read-only tier) list vykhovnyk assignments', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
-    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const plainJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, plainJunak);
 
     await request(app.getHttpServer())
       .get('/vykhovnyk-assignments')
-      .set('Authorization', `Bearer ${issueTokenFor(jwtService, junak)}`)
-      .expect(403);
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 
   it('returns 404 when hurtokId belongs to another kurin', async () => {
