@@ -19,13 +19,6 @@ const KURIN_POSITION_TYPES: { value: PositionType; label: string }[] = [
   { value: 'SMM', label: 'СММник' },
 ];
 
-const HURTOK_POSITION_TYPES: { value: PositionType; label: string }[] = [
-  { value: 'HURTKOVYI', label: 'Гуртковий' },
-  { value: 'SUDDIA', label: 'Суддя' },
-  { value: 'PYSAR', label: 'Писар' },
-  { value: 'SKARBNYK', label: 'Скарбник' },
-];
-
 const POSITION_TYPE_LABELS: Record<PositionType, string> = {
   KURINNYI: 'Курінний',
   SUDDIA: 'Суддя',
@@ -159,31 +152,6 @@ export default function PositionsPage() {
           ))}
         </CardContent>
       </Card>
-
-      {(hurtky ?? []).map((h) => (
-        <Card key={h.id}>
-          <CardHeader>
-            <CardTitle>Посади гуртка &laquo;{h.name}&raquo;</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {HURTOK_POSITION_TYPES.map((p) => (
-              <PositionSlot
-                key={p.value}
-                label={p.label}
-                positionType={p.value}
-                scope="HURTOK"
-                hurtokId={h.id}
-                current={kurinPositions.find(
-                  (kp) => kp.scope === 'HURTOK' && kp.hurtokId === h.id && kp.positionType === p.value,
-                )}
-                candidates={candidates.filter((c) => c.hurtokId === h.id)}
-                positionsInScope={kurinPositions.filter((kp) => kp.scope === 'HURTOK')}
-                hurtokNameById={hurtokNameById}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }

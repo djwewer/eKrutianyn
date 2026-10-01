@@ -19,7 +19,6 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/approval-requests', label: 'Запити' },
     { href: '/users', label: 'Люди' },
     { href: '/hurtky', label: 'Гуртки' },
-    { href: '/vykhovnyk-assignments', label: 'Призначення' },
     { href: '/kurin', label: 'Курінь' },
     { href: '/positions', label: 'Діловоди' },
     { href: '/settings', label: 'Налаштування' },
@@ -47,7 +46,7 @@ export function Nav() {
 
   const links = [...(LINKS_BY_ROLE[session.role] ?? [])];
   if (session.isKurinniy) {
-    links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/vykhovnyk-assignments', label: 'Виховники' });
+    links.splice(1, 0, { href: '/users', label: 'Юнаки' });
   }
   if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('INTENDANT') || session.isKurinniy)) {
     links.push({ href: '/inventory', label: 'Облік реманенту' });
