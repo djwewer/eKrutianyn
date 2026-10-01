@@ -64,3 +64,26 @@ test('a plain member does not see Кадра виховників or Списо�
   await expect(page.getByText('Кадра виховників')).toHaveCount(0);
   await expect(page.getByText('Список юнацтва')).toHaveCount(0);
 });
+
+test('a plain vykhovnyk sees exactly the three read-only sections', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const plainVykhovnykEmail = `plain-vykhovnyk-${Date.now()}@example.com`;
+  await createUserAs(zvyazkovyiToken, {
+    firstName: 'Прост',
+    lastName: 'Виховник',
+    email: plainVykhovnykEmail,
+    role: 'VYKHOVNYK',
+    password: 'password123',
+  });
+
+  await loginAs(page, plainVykhovnykEmail, 'password123');
+  await page.goto('/kurin');
+  for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки']) {
+    await expect(page.getByText(title)).toBeVisible();
+  }
+  await expect(page.getByText('Кадра виховників')).toHaveCount(0);
+  await expect(page.getByText('Список юнацтва')).toHaveCount(0);
+});

@@ -147,6 +147,32 @@ describe('Vykhovnyk assignments (e2e)', () => {
       .expect((res) => expect([200, 201]).toContain(res.status));
   });
 
+  it('forbids a HURTOK-scope (not KURIN-scope) suddia from assigning a vykhovnyk', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: 'HURTOK',
+        hurtokId: hurtok.id,
+        positionType: 'SUDDIA',
+        userId: junak.id,
+        assignedById: zvyazkovyi.id,
+      },
+    });
+    const token = issueTokenFor(jwtService, junak);
+
+    await request(app.getHttpServer())
+      .post('/vykhovnyk-assignments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id })
+      .expect(403);
+  });
+
   it('still forbids a plain junak from assigning a vykhovnyk', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });

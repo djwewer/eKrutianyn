@@ -212,3 +212,34 @@ test('a plain member sees hurtok info read-only, with no settings button', async
   await expect(page.getByRole('button', { name: 'Налаштування' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Додати юнака/чку' })).toHaveCount(0);
 });
+
+test('a HURTOK-scope (not KURIN-scope) suddia sees hurtok info read-only, with no settings button', async ({
+  page,
+  request,
+}) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const hurtok = await createHurtok(zvyazkovyiToken, 'Ведмеді');
+  const suddiaEmail = `hurtok-suddia-${Date.now()}@example.com`;
+  const suddia = await createUserAs(zvyazkovyiToken, {
+    firstName: 'Гурток',
+    lastName: 'Суддя',
+    email: suddiaEmail,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+  await request.post('http://localhost:3001/kurin-positions', {
+    headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
+    data: { userId: suddia.id, scope: 'HURTOK', hurtokId: hurtok.id, positionType: 'SUDDIA' },
+  });
+
+  await loginAs(page, suddiaEmail, 'password123');
+  await page.goto('/kurin');
+  await page.getByText('Гуртки').click();
+  await page.getByText('Ведмеді').click();
+  await expect(page.getByRole('button', { name: 'Налаштування' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Додати юнака/чку' })).toHaveCount(0);
+});
