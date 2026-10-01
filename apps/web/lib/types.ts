@@ -33,6 +33,7 @@ export interface Hurtok {
   name: string;
   slug: string | null;
   number: string | null;
+  foundedAt: string | null;
 }
 
 export type PositionScope = 'KURIN' | 'HURTOK';
@@ -131,7 +132,7 @@ export interface HurtokMember extends UserSummary {
 }
 
 export interface HurtokMembers {
-  hurtok: { id: string; name: string; slug: string | null; number: string | null; archivedAt: string | null };
+  hurtok: { id: string; name: string; slug: string | null; number: string | null; foundedAt: string | null; archivedAt: string | null };
   members: HurtokMember[];
 }
 

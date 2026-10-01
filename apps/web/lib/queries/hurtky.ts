@@ -29,3 +29,18 @@ export function useArchiveHurtok(id: string, slug: string | undefined) {
     },
   });
 }
+
+export function useUpdateHurtok(id: string, slug: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { foundedAt: string | null }) =>
+      apiFetch<Hurtok>(`/hurtky/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hurtky'] });
+      queryClient.invalidateQueries({ queryKey: ['hurtky', 'by-slug', slug] });
+    },
+  });
+}
