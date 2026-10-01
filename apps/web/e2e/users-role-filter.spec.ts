@@ -31,7 +31,7 @@ test('lets kurinniy view vykhovnyk contacts read-only', async ({ page, request }
   });
 
   await loginAs(page, kurinnyiEmail, 'password123');
-  await page.goto('/users');
+  await page.goto('/kurin');
   await page.getByRole('button', { name: 'Виховники' }).click();
 
   await expect(page.getByText(`${vykhovnyk.lastName} ${vykhovnyk.firstName}`)).toBeVisible();

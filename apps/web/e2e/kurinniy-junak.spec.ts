@@ -26,8 +26,8 @@ test('a junak with the kurinniy position sees the extended nav and can list user
 
   await loginAs(page, junakEmail, 'password123');
 
-  await expect(page.getByRole('link', { name: 'Юнаки' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Курінь' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Юнаки' }).click();
-  await expect(page).toHaveURL(/\/users$/);
+  await page.getByRole('link', { name: 'Курінь' }).click();
+  await expect(page).toHaveURL(/\/kurin$/);
 });

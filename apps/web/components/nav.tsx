@@ -9,18 +9,16 @@ import { Button } from '@/components/ui/button';
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
     { href: '/proby', label: 'Моя проба' },
+    { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],
   VYKHOVNYK: [
-    { href: '/hurtky', label: 'Мої гуртки' },
+    { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],
   ZVYAZKOVYI: [
     { href: '/approval-requests', label: 'Запити' },
-    { href: '/users', label: 'Люди' },
-    { href: '/hurtky', label: 'Гуртки' },
     { href: '/kurin', label: 'Курінь' },
-    { href: '/positions', label: 'Діловоди' },
     { href: '/settings', label: 'Налаштування' },
   ],
 };
@@ -45,9 +43,6 @@ export function Nav() {
   if (!session) return null;
 
   const links = [...(LINKS_BY_ROLE[session.role] ?? [])];
-  if (session.isKurinniy) {
-    links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/hurtky', label: 'Гуртки' });
-  }
   if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('INTENDANT') || session.isKurinniy)) {
     links.push({ href: '/inventory', label: 'Облік реманенту' });
   }
