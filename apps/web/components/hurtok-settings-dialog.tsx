@@ -41,14 +41,15 @@ export function HurtokSettingsDialog({
   const assignPosition = useAssignPosition();
   const removePosition = useRemovePosition();
 
-  const { data: vykhovnykAssignments } = useVykhovnykAssignments(hurtok.id);
-  const { data: vykhovnykUsers } = useUsers({ role: 'VYKHOVNYK' });
+  const { data: vykhovnykAssignments, isLoading: vykhovnykAssignmentsLoading } = useVykhovnykAssignments(hurtok.id);
+  const { data: vykhovnykUsers, isLoading: vykhovnykUsersLoading } = useUsers({ role: 'VYKHOVNYK' });
   const assignVykhovnyk = useAssignVykhovnyk();
   const unassignVykhovnyk = useUnassignVykhovnyk();
 
   const { data: allHurtky, isLoading: hurtkyLoading } = useHurtky();
   const hurtokNameById = Object.fromEntries((allHurtky ?? []).map((h) => [h.id, h.name]));
   const positionSelectsDisabled = hurtkyLoading || positionsLoading;
+  const vykhovnykSelectDisabled = vykhovnykAssignmentsLoading || vykhovnykUsersLoading;
 
   const junakMembers = members.filter((m) => m.role === 'JUNAK');
   const hurtokScopePositions = (allPositions ?? []).filter((p) => p.scope === 'HURTOK');
@@ -132,6 +133,7 @@ export function HurtokSettingsDialog({
               id="vykhovnyk-select"
               className="w-full rounded-md border px-3 py-2 text-sm"
               value={currentVykhovnykAssignment?.vykhovnykId ?? ''}
+              disabled={vykhovnykSelectDisabled}
               onChange={(e) => handleVykhovnykChange(e.target.value)}
             >
               <option value="">— немає —</option>
