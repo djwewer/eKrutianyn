@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /users/:id (e2e)', () => {
   let app: INestApplication;
@@ -192,5 +192,18 @@ describe('GET /users/:id (e2e)', () => {
       .get('/users/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  it("lets a KURIN-scope suddia view another junak's detail page", async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    await request(app.getHttpServer())
+      .get(`/users/${junak.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 });

@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
@@ -153,7 +153,8 @@ export class UsersService {
   }
 
   async list(actor: CurrentUserPayload, filters: { role?: Role; hurtokId?: string }) {
-    if (actor.role === Role.JUNAK && !actor.isKurinniy) {
+    const isKurinScopeSuddia = actor.positions.includes(PositionType.SUDDIA);
+    if (actor.role === Role.JUNAK && !actor.isKurinniy && !isKurinScopeSuddia) {
       throw new ForbiddenException('Junak cannot list users');
     }
     if (actor.role === Role.VYKHOVNYK && filters.role && filters.role !== Role.JUNAK) {
@@ -201,7 +202,7 @@ export class UsersService {
       });
     }
 
-    if (actor.isKurinniy) {
+    if (actor.isKurinniy || isKurinScopeSuddia) {
       return this.prisma.user.findMany({
         where: {
           kurinId: actor.kurinId,
@@ -228,7 +229,8 @@ export class UsersService {
   }
 
   async findScoped(id: string, actor: CurrentUserPayload) {
-    if (actor.role === Role.JUNAK && !actor.isKurinniy) {
+    const isKurinScopeSuddia = actor.positions.includes(PositionType.SUDDIA);
+    if (actor.role === Role.JUNAK && !actor.isKurinniy && !isKurinScopeSuddia) {
       if (actor.userId !== id) {
         throw new NotFoundException('User not found');
       }
@@ -257,7 +259,7 @@ export class UsersService {
     if (actor.role === Role.ZVYAZKOVYI) {
       return true;
     }
-    if (actor.isKurinniy) {
+    if (actor.isKurinniy || actor.positions.includes(PositionType.SUDDIA)) {
       return true;
     }
     if (actor.role === Role.VYKHOVNYK) {

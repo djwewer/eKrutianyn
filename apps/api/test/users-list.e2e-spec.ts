@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('GET /users (e2e)', () => {
   let app: INestApplication;
@@ -146,5 +146,26 @@ describe('GET /users (e2e)', () => {
 
   it('returns 401 without a token', async () => {
     await request(app.getHttpServer()).get('/users').expect(401);
+  });
+
+  it('lets a KURIN-scope suddia list junaky and vykhovnyky', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    const junaky = await request(app.getHttpServer())
+      .get('/users?role=JUNAK')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(junaky.body.length).toBeGreaterThanOrEqual(1);
+
+    const vykhovnyky = await request(app.getHttpServer())
+      .get('/users?role=VYKHOVNYK')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(vykhovnyky.body.length).toBeGreaterThanOrEqual(1);
   });
 });
