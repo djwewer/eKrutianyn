@@ -46,7 +46,7 @@ export function HurtokSettingsDialog({
   const assignVykhovnyk = useAssignVykhovnyk();
   const unassignVykhovnyk = useUnassignVykhovnyk();
 
-  const { data: allHurtky } = useHurtky();
+  const { data: allHurtky, isLoading: hurtkyLoading } = useHurtky();
   const hurtokNameById = Object.fromEntries((allHurtky ?? []).map((h) => [h.id, h.name]));
 
   const junakMembers = members.filter((m) => m.role === 'JUNAK');
@@ -158,6 +158,7 @@ export function HurtokSettingsDialog({
                   id={`position-${positionType}`}
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   value={current?.user.id ?? ''}
+                  disabled={hurtkyLoading}
                   onChange={(e) => handlePositionChange(positionType, e.target.value)}
                 >
                   <option value="">— немає —</option>
