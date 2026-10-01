@@ -1,5 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
@@ -17,6 +17,9 @@ export class HurtkyService {
   }
 
   async update(hurtokId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload) {
+    if (actor.role !== Role.ZVYAZKOVYI && !actor.positions.includes(PositionType.SUDDIA)) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
     const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
     if (!hurtok || hurtok.kurinId !== actor.kurinId) {
       throw new NotFoundException('Hurtok not found in this kurin');
@@ -28,6 +31,9 @@ export class HurtkyService {
   }
 
   async archiveHurtok(hurtokId: string, actor: CurrentUserPayload) {
+    if (actor.role !== Role.ZVYAZKOVYI && !actor.positions.includes(PositionType.SUDDIA)) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
     const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
     if (!hurtok || hurtok.kurinId !== actor.kurinId) {
       throw new NotFoundException('Hurtok not found in this kurin');
@@ -61,15 +67,6 @@ export class HurtkyService {
     const hurtok = await this.prisma.hurtok.findFirst({ where: { kurinId: actor.kurinId, slug } });
     if (!hurtok) {
       throw new NotFoundException('Hurtok not found in this kurin');
-    }
-
-    if (actor.role === Role.VYKHOVNYK) {
-      const assigned = await this.prisma.vykhovnykHurtok.findFirst({
-        where: { vykhovnykId: actor.userId, hurtokId: hurtok.id },
-      });
-      if (!assigned) {
-        throw new NotFoundException('Hurtok not found in this kurin');
-      }
     }
 
     const junaky = await this.prisma.user.findMany({

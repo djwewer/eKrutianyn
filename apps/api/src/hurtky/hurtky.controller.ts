@@ -19,13 +19,11 @@ export class HurtkyController {
     return this.service.create(dto, user.kurinId);
   }
 
-  @Roles(Role.ZVYAZKOVYI)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateHurtokDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.update(id, dto, user);
   }
 
-  @Roles(Role.ZVYAZKOVYI)
   @Patch(':id/archive')
   archive(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     return this.service.archiveHurtok(id, user);
@@ -36,7 +34,6 @@ export class HurtkyController {
     return this.service.listForKurin(user.kurinId);
   }
 
-  @Roles(Role.VYKHOVNYK, Role.ZVYAZKOVYI)
   @Get('by-slug/:slug')
   membersBySlug(@Param('slug') slug: string, @CurrentUser() user: CurrentUserPayload) {
     return this.service.getMembersBySlug(slug, user);

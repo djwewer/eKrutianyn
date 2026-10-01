@@ -85,7 +85,7 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
     expect(junakIds).toEqual([junak.id, kurinnyi.id].sort());
   });
 
-  it('returns 404 for a vykhovnyk not assigned to the hurtok', async () => {
+  it('lets a vykhovnyk not assigned to the hurtok read it', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
@@ -95,7 +95,7 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
     await request(app.getHttpServer())
       .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${token}`)
-      .expect(404);
+      .expect(200);
   });
 
   it('lets a zvyazkovyi view any hurtok in their kurin by slug', async () => {
@@ -111,7 +111,7 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
       .expect(200);
   });
 
-  it('forbids a kurinniy and a junak from viewing the members list', async () => {
+  it('lets a kurinniy and a junak read a hurtok', async () => {
     const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     await prisma.hurtok.create({ data: { name: 'Орлики', slug: 'orlyky', kurinId: kurin.id } });
@@ -121,12 +121,12 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
     await request(app.getHttpServer())
       .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${issueTokenFor(jwtService, kurinniy)}`)
-      .expect(403);
+      .expect(200);
 
     await request(app.getHttpServer())
       .get('/hurtky/by-slug/orlyky')
       .set('Authorization', `Bearer ${issueTokenFor(jwtService, junak)}`)
-      .expect(403);
+      .expect(200);
   });
 
   it('returns 404 for a slug that only exists in another kurin', async () => {

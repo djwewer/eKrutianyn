@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('Hurtok update (e2e)', () => {
   let app: INestApplication;
@@ -108,5 +108,33 @@ describe('Hurtok update (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ foundedAt: '2020-09-01' })
       .expect(404);
+  });
+
+  it('lets a KURIN-scope suddia update a hurtok', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    await request(app.getHttpServer())
+      .patch(`/hurtky/${hurtok.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ foundedAt: '2020-01-01' })
+      .expect(200);
+  });
+
+  it('still forbids a plain vykhovnyk from updating a hurtok', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    await request(app.getHttpServer())
+      .patch(`/hurtky/${hurtok.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ foundedAt: '2020-01-01' })
+      .expect(403);
   });
 });

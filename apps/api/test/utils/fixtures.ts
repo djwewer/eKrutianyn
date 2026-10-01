@@ -97,6 +97,29 @@ export async function createKurinniyUser(
   return user;
 }
 
+export async function createKurinSuddiaUser(
+  prisma: PrismaClient,
+  overrides: { kurinId: string; hurtokId?: string; email?: string; password?: string },
+) {
+  const user = await createUser(prisma, {
+    role: Role.JUNAK,
+    kurinId: overrides.kurinId,
+    hurtokId: overrides.hurtokId,
+    email: overrides.email,
+    password: overrides.password,
+  });
+  await prisma.kurinPosition.create({
+    data: {
+      kurinId: overrides.kurinId,
+      scope: PositionScope.KURIN,
+      positionType: PositionType.SUDDIA,
+      userId: user.id,
+      assignedById: user.id,
+    },
+  });
+  return user;
+}
+
 export function issueTokenFor(
   jwtService: JwtService,
   user: { id: string; role: Role; kurinId: string },

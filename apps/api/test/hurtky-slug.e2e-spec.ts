@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 
 describe('Hurtok slug generation (e2e)', () => {
   let app: INestApplication;
@@ -86,5 +86,31 @@ describe('Hurtok slug generation (e2e)', () => {
 
     expect(responseA.body.slug).toBe('vovky');
     expect(responseB.body.slug).toBe('vovky');
+  });
+
+  it('lets a plain junak read a hurtok by slug (read-only tier)', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Орлики', slug: 'orlyky' } });
+    const plainJunak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, plainJunak);
+
+    await request(app.getHttpServer())
+      .get('/hurtky/by-slug/orlyky')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+  });
+
+  it('lets a plain vykhovnyk read a hurtok they are not assigned to', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const hurtok = await prisma.hurtok.create({ data: { kurinId: kurin.id, name: 'Соколи', slug: 'sokoly' } });
+    const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, vykhovnyk);
+
+    await request(app.getHttpServer())
+      .get('/hurtky/by-slug/sokoly')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 });
