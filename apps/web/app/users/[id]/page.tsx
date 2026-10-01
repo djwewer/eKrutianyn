@@ -285,6 +285,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [nameRequestSent, setNameRequestSent] = useState(false);
+  const [hurtokRequestSent, setHurtokRequestSent] = useState(false);
 
   const canEditContactInfo =
     (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) &&
@@ -309,7 +310,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const reopenStage = useReopenStage(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
 
-  const canMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak && !user?.archivedAt;
+  const canDirectlyMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak && !user?.archivedAt;
+  const canRequestMoveHurtok =
+    isJunak && !user?.archivedAt && (session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA'));
+  const canMoveHurtok = canDirectlyMoveHurtok || canRequestMoveHurtok;
   const { data: hurtky } = useHurtky();
   const updateHurtok = useUpdateHurtok(id);
   const [selectedHurtokId, setSelectedHurtokId] = useState('');
@@ -345,28 +349,49 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <div className="space-y-2 pt-2">
               <Label htmlFor="hurtok">Гурток</Label>
               {canMoveHurtok ? (
-                <div className="flex gap-2">
-                  <select
-                    id="hurtok"
-                    value={selectedHurtokId}
-                    onChange={(e) => setSelectedHurtokId(e.target.value)}
-                    className="flex-1 rounded-md border px-2 py-1 text-sm"
-                  >
-                    <option value="">Без гуртка</option>
-                    {(hurtky ?? []).map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    disabled={selectedHurtokId === (user.hurtokId ?? '') || updateHurtok.isPending}
-                    onClick={() => updateHurtok.mutate(selectedHurtokId || null)}
-                  >
-                    Перевести
-                  </Button>
-                </div>
+                hurtokRequestSent ? (
+                  <p className="text-sm text-muted-foreground">
+                    Запит на переведення надіслано, очікує затвердження зв&apos;язковим.
+                  </p>
+                ) : (
+                  <div className="flex gap-2">
+                    <select
+                      id="hurtok"
+                      value={selectedHurtokId}
+                      onChange={(e) => setSelectedHurtokId(e.target.value)}
+                      className="flex-1 rounded-md border px-2 py-1 text-sm"
+                    >
+                      <option value="">Без гуртка</option>
+                      {(hurtky ?? []).map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      disabled={selectedHurtokId === (user.hurtokId ?? '') || updateHurtok.isPending || createRequest.isPending}
+                      onClick={async () => {
+                        if (canDirectlyMoveHurtok) {
+                          updateHurtok.mutate(selectedHurtokId || null);
+                          return;
+                        }
+                        try {
+                          await createRequest.mutateAsync({
+                            actionType: 'CHANGE_HURTOK',
+                            junakId: user.id,
+                            newData: { hurtokId: selectedHurtokId || null },
+                          });
+                          setHurtokRequestSent(true);
+                        } catch {
+                          /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                        }
+                      }}
+                    >
+                      Перевести
+                    </Button>
+                  </div>
+                )
               ) : (
                 <p>{hurtky?.find((h) => h.id === user.hurtokId)?.name ?? 'Без гуртка'}</p>
               )}
