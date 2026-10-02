@@ -9,6 +9,7 @@ export const USER_SELECT = {
   kurinId: true,
   hurtokId: true,
   archivedAt: true,
+  photoUpdatedAt: true,
 } as const;
 
 export const USER_SELECT_PUBLIC = {
@@ -16,4 +17,5 @@ export const USER_SELECT_PUBLIC = {
   firstName: true,
   lastName: true,
   role: true,
+  photoUpdatedAt: true,
 } as const;

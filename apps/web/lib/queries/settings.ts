@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, apiUpload } from '@/lib/api-client';
 import type { UserDetail } from '@/lib/types';
 
 export function useOwnProfile() {
@@ -38,5 +38,29 @@ export function useRequestEmailChange() {
   return useMutation({
     mutationFn: (data: { newEmail: string; currentPassword: string }) =>
       apiFetch<{ ok: true }>('/users/me/email', { method: 'PATCH', body: JSON.stringify(data) }),
+  });
+}
+
+export function useUpdateOwnPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('photo', file);
+      return apiUpload<{ ok: true }>('/users/me/photo', formData, 'PATCH');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
+
+export function useRemoveOwnPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<{ ok: true }>('/users/me/photo', { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
   });
 }

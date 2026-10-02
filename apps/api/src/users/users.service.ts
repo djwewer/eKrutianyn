@@ -388,4 +388,31 @@ export class UsersService {
 
     return updated;
   }
+
+  async updateOwnPhoto(userId: string, file: Express.Multer.File) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { photoData: file.buffer, photoMimeType: file.mimetype, photoUpdatedAt: new Date() },
+    });
+    return { ok: true as const };
+  }
+
+  async removeOwnPhoto(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { photoData: null, photoMimeType: null, photoUpdatedAt: null },
+    });
+    return { ok: true as const };
+  }
+
+  async getPhoto(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { photoData: true, photoMimeType: true },
+    });
+    if (!user?.photoData || !user.photoMimeType) {
+      return null;
+    }
+    return { data: user.photoData, mimeType: user.photoMimeType };
+  }
 }

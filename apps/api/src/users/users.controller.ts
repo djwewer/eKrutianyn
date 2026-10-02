@@ -1,4 +1,23 @@
-import { Body, Controller, Get, Param, ParseEnumPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  ParseEnumPipe,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { Response } from 'express';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -41,6 +60,39 @@ export class UsersController {
   @Patch('me')
   updateOwnProfile(@Body() dto: UpdateOwnProfileDto, @CurrentUser() user: CurrentUserPayload) {
     return this.service.updateOwnProfile(user.userId, dto);
+  }
+
+  @Patch('me/photo')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Дозволені лише зображення'), file.mimetype.startsWith('image/'));
+      },
+    }),
+  )
+  updatePhoto(@UploadedFile() photo: Express.Multer.File | undefined, @CurrentUser() user: CurrentUserPayload) {
+    if (!photo) {
+      throw new BadRequestException('Файл фото обов\'язковий');
+    }
+    return this.service.updateOwnPhoto(user.userId, photo);
+  }
+
+  @Delete('me/photo')
+  removePhoto(@CurrentUser() user: CurrentUserPayload) {
+    return this.service.removeOwnPhoto(user.userId);
+  }
+
+  @Get(':id/photo')
+  async getPhoto(@Param('id') id: string, @Res() res: Response) {
+    const photo = await this.service.getPhoto(id);
+    if (!photo) {
+      throw new NotFoundException('Photo not found');
+    }
+    res.set('Content-Type', photo.mimeType);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(photo.data);
   }
 
   @Get()

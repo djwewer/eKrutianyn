@@ -20,6 +20,7 @@ export interface UserSummary {
   kurinId: string;
   hurtokId: string | null;
   archivedAt: string | null;
+  photoUpdatedAt: string | null;
 }
 
 export interface UserDetail extends UserSummary {
