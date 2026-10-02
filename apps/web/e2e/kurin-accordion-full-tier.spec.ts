@@ -32,7 +32,7 @@ test('zvyazkovyi sees and can use all 5 sections of the Курінь accordion',
   }
 
   await page.getByText('Інформація по куреню').click();
-  await expect(page.getByText(/Номер:/)).toBeVisible();
+  await expect(page.getByText('Номер', { exact: true })).toBeVisible();
 
   await page.getByText('Гуртки').click();
   await page.getByText('Орлики').click();
