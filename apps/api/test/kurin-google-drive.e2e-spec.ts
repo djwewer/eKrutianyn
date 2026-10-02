@@ -16,6 +16,7 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
     getAuthUrl: jest.Mock;
     handleCallback: jest.Mock;
     getPickerAccessToken: jest.Mock;
+    disconnect: jest.Mock;
   };
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
@@ -24,6 +25,7 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
       getAuthUrl: jest.fn(),
       handleCallback: jest.fn(),
       getPickerAccessToken: jest.fn(),
+      disconnect: jest.fn(),
     };
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(GoogleDriveService)
@@ -46,6 +48,7 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
     fakeGoogleDrive.getAuthUrl.mockReset();
     fakeGoogleDrive.handleCallback.mockReset();
     fakeGoogleDrive.getPickerAccessToken.mockReset();
+    fakeGoogleDrive.disconnect.mockReset();
   });
 
   async function setup() {
@@ -162,6 +165,55 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
       .get(`/kurins/${kurin.id}/google-drive/status`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
+  });
+
+  it('disconnects a connected kurin', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+    fakeGoogleDrive.disconnect.mockResolvedValue(undefined);
+
+    const response = await request(app.getHttpServer())
+      .delete(`/kurins/${kurin.id}/google-drive`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toEqual({ connected: false });
+    expect(fakeGoogleDrive.disconnect).toHaveBeenCalledWith(kurin.id);
+  });
+
+  it('forbids a non-zvyazkovyi from disconnecting', async () => {
+    const { kurin } = await setup();
+    const intendant = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: PositionScope.KURIN,
+        positionType: PositionType.INTENDANT,
+        userId: intendant.id,
+        assignedById: intendant.id,
+      },
+    });
+    const token = issueTokenFor(jwtService, intendant);
+
+    await request(app.getHttpServer())
+      .delete(`/kurins/${kurin.id}/google-drive`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  it('forbids disconnecting a different kurin', async () => {
+    const { kurin } = await setup();
+    const { program: otherProgram } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['P']);
+    const otherKurin = await createKurin(prisma, { probyProgramId: otherProgram.id });
+    const outsider = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: otherKurin.id });
+    const token = issueTokenFor(jwtService, outsider);
+
+    await request(app.getHttpServer())
+      .delete(`/kurins/${kurin.id}/google-drive`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+    expect(fakeGoogleDrive.disconnect).not.toHaveBeenCalled();
   });
 
   it('forbids acting on a different kurin', async () => {

@@ -47,6 +47,33 @@ export class GoogleDriveService {
     return { email };
   }
 
+  async disconnect(kurinId: string): Promise<void> {
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { driveRefreshToken: true },
+    });
+    if (kurin?.driveRefreshToken) {
+      try {
+        const client = this.createOAuthClient();
+        await client.revokeToken(kurin.driveRefreshToken);
+      } catch {
+        // Best-effort: the token may already be invalid or expired on
+        // Google's side. Either way, our own stored state still needs
+        // clearing so the kurin can reconnect cleanly.
+      }
+    }
+    await this.prisma.kurin.update({
+      where: { id: kurinId },
+      data: {
+        driveRefreshToken: null,
+        driveConnectedEmail: null,
+        driveConnectedAt: null,
+        driveFolderId: null,
+        driveFolderName: null,
+      },
+    });
+  }
+
   async getPickerAccessToken(kurinId: string): Promise<string> {
     const client = await this.getAuthorizedClient(kurinId);
     const { token } = await client.getAccessToken();

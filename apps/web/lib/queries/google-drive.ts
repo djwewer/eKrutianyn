@@ -39,3 +39,13 @@ export function useSetGoogleDriveFolder(kurinId: string) {
     },
   });
 }
+
+export function useDisconnectGoogleDrive(kurinId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch(`/kurins/${kurinId}/google-drive`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['google-drive-status', kurinId] });
+    },
+  });
+}

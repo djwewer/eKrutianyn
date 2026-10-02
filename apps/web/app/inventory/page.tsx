@@ -20,6 +20,7 @@ import {
   useGoogleDriveStatus,
   useConnectGoogleDrive,
   useSetGoogleDriveFolder,
+  useDisconnectGoogleDrive,
   fetchGoogleDrivePickerToken,
 } from '@/lib/queries/google-drive';
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
@@ -39,7 +40,18 @@ function GoogleDriveCard({
 }) {
   const connectDrive = useConnectGoogleDrive(kurinId);
   const setDriveFolder = useSetGoogleDriveFolder(kurinId);
+  const disconnectDrive = useDisconnectGoogleDrive(kurinId);
   const [pickerError, setPickerError] = useState<string | null>(null);
+
+  function handleDisconnect() {
+    if (
+      window.confirm(
+        'Відключити Google Drive? Папку для реманенту доведеться обрати заново після повторного підключення. Вже завантажені фото речей не постраждають.',
+      )
+    ) {
+      disconnectDrive.mutate();
+    }
+  }
 
   async function handlePickFolder() {
     setPickerError(null);
@@ -71,11 +83,22 @@ function GoogleDriveCard({
               {driveStatus.folderName ?? <span className="text-muted-foreground">не обрана</span>}
             </p>
             {isZvyazkovyi && (
-              <Button size="sm" variant="outline" onClick={handlePickFolder}>
-                {driveStatus.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={handlePickFolder}>
+                  {driveStatus.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
+                </Button>
+                <Button size="sm" variant="outline" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
+                  Перепідключити
+                </Button>
+                <Button size="sm" variant="outline" disabled={disconnectDrive.isPending} onClick={handleDisconnect}>
+                  Відключити
+                </Button>
+              </div>
             )}
             {pickerError && <p className="text-sm text-destructive">{pickerError}</p>}
+            {disconnectDrive.isError && (
+              <p className="text-sm text-destructive">Не вдалося відключити Google Drive. Спробуйте ще раз.</p>
+            )}
           </>
         ) : (
           <>

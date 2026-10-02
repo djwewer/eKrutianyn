@@ -8,4 +8,6 @@ export class CreateKurinDto {
   @IsString() @IsNotEmpty() stanytsia: string;
   @IsUUID() probyProgramId: string;
   @IsOptional() @IsString() driveFolderId?: string;
+  @IsOptional() @IsString() driveRefreshToken?: string;
+  @IsOptional() @IsString() driveConnectedEmail?: string;
 }

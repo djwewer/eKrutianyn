@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Logger, Param, Patch, Query, Redirect, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Logger, Param, Patch, Query, Redirect, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -95,6 +95,15 @@ export class KurinGoogleDriveController {
       select: DRIVE_STATUS_SELECT,
     });
     return this.toStatus(kurin);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ZVYAZKOVYI)
+  @Delete(':kurinId/google-drive')
+  async disconnect(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
+    this.assertOwnKurin(kurinId, user);
+    await this.googleDrive.disconnect(kurinId);
+    return { connected: false };
   }
 
   private toStatus(kurin: DriveStatusRow) {

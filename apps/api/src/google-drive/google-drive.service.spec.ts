@@ -6,6 +6,7 @@ const mockOAuth2Instance = {
   getToken: jest.fn(),
   setCredentials: jest.fn(),
   getAccessToken: jest.fn(),
+  revokeToken: jest.fn(),
 };
 const mockFilesCreate = jest.fn();
 const mockFilesGet = jest.fn();
@@ -101,6 +102,47 @@ describe('GoogleDriveService', () => {
       await expect(service.handleCallback('kurin-1', 'auth-code-xyz')).rejects.toThrow(
         ServiceUnavailableException,
       );
+    });
+  });
+
+  describe('disconnect', () => {
+    it('revokes the refresh token and clears all stored drive state', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: 'refresh-abc' });
+      mockOAuth2Instance.revokeToken.mockResolvedValue({});
+
+      await service.disconnect('kurin-1');
+
+      expect(mockOAuth2Instance.revokeToken).toHaveBeenCalledWith('refresh-abc');
+      expect(prisma.kurin.update).toHaveBeenCalledWith({
+        where: { id: 'kurin-1' },
+        data: {
+          driveRefreshToken: null,
+          driveConnectedEmail: null,
+          driveConnectedAt: null,
+          driveFolderId: null,
+          driveFolderName: null,
+        },
+      });
+    });
+
+    it('still clears stored state when revoking with Google fails', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: 'refresh-abc' });
+      mockOAuth2Instance.revokeToken.mockRejectedValue(new Error('token already invalid'));
+
+      await service.disconnect('kurin-1');
+
+      expect(prisma.kurin.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ driveRefreshToken: null }) }),
+      );
+    });
+
+    it('skips the revoke call for a kurin that was never connected', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: null });
+
+      await service.disconnect('kurin-1');
+
+      expect(mockOAuth2Instance.revokeToken).not.toHaveBeenCalled();
+      expect(prisma.kurin.update).toHaveBeenCalled();
     });
   });
 
