@@ -3,6 +3,12 @@
 // repurposes this once real pages render these components directly.
 import { Badge } from "@/components/ui/badge"
 import { Avatar } from "@/components/ui/avatar"
+import {
+  AccordionRoot,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion"
 
 export default function DevUiKitPage() {
   return (
@@ -25,6 +31,32 @@ export default function DevUiKitPage() {
           <Avatar initials="ТШ" />
           <Avatar initials="МК" />
         </div>
+      </section>
+      <section aria-labelledby="accordion-heading">
+        <h2 id="accordion-heading" className="mb-3 font-heading text-lg font-semibold">
+          Accordion (with nesting)
+        </h2>
+        <AccordionRoot>
+          <AccordionItem value="info">
+            <AccordionTrigger>Інформація по куреню</AccordionTrigger>
+            <AccordionContent>Назва, номер, пробна програма.</AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="hurtky">
+            <AccordionTrigger>Гуртки</AccordionTrigger>
+            <AccordionContent>
+              <AccordionRoot>
+                <AccordionItem value="orlyky">
+                  <AccordionTrigger>Орлики</AccordionTrigger>
+                  <AccordionContent>Тарас Шевчук — Гуртковий</AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="sokoly">
+                  <AccordionTrigger>Соколи</AccordionTrigger>
+                  <AccordionContent>Соломія Гнатюк — Гуртковий</AccordionContent>
+                </AccordionItem>
+              </AccordionRoot>
+            </AccordionContent>
+          </AccordionItem>
+        </AccordionRoot>
       </section>
     </main>
   )
