@@ -405,7 +405,12 @@ export class UsersService {
     return { ok: true as const };
   }
 
-  async getPhoto(userId: string) {
+  async getPhoto(userId: string, actor: CurrentUserPayload) {
+    try {
+      await this.findScoped(userId, actor);
+    } catch {
+      return null;
+    }
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { photoData: true, photoMimeType: true },

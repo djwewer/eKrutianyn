@@ -85,8 +85,8 @@ export class UsersController {
   }
 
   @Get(':id/photo')
-  async getPhoto(@Param('id') id: string, @Res() res: Response) {
-    const photo = await this.service.getPhoto(id);
+  async getPhoto(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload, @Res() res: Response) {
+    const photo = await this.service.getPhoto(id, user);
     if (!photo) {
       throw new NotFoundException('Photo not found');
     }
