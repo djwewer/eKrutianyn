@@ -10,6 +10,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function DevUiKitPage() {
   return (
@@ -76,6 +77,12 @@ export default function DevUiKitPage() {
             <SelectItem value="vovky">Вовки</SelectItem>
           </SelectContent>
         </Select>
+      </section>
+      <section aria-labelledby="theme-toggle-heading">
+        <h2 id="theme-toggle-heading" className="mb-3 font-heading text-lg font-semibold">
+          Theme toggle
+        </h2>
+        <ThemeToggle />
       </section>
     </main>
   )
