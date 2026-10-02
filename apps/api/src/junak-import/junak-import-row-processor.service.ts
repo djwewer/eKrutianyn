@@ -8,12 +8,7 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { ResolvedJunakRow, JunakImportRowResult } from './junak-import-row.types';
 import { isKurinniyForUser } from '../common/kurinniy.util';
 import { getActiveKurinPositions } from '../common/positions.util';
-
-const DEGREE_STAGE_PREFIXES: { key: keyof NonNullable<ResolvedJunakRow['degreeDates']>; prefix: string }[] = [
-  { key: 'PRYHYLNYK', prefix: 'Проба прихильника' },
-  { key: 'UCHASNYK', prefix: 'Проба учасника' },
-  { key: 'ROZVIDUVACH', prefix: 'Проба розвідувача' },
-];
+import { DEGREE_STAGE_PREFIXES } from '../common/degree-stages.util';
 
 export interface ProcessRowOptions {
   restrictProtectedTargets?: boolean;
