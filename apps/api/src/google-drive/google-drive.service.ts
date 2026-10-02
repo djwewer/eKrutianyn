@@ -139,6 +139,30 @@ export class GoogleDriveService {
     });
   }
 
+  async updateCellValues(
+    kurinId: string,
+    spreadsheetId: string,
+    updates: { row: number; column: string; value: string }[],
+  ): Promise<void> {
+    if (updates.length === 0) {
+      return;
+    }
+    const client = await this.getAuthorizedClient(kurinId);
+    const mimeType = await this.getFileMimeType(client, spreadsheetId);
+    if (mimeType === XLSX_MIME_TYPE) {
+      await this.updateXlsxCells(client, spreadsheetId, updates);
+      return;
+    }
+    const sheets = google.sheets({ version: 'v4', auth: client });
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        valueInputOption: 'RAW',
+        data: updates.map((u) => ({ range: `${u.column}${u.row}`, values: [[u.value]] })),
+      },
+    });
+  }
+
   private async getFileMimeType(client: GoogleAuthClient, fileId: string): Promise<string> {
     const drive = google.drive({ version: 'v3', auth: client });
     const res = await drive.files.get({ fileId, fields: 'mimeType' });
@@ -174,6 +198,29 @@ export class GoogleDriveService {
       throw new Error('Книга судді не містить жодного аркуша');
     }
     worksheet.addRow(values);
+    const updatedBuffer = await workbook.xlsx.writeBuffer();
+    const drive = google.drive({ version: 'v3', auth: client });
+    await drive.files.update({
+      fileId,
+      media: { mimeType: XLSX_MIME_TYPE, body: Readable.from(Buffer.from(updatedBuffer)) },
+    });
+  }
+
+  private async updateXlsxCells(
+    client: GoogleAuthClient,
+    fileId: string,
+    updates: { row: number; column: string; value: string }[],
+  ): Promise<void> {
+    const buffer = await this.downloadFileBuffer(client, fileId);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new Error('Книга судді не містить жодного аркуша');
+    }
+    updates.forEach((u) => {
+      worksheet.getCell(`${u.column}${u.row}`).value = u.value;
+    });
     const updatedBuffer = await workbook.xlsx.writeBuffer();
     const drive = google.drive({ version: 'v3', auth: client });
     await drive.files.update({

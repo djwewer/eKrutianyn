@@ -15,6 +15,7 @@ const mockPermissionsCreate = jest.fn();
 const mockUserinfoGet = jest.fn();
 const mockSheetsValuesGet = jest.fn();
 const mockSheetsValuesAppend = jest.fn();
+const mockSheetsValuesBatchUpdate = jest.fn();
 
 jest.mock('googleapis', () => ({
   google: {
@@ -27,7 +28,9 @@ jest.mock('googleapis', () => ({
       userinfo: { get: mockUserinfoGet },
     })),
     sheets: jest.fn().mockImplementation(() => ({
-      spreadsheets: { values: { get: mockSheetsValuesGet, append: mockSheetsValuesAppend } },
+      spreadsheets: {
+        values: { get: mockSheetsValuesGet, append: mockSheetsValuesAppend, batchUpdate: mockSheetsValuesBatchUpdate },
+      },
     })),
   },
 }));
@@ -272,6 +275,78 @@ describe('GoogleDriveService', () => {
       expect(rows).toEqual([
         ['ПІБ', 'Псевдо'],
         ['Іван Петренко', 'Сокіл'],
+      ]);
+    });
+  });
+
+  describe('updateCellValues', () => {
+    it('does nothing when there are no updates', async () => {
+      await service.updateCellValues('kurin-1', 'sheet-id-1', []);
+
+      expect(prisma.kurin.findUnique).not.toHaveBeenCalled();
+      expect(mockFilesGet).not.toHaveBeenCalled();
+      expect(mockSheetsValuesBatchUpdate).not.toHaveBeenCalled();
+      expect(mockFilesUpdate).not.toHaveBeenCalled();
+    });
+
+    it('batches a single batchUpdate call for a native Google Sheet', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockSheetsValuesBatchUpdate.mockResolvedValue({});
+
+      await service.updateCellValues('kurin-1', 'sheet-id-1', [
+        { row: 5, column: 'C', value: '2024-01-15' },
+        { row: 6, column: 'D', value: 'ivan@example.com' },
+      ]);
+
+      expect(mockSheetsValuesBatchUpdate).toHaveBeenCalledTimes(1);
+      expect(mockSheetsValuesBatchUpdate).toHaveBeenCalledWith({
+        spreadsheetId: 'sheet-id-1',
+        requestBody: {
+          valueInputOption: 'RAW',
+          data: [
+            { range: 'C5', values: [['2024-01-15']] },
+            { range: 'D6', values: [['ivan@example.com']] },
+          ],
+        },
+      });
+    });
+
+    it('updates cells in an uploaded .xlsx file by downloading once and re-uploading once', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      const buffer = await buildXlsxBuffer([
+        ['ПІБ', 'Псевдо', 'Дата проби', 'Email'],
+        ['Іван Петренко', 'Сокіл', '', ''],
+      ]);
+      mockFilesGet.mockImplementation((params: { fields?: string; alt?: string }) => {
+        if (params.fields === 'mimeType') return Promise.resolve({ data: { mimeType: XLSX_MIME_TYPE } });
+        if (params.alt === 'media') return Promise.resolve({ data: buffer });
+        throw new Error(`unexpected files.get call: ${JSON.stringify(params)}`);
+      });
+      mockFilesUpdate.mockResolvedValue({});
+
+      await service.updateCellValues('kurin-1', 'file-id-1', [
+        { row: 2, column: 'C', value: '2024-01-15' },
+        { row: 2, column: 'D', value: 'ivan@example.com' },
+      ]);
+
+      expect(mockSheetsValuesBatchUpdate).not.toHaveBeenCalled();
+      expect(mockFilesGet).toHaveBeenCalledTimes(2); // mimeType check + download
+      expect(mockFilesUpdate).toHaveBeenCalledTimes(1);
+      const updateCall = mockFilesUpdate.mock.calls[0][0];
+      expect(updateCall.fileId).toBe('file-id-1');
+      expect(updateCall.media.mimeType).toBe(XLSX_MIME_TYPE);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of updateCall.media.body) {
+        chunks.push(chunk as Buffer);
+      }
+      const uploadedWorkbook = new ExcelJS.Workbook();
+      await uploadedWorkbook.xlsx.load(Buffer.concat(chunks) as any);
+      const rows: string[][] = [];
+      uploadedWorkbook.worksheets[0].eachRow((row) => rows.push((row.values as unknown[]).slice(1).map(String)));
+      expect(rows).toEqual([
+        ['ПІБ', 'Псевдо', 'Дата проби', 'Email'],
+        ['Іван Петренко', 'Сокіл', '2024-01-15', 'ivan@example.com'],
       ]);
     });
   });
