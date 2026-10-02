@@ -128,6 +128,7 @@ model User {
   birthDate    DateTime?
   notes        String?
   phone        String?
+  judgeBookRowNumber Int?
   photoData       Bytes?
   photoMimeType   String?
   photoUpdatedAt  DateTime?
