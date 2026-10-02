@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session-client';
@@ -33,10 +34,21 @@ const DILOVODY_PAGES = [
   { href: '/suddivstvo', label: 'Суддівство' },
 ];
 
-function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+function NavLink({
+  href,
+  label,
+  active,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  onClick?: () => void;
+}) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         'rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent-soft hover:text-accent-text',
         active && 'bg-accent-soft font-semibold text-accent-text'
@@ -51,6 +63,7 @@ export function Nav() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: session } = useSession();
   const { data: kurin } = useKurin({ enabled: !!session });
   const { data: profile } = useOwnProfile({ enabled: !!session });
@@ -89,7 +102,7 @@ export function Nav() {
           )}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="hidden items-center gap-1 sm:flex sm:flex-wrap">
         {links.map((link) => (
           <NavLink key={link.href} href={link.href} label={link.label} active={pathname === link.href} />
         ))}
@@ -117,6 +130,23 @@ export function Nav() {
           </details>
         )}
       </div>
+      <button
+        type="button"
+        aria-label="Меню"
+        aria-expanded={mobileMenuOpen}
+        onClick={() => setMobileMenuOpen((open) => !open)}
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent-soft hover:text-accent-text sm:hidden"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path
+            d="M3 5h14M3 10h14M3 15h14"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
       <div className="flex items-center gap-3.5">
         <ThemeToggle />
         {profile && (
@@ -129,6 +159,29 @@ export function Nav() {
           Вийти
         </Button>
       </div>
+      {mobileMenuOpen && (
+        <div className="flex w-full flex-col gap-1 border-t pt-3 sm:hidden">
+          {links.map((link) => (
+            <NavLink
+              key={link.href}
+              href={link.href}
+              label={link.label}
+              active={pathname === link.href}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          ))}
+          {session.role === 'ZVYAZKOVYI' &&
+            DILOVODY_PAGES.map((page) => (
+              <NavLink
+                key={page.href}
+                href={page.href}
+                label={page.label}
+                active={pathname === page.href}
+                onClick={() => setMobileMenuOpen(false)}
+              />
+            ))}
+        </div>
+      )}
     </nav>
   );
 }
