@@ -19,7 +19,11 @@ function ThemeToggle({
   // cookie (SSR) or the system-preference inline script (app/layout.tsx)
   // already applied to <html>, before the browser paints — this is what
   // fixes the toggle always rendering "off" even when the page loaded dark.
+  // One-time correction from an external, non-React-owned source (the DOM
+  // class list set before this component mounted), not a cascading
+  // render loop — the lint rule can't distinguish the two.
   React.useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setChecked(document.documentElement.classList.contains("dark"))
   }, [])
 
