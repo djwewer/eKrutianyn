@@ -13,6 +13,7 @@ function RowList({ className, ...props }: React.ComponentProps<"div">) {
 
 function Row({
   initials,
+  photoUrl,
   title,
   subtitle,
   children,
@@ -20,6 +21,7 @@ function Row({
   ...props
 }: React.ComponentProps<"div"> & {
   initials: string
+  photoUrl?: string | null
   title: string
   subtitle?: string
 }) {
@@ -32,7 +34,7 @@ function Row({
       )}
       {...props}
     >
-      <Avatar initials={initials} aria-hidden="true" />
+      <Avatar initials={initials} photoUrl={photoUrl} aria-hidden="true" />
       <div className="flex min-w-0 flex-grow flex-col gap-px">
         <span className="text-sm font-medium">{title}</span>
         {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
