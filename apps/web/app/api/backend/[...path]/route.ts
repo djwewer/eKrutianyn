@@ -24,7 +24,10 @@ async function proxy(request: NextRequest, path: string[]) {
     body,
   });
 
-  const responseBody = await response.text();
+  // Read as ArrayBuffer, not .text() — reading binary responses (e.g. the
+  // user photo endpoint) as text corrupts them via lossy UTF-8 decoding.
+  // ArrayBuffer is binary-safe and works identically for JSON responses too.
+  const responseBody = await response.arrayBuffer();
   return new NextResponse(responseBody, {
     status: response.status,
     headers: { 'Content-Type': response.headers.get('Content-Type') ?? 'application/json' },
