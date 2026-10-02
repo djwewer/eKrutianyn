@@ -1,17 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useOwnProfile, useUpdateOwnProfile, useChangePassword, useRequestEmailChange } from '@/lib/queries/settings';
+import { useEffect, useState, useRef } from 'react';
+import { useOwnProfile, useUpdateOwnProfile, useChangePassword, useRequestEmailChange, useUpdateOwnPhoto, useRemoveOwnPhoto } from '@/lib/queries/settings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Avatar } from '@/components/ui/avatar';
+import { getInitials } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { data: profile, isLoading } = useOwnProfile();
   const updateProfile = useUpdateOwnProfile();
   const changePassword = useChangePassword();
   const requestEmailChange = useRequestEmailChange();
+  const updatePhoto = useUpdateOwnPhoto();
+  const removePhoto = useRemoveOwnPhoto();
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -81,6 +86,41 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <h1 className="text-2xl font-bold">Налаштування</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Фото профілю</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-4">
+          <Avatar
+            initials={getInitials(profile.firstName, profile.lastName)}
+            photoUrl={profile.photoUpdatedAt ? `/api/backend/users/${profile.id}/photo?v=${profile.photoUpdatedAt}` : null}
+            className="size-16 text-base"
+          />
+          <div className="flex flex-col gap-2">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) updatePhoto.mutate(file);
+                e.target.value = '';
+              }}
+            />
+            <Button type="button" size="sm" variant="outline" disabled={updatePhoto.isPending} onClick={() => photoInputRef.current?.click()}>
+              {profile.photoUpdatedAt ? 'Змінити фото' : 'Завантажити фото'}
+            </Button>
+            {profile.photoUpdatedAt && (
+              <Button type="button" size="sm" variant="ghost" disabled={removePhoto.isPending} onClick={() => removePhoto.mutate()}>
+                Видалити фото
+              </Button>
+            )}
+            {updatePhoto.isError && <p className="text-sm text-destructive">Не вдалося завантажити фото.</p>}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
