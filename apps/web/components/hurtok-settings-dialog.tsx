@@ -153,34 +153,39 @@ export function HurtokSettingsDialog({
 
         {HURTOK_POSITION_TYPES.map((positionType) => {
           const current = hurtokPositions.find((p) => p.positionType === positionType);
+          // The position holder can end up moved out of this hurtok (see
+          // handlePositionChange's conflict warning) while still holding the
+          // position here, so they may not be in junakMembers. Synthesize
+          // their option so the select still shows their name correctly
+          // instead of falling back to a blank selection.
+          const currentIsMember = current ? junakMembers.some((m) => m.id === current.user.id) : true;
           return (
             <div key={positionType} className="space-y-2" data-testid={`position-row-${positionType}`}>
               <Label htmlFor={`position-${positionType}`}>{POSITION_LABELS[positionType]}</Label>
               <div className="flex items-center gap-2">
-                {current ? (
-                  <>
-                    <span className="flex-1 text-sm">
+                <select
+                  id={`position-${positionType}`}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  value={current?.user.id ?? ''}
+                  disabled={positionSelectsDisabled}
+                  onChange={(e) => handlePositionChange(positionType, e.target.value)}
+                >
+                  <option value="">— немає —</option>
+                  {current && !currentIsMember && (
+                    <option value={current.user.id}>
                       {current.user.lastName} {current.user.firstName}
-                    </span>
-                    <Button size="sm" variant="outline" onClick={() => handleRemovePosition(current.id)}>
-                      Зняти
-                    </Button>
-                  </>
-                ) : (
-                  <select
-                    id={`position-${positionType}`}
-                    className="w-full rounded-md border px-3 py-2 text-sm"
-                    value=""
-                    disabled={positionSelectsDisabled}
-                    onChange={(e) => handlePositionChange(positionType, e.target.value)}
-                  >
-                    <option value="">— немає —</option>
-                    {junakMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.lastName} {m.firstName}
-                      </option>
-                    ))}
-                  </select>
+                    </option>
+                  )}
+                  {junakMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.lastName} {m.firstName}
+                    </option>
+                  ))}
+                </select>
+                {current && (
+                  <Button size="sm" variant="outline" onClick={() => handleRemovePosition(current.id)}>
+                    Зняти
+                  </Button>
                 )}
               </div>
             </div>

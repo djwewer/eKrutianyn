@@ -65,17 +65,14 @@ test('lets zvyazkovyi assign and then remove a hurtok position', async ({ page }
 
   await page.getByRole('button', { name: 'Налаштування' }).click();
   const hurtkovyiRow = page.getByTestId('position-row-HURTKOVYI');
-  // Scoped to the <span> showing the current holder, not getByText — the
-  // same name also sits (hidden) inside this row's own <select>'s <option>,
-  // which would otherwise make an unscoped getByText match ambiguous.
-  const hurtkovyiAssigned = hurtkovyiRow
-    .locator('span')
-    .filter({ hasText: `${junak.lastName} ${junak.firstName}` });
-  await page.getByLabel('Гуртковий').selectOption(junak.id);
-  await expect(hurtkovyiAssigned).toBeVisible();
+  const hurtkovyiSelect = page.getByLabel('Гуртковий');
+  await hurtkovyiSelect.selectOption(junak.id);
+  await expect(hurtkovyiSelect).toHaveValue(junak.id);
+  await expect(hurtkovyiRow.getByRole('button', { name: 'Зняти' })).toBeVisible();
 
   await hurtkovyiRow.getByRole('button', { name: 'Зняти' }).click();
-  await expect(hurtkovyiAssigned).not.toBeVisible();
+  await expect(hurtkovyiSelect).toHaveValue('');
+  await expect(hurtkovyiRow.getByRole('button', { name: 'Зняти' })).not.toBeVisible();
 });
 
 test('warns before reassigning a junak who already holds a position in another hurtok', async ({ page }) => {
@@ -120,10 +117,11 @@ test('warns before reassigning a junak who already holds a position in another h
   await expect.poll(() => dialogMessage).toContain('Орлики');
 
   // Declined — Олег's original Гуртковий position in Орлики must stay intact.
+  // He's no longer a member of Орлики (moved to Вовки above), so the select
+  // shows him via a synthesized option rather than one from junakMembers.
   await page.goto(`/${kurin.kurinNumber}/hurtky/${hurtokA.slug}`);
   await page.getByRole('button', { name: 'Налаштування' }).click();
-  const hurtkovyiRow = page.getByTestId('position-row-HURTKOVYI');
-  await expect(hurtkovyiRow.getByText('Олененко Олег')).toBeVisible();
+  await expect(page.getByLabel('Гуртковий')).toHaveValue(junak.id);
 });
 
 test('disables disbanding a hurtok that still has a junak, enables it once empty', async ({ page }) => {
