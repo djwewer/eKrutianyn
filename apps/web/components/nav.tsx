@@ -94,7 +94,7 @@ export function Nav() {
           К
         </span>
         <div className="flex min-w-0 flex-col">
-          <span className="text-xs font-semibold tracking-wide text-accent uppercase">Пласт</span>
+          <span className="text-xs font-semibold tracking-wide text-accent">єПластун</span>
           {kurin && (
             <h1 className="truncate text-[19px] font-bold tracking-tight">
               Курінь ч. {kurin.kurinNumber} «{kurin.name}»
