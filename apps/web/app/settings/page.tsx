@@ -117,7 +117,10 @@ export default function SettingsPage() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) setPhotoToCrop(file);
+                if (file) {
+                  updatePhoto.reset();
+                  setPhotoToCrop(file);
+                }
                 e.target.value = '';
               }}
             />
@@ -141,7 +144,7 @@ export default function SettingsPage() {
       <PhotoCropDialog
         file={photoToCrop}
         onOpenChange={(open) => {
-          if (!open) setPhotoToCrop(null);
+          if (!open && !updatePhoto.isPending) setPhotoToCrop(null);
         }}
         isSaving={updatePhoto.isPending}
         errorMessage={updatePhoto.isError ? apiErrorMessage(updatePhoto.error, 'Не вдалося завантажити фото.') : null}
