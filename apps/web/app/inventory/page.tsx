@@ -105,7 +105,15 @@ function PhotoCarousel({ item, canEdit, kurinId }: { item: InventoryItem; canEdi
 
   return (
     <div className="space-y-2">
-      <img src={photo.url} alt={item.name} className="h-40 w-full rounded object-cover" />
+      <div className="relative aspect-square w-full overflow-hidden rounded">
+        <img
+          src={photo.url}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 size-full scale-110 object-cover blur-xl"
+        />
+        <img src={photo.url} alt={item.name} className="relative size-full object-contain" />
+      </div>
       {item.photos.length > 1 && (
         <div className="flex items-center justify-between">
           <Button

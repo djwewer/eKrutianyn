@@ -14,14 +14,22 @@ import type { Role } from '@/lib/types';
 export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' | 'JUNAK'> }) {
   const { data: session } = useSession();
   const { data: users, isLoading, isError, error } = useUsers({ role });
+  // Кадра виховників also lists the kurin's own zvyazkovyi — they lead the
+  // kurin's vykhovnyky even though their Role is ZVYAZKOVYI, not VYKHOVNYK.
+  const { data: zvyazkovyiUsers, isLoading: zvyazkovyiLoading } = useUsers(
+    { role: 'ZVYAZKOVYI' },
+    { enabled: role === 'VYKHOVNYK' },
+  );
 
-  if (isLoading) return <p>Завантаження...</p>;
+  if (isLoading || zvyazkovyiLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error)}</p>;
 
   const canCreate =
     role === 'VYKHOVNYK'
       ? session?.role === 'ZVYAZKOVYI'
       : session?.role === 'ZVYAZKOVYI' || session?.isKurinniy;
+
+  const rosterUsers = role === 'VYKHOVNYK' ? [...(zvyazkovyiUsers ?? []), ...(users ?? [])] : (users ?? []);
 
   return (
     <div className="space-y-4">
@@ -31,7 +39,7 @@ export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' |
         </Link>
       )}
       <RowList>
-        {(users ?? []).map((u) => (
+        {rosterUsers.map((u) => (
           <Link key={u.id} href={`/users/${u.id}`}>
             <Row initials={getInitials(u.firstName, u.lastName)} title={`${u.lastName} ${u.firstName}`}>
               <Badge variant="neutral">{ROLE_LABELS[u.role]}</Badge>

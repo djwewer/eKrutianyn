@@ -18,14 +18,16 @@ import {
   type JunakImportColumnMapping,
   type JunakImportPositionValueMapping,
   type JunakImportRowResult,
+  type PositionType,
 } from '@/lib/types';
 import { autoMapColumns, autoMapPositionValues } from '@/lib/junak-import-auto-map';
+import { POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const FIELD_OPTIONS = Object.keys(JUNAK_IMPORT_FIELD_LABELS) as JunakImportField[];
-const POSITION_TYPES = ['SUDDIA', 'PYSAR', 'SKARBNYK', 'INTENDANT', 'KHORUNZHYI', 'SMM', 'HURTKOVYI'];
+const POSITION_TYPES: PositionType[] = ['SUDDIA', 'PYSAR', 'SKARBNYK', 'INTENDANT', 'KHORUNZHYI', 'SMM', 'HURTKOVYI'];
 
 function columnLetter(index: number): string {
   let n = index + 1;
@@ -356,7 +358,7 @@ export default function JunakImportPage() {
                   <option value="">Не імпортувати</option>
                   {POSITION_TYPES.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {POSITION_LABELS[p]}
                     </option>
                   ))}
                 </select>

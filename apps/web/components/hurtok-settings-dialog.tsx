@@ -157,29 +157,30 @@ export function HurtokSettingsDialog({
             <div key={positionType} className="space-y-2" data-testid={`position-row-${positionType}`}>
               <Label htmlFor={`position-${positionType}`}>{POSITION_LABELS[positionType]}</Label>
               <div className="flex items-center gap-2">
-                <select
-                  id={`position-${positionType}`}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={current?.user.id ?? ''}
-                  disabled={positionSelectsDisabled}
-                  onChange={(e) => handlePositionChange(positionType, e.target.value)}
-                >
-                  <option value="">— немає —</option>
-                  {junakMembers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.lastName} {m.firstName}
-                    </option>
-                  ))}
-                </select>
-                {current && (
-                  <span className="whitespace-nowrap text-sm text-muted-foreground">
-                    {current.user.lastName} {current.user.firstName}
-                  </span>
-                )}
-                {current && (
-                  <Button size="sm" variant="outline" onClick={() => handleRemovePosition(current.id)}>
-                    Зняти
-                  </Button>
+                {current ? (
+                  <>
+                    <span className="flex-1 text-sm">
+                      {current.user.lastName} {current.user.firstName}
+                    </span>
+                    <Button size="sm" variant="outline" onClick={() => handleRemovePosition(current.id)}>
+                      Зняти
+                    </Button>
+                  </>
+                ) : (
+                  <select
+                    id={`position-${positionType}`}
+                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    value=""
+                    disabled={positionSelectsDisabled}
+                    onChange={(e) => handlePositionChange(positionType, e.target.value)}
+                  >
+                    <option value="">— немає —</option>
+                    {junakMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.lastName} {m.firstName}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             </div>

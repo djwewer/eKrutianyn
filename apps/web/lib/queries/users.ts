@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type { UserSummary, UserDetail, Role } from '@/lib/types';
 
-export function useUsers(filters: { role?: Role; hurtokId?: string } = {}) {
+export function useUsers(filters: { role?: Role; hurtokId?: string } = {}, options?: { enabled?: boolean }) {
   const queryParts = [];
   if (filters.role) queryParts.push(`role=${encodeURIComponent(filters.role)}`);
   if (filters.hurtokId) queryParts.push(`hurtokId=${encodeURIComponent(filters.hurtokId)}`);
@@ -13,6 +13,7 @@ export function useUsers(filters: { role?: Role; hurtokId?: string } = {}) {
   return useQuery({
     queryKey: ['users', filters],
     queryFn: () => apiFetch<UserSummary[]>(`/users${query}`),
+    enabled: options?.enabled ?? true,
   });
 }
 
