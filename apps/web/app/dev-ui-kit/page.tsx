@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { RowList, Row } from "@/components/ui/row-list"
 
 export default function DevUiKitPage() {
   return (
@@ -83,6 +84,17 @@ export default function DevUiKitPage() {
           Theme toggle
         </h2>
         <ThemeToggle />
+      </section>
+      <section aria-labelledby="row-list-heading">
+        <h2 id="row-list-heading" className="mb-3 font-heading text-lg font-semibold">
+          Row list
+        </h2>
+        <RowList>
+          <Row initials="ІМ" title="Іван Мельник" subtitle="Курінний" />
+          <Row initials="ОТ" title="Олена Ткаченко" subtitle="Писар">
+            <Badge variant="neutral">Писар</Badge>
+          </Row>
+        </RowList>
       </section>
     </main>
   )
