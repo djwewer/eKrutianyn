@@ -59,6 +59,52 @@ describe('JunakImportRowProcessorService', () => {
     });
   });
 
+  it('does not overwrite an existing phone/email with the sheet value on update (app wins)', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-2',
+      role: 'JUNAK',
+      kurinId: 'kurin-1',
+      email: 'existing@example.com',
+      phone: '0670000000',
+    });
+    prisma.user.update.mockResolvedValue({ id: 'user-2' });
+
+    await service.processRow(
+      'kurin-1',
+      baseRow({ matchedUserId: 'user-2', email: 'from-sheet@example.com', phone: '0991111111' }),
+      0,
+      ACTOR,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-2' },
+      data: expect.not.objectContaining({ email: expect.anything(), phone: expect.anything() }),
+    });
+  });
+
+  it('applies the sheet value for phone/email on update when the target has none yet', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-2',
+      role: 'JUNAK',
+      kurinId: 'kurin-1',
+      email: null,
+      phone: null,
+    });
+    prisma.user.update.mockResolvedValue({ id: 'user-2' });
+
+    await service.processRow(
+      'kurin-1',
+      baseRow({ matchedUserId: 'user-2', email: 'from-sheet@example.com', phone: '0991111111' }),
+      0,
+      ACTOR,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-2' },
+      data: expect.objectContaining({ email: 'from-sheet@example.com', phone: '0991111111' }),
+    });
+  });
+
   it('sets judgeBookRowNumber from rowIndex on create (rowIndex + 2 for header + 1-based numbering)', async () => {
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
 
@@ -232,6 +278,42 @@ describe('JunakImportRowProcessorService', () => {
 
     expect(probyProgress.confirm).not.toHaveBeenCalled();
     expect(probyProgress.closeStage).not.toHaveBeenCalled();
+    expect(result.succeededSteps).not.toContain('proba-progress');
+  });
+
+  it('does not overwrite firstClosedAt when backfilling a degree date for an already-closed stage (regression)', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' });
+    prisma.probyStage.findMany.mockResolvedValue([
+      { id: 'stage-1', name: 'Проба прихильника (Відзнака прихильника)', order: 1, categories: [{ points: [{ id: 'p1' }] }] },
+    ]);
+    const stageProgress = {
+      stageId: 'stage-1',
+      status: 'CLOSED',
+      hasDebt: false,
+      firstClosedAt: new Date('2024-01-15T00:00:00.000Z'),
+    };
+    probyProgress.getProgressFor.mockResolvedValue({ points: [], stages: [stageProgress] });
+    // If the CLOSED guard were ever removed, closeStage would run and (as in the real
+    // service) stamp a fresh firstClosedAt — simulate that here so the assertion below
+    // actually fails if the regression resurfaces.
+    probyProgress.closeStage.mockImplementation(() => {
+      stageProgress.firstClosedAt = new Date('2026-10-02T00:00:00.000Z');
+    });
+    const originalFirstClosedAt = stageProgress.firstClosedAt;
+
+    const result = await service.processRow(
+      'kurin-1',
+      // A different date than what's already closed — the sheet must not be able to
+      // reopen/re-stamp a stage the app already confirmed.
+      baseRow({ degreeDates: { PRYHYLNYK: '2020-06-01' } }),
+      0,
+      ACTOR,
+    );
+
+    expect(probyProgress.confirm).not.toHaveBeenCalled();
+    expect(probyProgress.closeStage).not.toHaveBeenCalled();
+    expect(stageProgress.firstClosedAt).toEqual(originalFirstClosedAt);
     expect(result.succeededSteps).not.toContain('proba-progress');
   });
 

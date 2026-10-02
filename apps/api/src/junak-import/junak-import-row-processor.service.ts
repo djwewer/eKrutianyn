@@ -81,8 +81,8 @@ export class JunakImportRowProcessorService {
         if (row.lastName) updateData.lastName = row.lastName;
         if (row.nickname) updateData.nickname = row.nickname;
         if (row.birthDate) updateData.birthDate = new Date(row.birthDate);
-        if (row.email) updateData.email = row.email;
-        if (row.phone) updateData.phone = row.phone;
+        if (row.email && !target.email) updateData.email = row.email;
+        if (row.phone && !target.phone) updateData.phone = row.phone;
         if (hurtokId) updateData.hurtokId = hurtokId;
         updateData.judgeBookRowNumber = rowIndex + 2;
         const updated = await tx.user.update({ where: { id: row.matchedUserId }, data: updateData });
