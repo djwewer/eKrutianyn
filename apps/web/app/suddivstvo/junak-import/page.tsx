@@ -48,6 +48,8 @@ function parseUkrainianDate(raw: string): string | undefined {
 }
 
 interface WizardRow {
+  /** Index within `dataRows` (0-based, after the header row) — stable across filtering, unlike the row's position in `wizardRows`. */
+  rowIndex: number;
   cells: string[];
   hurtokName: string;
   firstName: string;
@@ -163,6 +165,7 @@ export default function JunakImportPage() {
         const fullName = nameColIndex ? (cells[Number(nameColIndex)] ?? '').trim() : '';
         const [firstName, ...rest] = fullName.split(' ');
         return {
+          rowIndex: i,
           cells,
           hurtokName: lastHurtok,
           firstName: firstName ?? '',
@@ -206,9 +209,9 @@ export default function JunakImportPage() {
 
   function buildResolvedRows() {
     const emailColIndex = colIndexFor('EMAIL');
-    return wizardRows.map((row, i) => {
+    return wizardRows.map((row) => {
       const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
-      const email = rowOverrides[i]?.email || emailFromSheet;
+      const email = rowOverrides[row.rowIndex]?.email || emailFromSheet;
 
       const guardians: { name: string; phone?: string; email?: string }[] = [];
       const guardian1Name = cellFor(row.cells, 'GUARDIAN_1_NAME');
@@ -239,6 +242,7 @@ export default function JunakImportPage() {
       const birthDateRaw = cellFor(row.cells, 'BIRTH_DATE');
 
       return {
+        rowIndex: row.rowIndex,
         matchedUserId: row.matchChoice !== 'new' ? row.matchChoice : undefined,
         firstName: row.firstName,
         lastName: row.lastName,
@@ -381,9 +385,10 @@ export default function JunakImportPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-muted-foreground">Рядків до імпорту: {wizardRows.length}</p>
-            {wizardRows.map((row, i) => {
+            {wizardRows.map((row) => {
               const emailColIndex = colIndexFor('EMAIL');
               const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
+              const i = row.rowIndex;
               return (
               <div key={i} className="flex flex-col gap-2 border-b pb-2 text-sm sm:flex-row sm:items-center sm:pb-1">
                 <div className="flex items-center gap-2 sm:contents">

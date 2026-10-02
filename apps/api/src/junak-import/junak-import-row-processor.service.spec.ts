@@ -26,7 +26,7 @@ describe('JunakImportRowProcessorService', () => {
   });
 
   function baseRow(overrides: Partial<ResolvedJunakRow> = {}): ResolvedJunakRow {
-    return { firstName: 'Іван', lastName: 'Петренко', email: 'ivan@example.com', ...overrides };
+    return { rowIndex: 0, firstName: 'Іван', lastName: 'Петренко', email: 'ivan@example.com', ...overrides };
   }
 
   it('creates a new junak when no matchedUserId is given', async () => {

@@ -45,8 +45,8 @@ export class JunakImportController {
     this.assertOwnKurin(kurinId, user);
     this.assertZvyazkovyi(user);
     const results = [];
-    for (let i = 0; i < dto.rows.length; i++) {
-      results.push(await this.rowProcessor.processRow(kurinId, dto.rows[i] as ResolvedJunakRow, i, user));
+    for (const row of dto.rows as ResolvedJunakRow[]) {
+      results.push(await this.rowProcessor.processRow(kurinId, row, row.rowIndex, user));
     }
     return { results };
   }

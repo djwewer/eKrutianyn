@@ -46,7 +46,7 @@ describe('Junak import — direct rows endpoint (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         rows: [
-          { firstName: 'Іван', lastName: 'Петренко', email: `ivan-${Date.now()}@example.com`, hurtokName: 'Орли' },
+          { rowIndex: 0, firstName: 'Іван', lastName: 'Петренко', email: `ivan-${Date.now()}@example.com`, hurtokName: 'Орли' },
         ],
       })
       .expect((res) => expect([200, 201]).toContain(res.status));
@@ -70,8 +70,8 @@ describe('Junak import — direct rows endpoint (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         rows: [
-          { firstName: 'Дублікат', lastName: 'Юнак', email: existing.email },
-          { firstName: 'Новий', lastName: 'Юнак', email: `new-${Date.now()}@example.com` },
+          { rowIndex: 0, firstName: 'Дублікат', lastName: 'Юнак', email: existing.email },
+          { rowIndex: 1, firstName: 'Новий', lastName: 'Юнак', email: `new-${Date.now()}@example.com` },
         ],
       })
       .expect((res) => expect([200, 201]).toContain(res.status));

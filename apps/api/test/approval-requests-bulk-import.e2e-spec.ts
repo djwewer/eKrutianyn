@@ -55,7 +55,7 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
-        newData: { rows: [{ firstName: 'Іван', lastName: 'Петренко', email: `x-${Date.now()}@example.com` }] },
+        newData: { rows: [{ rowIndex: 0, firstName: 'Іван', lastName: 'Петренко', email: `x-${Date.now()}@example.com` }] },
       })
       .expect((res) => expect([200, 201]).toContain(res.status));
 
@@ -103,7 +103,7 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
       data: {
         initiatedById: kurinnyi.id,
         actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
-        newData: { rows: [{ firstName: 'Іван', lastName: 'Петренко', email }] },
+        newData: { rows: [{ rowIndex: 0, firstName: 'Іван', lastName: 'Петренко', email }] },
         status: ApprovalStatus.PENDING,
       },
     });
@@ -126,7 +126,7 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
       data: {
         initiatedById: kurinnyi.id,
         actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
-        newData: { rows: [{ firstName: 'Одна', lastName: 'Особа', email: `once-${Date.now()}@example.com` }] },
+        newData: { rows: [{ rowIndex: 0, firstName: 'Одна', lastName: 'Особа', email: `once-${Date.now()}@example.com` }] },
         status: ApprovalStatus.PENDING,
       },
     });
@@ -164,8 +164,8 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
         actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
         newData: {
           rows: [
-            { matchedUserId: kurinnyi.id, firstName: kurinnyi.firstName, lastName: kurinnyi.lastName, email: 'evil@attacker.com' },
-            { matchedUserId: suddya.id, firstName: 'Attacker', lastName: 'Self', email: suddya.email, kurinPositionTypes: [PositionType.KURINNYI] },
+            { rowIndex: 0, matchedUserId: kurinnyi.id, firstName: kurinnyi.firstName, lastName: kurinnyi.lastName, email: 'evil@attacker.com' },
+            { rowIndex: 1, matchedUserId: suddya.id, firstName: 'Attacker', lastName: 'Self', email: suddya.email, kurinPositionTypes: [PositionType.KURINNYI] },
           ],
         },
         status: ApprovalStatus.PENDING,

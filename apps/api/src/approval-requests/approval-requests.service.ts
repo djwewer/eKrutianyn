@@ -163,9 +163,9 @@ export class ApprovalRequestsService {
 
     const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
     const results = [];
-    for (let i = 0; i < data.rows.length; i++) {
+    for (const row of data.rows) {
       results.push(
-        await this.rowProcessor.processRow(actor.kurinId, data.rows[i], i, actor, {
+        await this.rowProcessor.processRow(actor.kurinId, row, row.rowIndex, actor, {
           restrictProtectedTargets: true,
         }),
       );
