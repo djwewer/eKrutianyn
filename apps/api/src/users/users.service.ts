@@ -13,6 +13,7 @@ import { ChangeEmailDto } from './dto/change-email.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { USER_SELECT } from './user-select.const';
 import { hasAnyActivePosition } from '../common/positions.util';
+import { detectSafeImageMimeType } from '../common/image-sniff.util';
 
 @Injectable()
 export class UsersService {
@@ -390,9 +391,18 @@ export class UsersService {
   }
 
   async updateOwnPhoto(userId: string, file: Express.Multer.File) {
+    // The controller's fileFilter checks the client-claimed mimetype, which
+    // is trivially spoofable. This checks the actual bytes and stores the
+    // real detected type — never the one the upload claimed — so an SVG (or
+    // anything else) relabeled as image/png can't get stored or served back
+    // as if it were a safe raster image.
+    const detectedMimeType = detectSafeImageMimeType(file.buffer);
+    if (!detectedMimeType) {
+      throw new BadRequestException('Файл не є дійсним зображенням (JPEG, PNG, WebP або GIF)');
+    }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { photoData: file.buffer, photoMimeType: file.mimetype, photoUpdatedAt: new Date() },
+      data: { photoData: file.buffer, photoMimeType: detectedMimeType, photoUpdatedAt: new Date() },
     });
     return { ok: true as const };
   }
@@ -408,8 +418,11 @@ export class UsersService {
   async getPhoto(userId: string, actor: CurrentUserPayload) {
     try {
       await this.findScoped(userId, actor);
-    } catch {
-      return null;
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        return null;
+      }
+      throw err;
     }
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

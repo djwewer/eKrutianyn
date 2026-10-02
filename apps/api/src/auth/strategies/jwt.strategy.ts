@@ -20,7 +20,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
     }
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    // select only what's actually used below — an unselected findUnique
+    // would load photoData (up to 5MB) on every single authenticated
+    // request in the app, since this runs on every request.
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { archivedAt: true },
+    });
     if (!user || user.archivedAt) {
       throw new UnauthorizedException('Account not found or archived');
     }

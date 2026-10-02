@@ -75,7 +75,7 @@ export function Nav() {
   const dilovodyActive = DILOVODY_PAGES.some((p) => pathname?.startsWith(p.href));
 
   return (
-    <nav className="flex flex-wrap items-center justify-between gap-6 border-b px-8 py-5">
+    <nav className="flex flex-wrap items-center justify-between gap-6 border-b px-4 py-5 sm:px-8">
       <div className="flex min-w-0 items-center gap-3.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-base font-bold text-accent-foreground">
           К
@@ -89,7 +89,7 @@ export function Nav() {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {links.map((link) => (
           <NavLink key={link.href} href={link.href} label={link.label} active={pathname === link.href} />
         ))}
@@ -103,7 +103,7 @@ export function Nav() {
             >
               Діловодство
             </summary>
-            <div className="absolute z-10 mt-1 flex flex-col rounded-md border bg-popover p-1 shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 flex flex-col rounded-md border bg-popover p-1 shadow-lg">
               {DILOVODY_PAGES.map((page) => (
                 <Link
                   key={page.href}

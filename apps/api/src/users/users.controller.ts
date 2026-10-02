@@ -68,7 +68,16 @@ export class UsersController {
       storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, callback) => {
-        callback(file.mimetype.startsWith('image/') ? null : new BadRequestException('Дозволені лише зображення'), file.mimetype.startsWith('image/'));
+        // A client-supplied mimetype is just a request header — never trust
+        // it alone. image/svg+xml in particular can carry a <script> tag,
+        // which would run on this app's own origin once served back from
+        // GET /users/:id/photo. This is a first, cheap rejection; the real
+        // check is the magic-byte sniff in UsersService.updateOwnPhoto.
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        callback(
+          allowed.includes(file.mimetype) ? null : new BadRequestException('Дозволені лише зображення (JPEG, PNG, WebP, GIF)'),
+          allowed.includes(file.mimetype),
+        );
       },
     }),
   )
@@ -91,7 +100,16 @@ export class UsersController {
       throw new NotFoundException('Photo not found');
     }
     res.set('Content-Type', photo.mimeType);
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    // Defense in depth even though mimetype is now sniffed server-side, not
+    // trusted from the upload: nosniff stops the browser from reinterpreting
+    // the response as something else, and the CSP stops any script from
+    // running if a hostile byte sequence ever did slip through, since the
+    // photo is served from this app's own origin.
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Security-Policy', "default-src 'none'; sandbox");
+    // private, not public: this endpoint is access-controlled (findScoped),
+    // so a shared cache must not serve one viewer's response to another.
+    res.set('Cache-Control', 'private, max-age=31536000, immutable');
     res.send(photo.data);
   }
 

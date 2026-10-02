@@ -8,6 +8,12 @@ function Avatar({
   ...props
 }: React.ComponentProps<"div"> & { initials: string; photoUrl?: string | null }) {
   const [imageFailed, setImageFailed] = React.useState(false)
+  const [lastPhotoUrl, setLastPhotoUrl] = React.useState(photoUrl)
+
+  if (photoUrl !== lastPhotoUrl) {
+    setLastPhotoUrl(photoUrl)
+    setImageFailed(false)
+  }
 
   return (
     <div

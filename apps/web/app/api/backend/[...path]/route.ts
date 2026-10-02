@@ -28,9 +28,21 @@ async function proxy(request: NextRequest, path: string[]) {
   // user photo endpoint) as text corrupts them via lossy UTF-8 decoding.
   // ArrayBuffer is binary-safe and works identically for JSON responses too.
   const responseBody = await response.arrayBuffer();
+  const responseHeaders: Record<string, string> = {
+    'Content-Type': response.headers.get('Content-Type') ?? 'application/json',
+  };
+  // Forward security headers the backend sets for access-controlled binary
+  // responses (e.g. GET /users/:id/photo's nosniff/CSP/Cache-Control) —
+  // dropping them here would silently undo the backend's XSS defenses.
+  for (const name of ['X-Content-Type-Options', 'Content-Security-Policy', 'Cache-Control']) {
+    const value = response.headers.get(name);
+    if (value) {
+      responseHeaders[name] = value;
+    }
+  }
   return new NextResponse(responseBody, {
     status: response.status,
-    headers: { 'Content-Type': response.headers.get('Content-Type') ?? 'application/json' },
+    headers: responseHeaders,
   });
 }
 

@@ -49,4 +49,13 @@ describe('JwtStrategy', () => {
       strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any),
     ).rejects.toThrow(UnauthorizedException);
   });
+
+  it('never loads photoData — this runs on every authenticated request', async () => {
+    await strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any);
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: { archivedAt: true },
+    });
+  });
 });

@@ -8,6 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
+import { ApiError } from '@/lib/api-client';
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && typeof error.body === 'object' && error.body) {
+    const message = (error.body as { message?: string | string[] }).message;
+    if (typeof message === 'string') return message;
+    if (Array.isArray(message) && message.length > 0) return message.join(' ');
+  }
+  return fallback;
+}
 
 export default function SettingsPage() {
   const { data: profile, isLoading } = useOwnProfile();
@@ -117,7 +127,16 @@ export default function SettingsPage() {
                 Видалити фото
               </Button>
             )}
-            {updatePhoto.isError && <p className="text-sm text-destructive">Не вдалося завантажити фото.</p>}
+            {updatePhoto.isError && (
+              <p className="text-sm text-destructive">
+                {apiErrorMessage(updatePhoto.error, 'Не вдалося завантажити фото.')}
+              </p>
+            )}
+            {removePhoto.isError && (
+              <p className="text-sm text-destructive">
+                {apiErrorMessage(removePhoto.error, 'Не вдалося видалити фото.')}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
