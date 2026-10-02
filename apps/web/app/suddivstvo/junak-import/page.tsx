@@ -86,7 +86,7 @@ function WizardRowMatchPicker({
 
   return (
     <select
-      className="rounded border p-1 text-xs"
+      className="w-full rounded border p-1 text-xs sm:w-auto"
       value={value ?? (soleCandidateId ? soleCandidateId : 'new')}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -385,13 +385,15 @@ export default function JunakImportPage() {
               const emailColIndex = colIndexFor('EMAIL');
               const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
               return (
-              <div key={i} className="flex items-center gap-2 border-b pb-1 text-sm">
-                <span className="w-40 truncate">
-                  {row.firstName} {row.lastName}
-                </span>
-                <span className="w-24 truncate text-muted-foreground">{row.hurtokName || '—'}</span>
+              <div key={i} className="flex flex-col gap-2 border-b pb-2 text-sm sm:flex-row sm:items-center sm:pb-1">
+                <div className="flex items-center gap-2 sm:contents">
+                  <span className="min-w-0 flex-1 truncate sm:w-40 sm:flex-none">
+                    {row.firstName} {row.lastName}
+                  </span>
+                  <span className="shrink-0 truncate text-muted-foreground sm:w-24">{row.hurtokName || '—'}</span>
+                </div>
                 <Input
-                  className="w-56"
+                  className="w-full sm:w-56"
                   placeholder="Email"
                   defaultValue={rowOverrides[i]?.email ?? (emailFromSheet || undefined)}
                   onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}
