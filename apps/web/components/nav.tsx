@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session-client';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
@@ -71,9 +72,12 @@ export function Nav() {
           </details>
         )}
       </div>
-      <Button variant="outline" size="sm" onClick={handleLogout}>
-        Вийти
-      </Button>
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          Вийти
+        </Button>
+      </div>
     </nav>
   );
 }
