@@ -1,0 +1,559 @@
+<!doctype html>
+<!--
+  Reference mockup for docs/superpowers/specs/2026-10-02-notion-style-ui-overhaul-design.md.
+
+  This is a de-templated, standalone copy of the /kurin mockup approved by the user
+  during brainstorming (originally built and iterated on as a Claude Artifact at
+  https://claude.ai/artifact/Houns6SmVwD3PDuEkVkwrv). It has no build step and no
+  external framework dependency (plain HTML/CSS/JS) specifically so it can be opened
+  directly in a browser, or read as ground truth by an implementer, without needing
+  access to the Artifact platform.
+
+  Any implementation task for Project 1 (design system) or Project 2 (page rollout)
+  that touches colors, typography, spacing, radii, shadows, or the accordion /
+  expand-collapse motion MUST treat this file's CSS as the source of truth — the
+  design spec's token tables are a summary of what is encoded here, not the other
+  way around. If the two ever disagree, this file wins; fix the spec's table to match.
+
+  This is a frozen reference artifact: do not "clean up" or refactor it to match
+  the real app's component structure — it is deliberately a flat, single-file mockup,
+  not a preview of the real React component tree.
+-->
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Курінь — Notion-style mockup (reference)</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; }
+
+  .km-shell {
+    --km-radius-sm: 8px;
+    --km-radius-md: 12px;
+    --km-radius-lg: 16px;
+    --km-font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --km-font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --km-accent: #2F5FD9;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--km-font-body);
+    transition: background-color 260ms ease, color 260ms ease;
+    background: var(--km-bg);
+    color: var(--km-text);
+  }
+  .km-shell * { box-sizing: border-box; }
+
+  .km-shell.theme-light {
+    --km-bg: #FBFAF8;
+    --km-bg-elevated: #FFFFFF;
+    --km-bg-sunken: #F3F1EC;
+    --km-border: #E8E6E1;
+    --km-text: #2B2A27;
+    --km-text-muted: #6F6C66;
+    --km-accent-soft: #E8EEFC;
+    --km-accent-fg: #FFFFFF;
+    --km-amber-soft: #FBF0DC;
+    --km-amber-text: #8A5A12;
+    --km-toggle-bg: #E8E6E1;
+    --km-toggle-thumb: #FFFFFF;
+    --km-shadow: 0 1px 2px rgba(43,42,39,0.04), 0 2px 10px rgba(43,42,39,0.04);
+    --km-shadow-hover: 0 2px 4px rgba(43,42,39,0.06), 0 8px 20px rgba(43,42,39,0.08);
+  }
+  .km-shell.theme-dark {
+    --km-bg: #1C1C1A;
+    --km-bg-elevated: #242320;
+    --km-bg-sunken: #191917;
+    --km-border: rgba(255,255,255,0.09);
+    --km-text: #EDECE9;
+    --km-text-muted: #9B9890;
+    --km-accent-soft: rgba(94,140,255,0.16);
+    --km-accent-fg: #FFFFFF;
+    --km-amber-soft: rgba(217,164,65,0.14);
+    --km-amber-text: #E6B766;
+    --km-toggle-bg: #3A3935;
+    --km-toggle-thumb: #EDECE9;
+    --km-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 2px 10px rgba(0,0,0,0.25);
+    --km-shadow-hover: 0 2px 6px rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.35);
+  }
+
+  .km-container { max-width: 1120px; margin: 0 auto; padding: 0 32px 96px; }
+
+  /* Header */
+  .km-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    padding: 20px 32px; border-bottom: 1px solid var(--km-border);
+    transition: border-color 260ms ease;
+    flex-wrap: wrap;
+  }
+  .km-header-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .km-mark {
+    width: 36px; height: 36px; border-radius: var(--km-radius-sm);
+    background: var(--km-accent); color: var(--km-accent-fg);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--km-font-heading); font-weight: 700; font-size: 16px;
+    flex-shrink: 0;
+  }
+  .km-crumbs { display: flex; flex-direction: column; min-width: 0; }
+  .km-org { font-size: 12px; color: var(--km-accent); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .km-kurin-title {
+    font-family: var(--km-font-heading); font-weight: 700; font-size: 19px; margin: 0; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .km-nav { display: flex; align-items: center; gap: 4px; }
+  .km-nav-link {
+    font-size: 14px; font-weight: 500; color: var(--km-text-muted); text-decoration: none;
+    padding: 8px 12px; border-radius: var(--km-radius-sm); transition: background-color 160ms ease, color 160ms ease;
+  }
+  .km-nav-link:hover { background: var(--km-accent-soft); color: var(--km-accent); }
+  .km-nav-link--active { color: var(--km-accent); background: var(--km-accent-soft); font-weight: 600; }
+  .km-header-right { display: flex; align-items: center; gap: 14px; }
+
+  .theme-toggle {
+    width: 42px; height: 24px; border-radius: 999px; position: relative; cursor: pointer;
+    background: var(--km-toggle-bg); border: 1px solid var(--km-border); padding: 0;
+    transition: background-color 220ms ease;
+  }
+  .theme-toggle .thumb {
+    position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--km-toggle-thumb); transition: transform 260ms cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .theme-dark .theme-toggle .thumb { transform: translateX(18px); }
+
+  .km-avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--km-accent-soft); color: var(--km-accent);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .km-btn {
+    font-family: var(--km-font-body); font-size: 13px; font-weight: 500; cursor: pointer;
+    border-radius: var(--km-radius-sm); padding: 8px 14px; border: 1px solid transparent;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+  }
+  .km-btn:active { transform: scale(0.97); }
+  .km-btn-ghost { background: transparent; border-color: var(--km-border); color: var(--km-text); }
+  .km-btn-ghost:hover { background: var(--km-accent-soft); border-color: var(--km-accent); color: var(--km-accent); }
+  .km-btn-accent { background: var(--km-accent); color: var(--km-accent-fg); border-color: transparent; }
+  .km-btn-accent:hover { filter: brightness(1.08); }
+  .km-btn-text { background: transparent; border: none; color: var(--km-accent); padding: 6px 4px; }
+  .km-btn-text:hover { text-decoration: underline; }
+
+  /* Main / eyebrow */
+  .km-eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--km-accent); margin: 40px 0 16px;
+  }
+
+  /* Accordion */
+  .km-accordion { display: flex; flex-direction: column; gap: 10px; }
+  .km-section {
+    background: var(--km-bg-elevated); border: 1px solid var(--km-border);
+    border-radius: var(--km-radius-lg); box-shadow: var(--km-shadow);
+    transition: box-shadow 200ms ease, border-color 260ms ease, background-color 260ms ease;
+    overflow: hidden;
+    animation: kmFadeUp 460ms cubic-bezier(.2,.7,.3,1) both;
+  }
+  .km-accordion .km-section:nth-child(1) { animation-delay: 20ms; }
+  .km-accordion .km-section:nth-child(2) { animation-delay: 70ms; }
+  .km-accordion .km-section:nth-child(3) { animation-delay: 120ms; }
+  .km-accordion .km-section:nth-child(4) { animation-delay: 170ms; }
+  .km-accordion .km-section:nth-child(5) { animation-delay: 220ms; }
+  @keyframes kmFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .km-section-header {
+    width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+    background: transparent; border: none; cursor: pointer; padding: 18px 22px;
+    font-family: var(--km-font-body); color: var(--km-text);
+  }
+  .km-section-header:hover { background: var(--km-accent-soft); }
+  .km-section-icon {
+    width: 34px; height: 34px; border-radius: var(--km-radius-sm); background: var(--km-accent-soft);
+    color: var(--km-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .km-section-titles { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; }
+  .km-section-title { font-family: var(--km-font-heading); font-weight: 600; font-size: 16px; }
+  .km-section-sub { font-size: 12.5px; color: var(--km-text-muted); }
+  .km-chevron { color: var(--km-text-muted); display: flex; transition: transform 260ms cubic-bezier(.4,0,.2,1); flex-shrink: 0; }
+  .km-chevron.open { transform: rotate(180deg); }
+
+  .km-section-body-inner { overflow: hidden; }
+  .km-section-body-pad { padding: 2px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+
+  .km-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px 24px; }
+  .km-info-row { display: flex; flex-direction: column; gap: 4px; }
+  .km-info-label { font-size: 12px; color: var(--km-text-muted); }
+  .km-info-value { font-size: 14.5px; font-weight: 500; }
+
+  .km-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px; width: fit-content;
+  }
+  .km-pill-accent { background: var(--km-accent-soft); color: var(--km-accent); }
+  .km-pill-amber { background: var(--km-amber-soft); color: var(--km-amber-text); }
+  .km-pill-neutral { background: var(--km-bg-elevated); color: var(--km-accent); border: 1px solid var(--km-accent-soft); }
+
+  .km-row {
+    display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: var(--km-radius-md);
+    background: var(--km-bg-sunken); transition: background-color 160ms ease, border-color 160ms ease;
+    border: 1px solid transparent;
+  }
+  .km-row:hover { border-color: var(--km-accent); }
+  .km-row-avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--km-accent-soft);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+    color: var(--km-accent); flex-shrink: 0;
+  }
+  .km-row-main { display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0; }
+  .km-row-name { font-size: 14px; font-weight: 500; }
+  .km-row-note { font-size: 12px; color: var(--km-text-muted); }
+  .km-row-list { display: flex; flex-direction: column; gap: 8px; }
+
+  /* Гуртки — full-width expandable rows, click to reveal members */
+  .km-hurtok-list { display: flex; flex-direction: column; gap: 10px; }
+  .km-hurtok-row {
+    border: 1px solid var(--km-border); border-radius: var(--km-radius-md);
+    background: var(--km-bg-sunken); overflow: hidden; transition: border-color 200ms ease;
+  }
+  .km-hurtok-row:has(.open) { border-color: var(--km-accent); }
+  .km-hurtok-header {
+    width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+    background: transparent; border: none; cursor: pointer; padding: 14px 16px;
+    font-family: var(--km-font-body); color: var(--km-text);
+  }
+  .km-hurtok-header:hover { background: var(--km-accent-soft); }
+  .km-hurtok-title-wrap { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; }
+  .km-hurtok-name { font-family: var(--km-font-heading); font-weight: 600; font-size: 14.5px; }
+  .km-hurtok-meta { font-size: 12px; color: var(--km-text-muted); }
+  .km-hurtok-body-pad { padding: 2px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .km-member-row {
+    display: flex; align-items: center; gap: 12px; padding: 8px 10px;
+    border-radius: var(--km-radius-sm); background: var(--km-bg-elevated); border: 1px solid var(--km-border);
+  }
+
+  @media (max-width: 680px) {
+    .km-header { padding: 16px; }
+    .km-nav { order: 3; width: 100%; justify-content: flex-start; padding-top: 10px; border-top: 1px solid var(--km-border); margin-top: 10px; }
+    .km-container { padding: 0 16px 64px; }
+    .km-info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="km-shell theme-light" id="shell">
+  <header class="km-header">
+    <div class="km-header-left">
+      <span class="km-mark">К</span>
+      <div class="km-crumbs">
+        <span class="km-org">Пласт</span>
+        <h1 class="km-kurin-title">Курінь ч. 5 «Лісові Чорти»</h1>
+      </div>
+    </div>
+    <nav class="km-nav" aria-label="Основна навігація">
+      <a href="#" class="km-nav-link">Запити</a>
+      <a href="#" class="km-nav-link km-nav-link--active">Курінь</a>
+      <a href="#" class="km-nav-link">Налаштування</a>
+    </nav>
+    <div class="km-header-right">
+      <button class="theme-toggle" id="theme-toggle" aria-label="Перемкнути темну тему">
+        <span class="thumb"></span>
+      </button>
+      <div class="km-avatar" aria-hidden="true">ІМ</div>
+      <button class="km-btn km-btn-ghost">Вийти</button>
+    </div>
+  </header>
+
+  <div class="km-container">
+    <p class="km-eyebrow">Огляд куреня</p>
+
+    <div class="km-accordion">
+
+      <!-- Section 1: Інформація по куреню -->
+      <section class="km-section">
+        <button class="km-section-header" data-section="0" aria-expanded="true">
+          <span class="km-section-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.2v4M8 5.1v.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </span>
+          <span class="km-section-titles">
+            <span class="km-section-title">Інформація по куреню</span>
+            <span class="km-section-sub">Назва, номер, пробна програма, Google Drive</span>
+          </span>
+          <span class="km-chevron open" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="km-section-body-inner" style="display:grid; grid-template-rows: 1fr; transition: grid-template-rows 320ms cubic-bezier(.4,0,.2,1)">
+          <div style="overflow:hidden">
+            <div class="km-section-body-pad">
+              <div class="km-info-grid">
+                <div class="km-info-row"><span class="km-info-label">Назва</span><span class="km-info-value">Лісові Чорти</span></div>
+                <div class="km-info-row"><span class="km-info-label">Номер</span><span class="km-info-value">5</span></div>
+                <div class="km-info-row"><span class="km-info-label">Пробна програма</span><span class="km-info-value">Нова (2024)</span></div>
+                <div class="km-info-row"><span class="km-info-label">Google Drive</span><span class="km-pill km-pill-accent">Підключено</span></div>
+              </div>
+              <button class="km-btn km-btn-accent" style="width: fit-content">Редагувати інформацію</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Провід куреня -->
+      <section class="km-section">
+        <button class="km-section-header" data-section="1" aria-expanded="false">
+          <span class="km-section-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l5 2v4c0 3.5-2.2 5.8-5 7-2.8-1.2-5-3.5-5-7v-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="km-section-titles">
+            <span class="km-section-title">Провід куреня</span>
+            <span class="km-section-sub">Курінний та діловодство</span>
+          </span>
+          <span class="km-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="km-section-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.4,0,.2,1)">
+          <div style="overflow:hidden">
+            <div class="km-section-body-pad">
+              <div class="km-row-list">
+                <div class="km-row">
+                  <div class="km-row-avatar">ІМ</div>
+                  <div class="km-row-main"><span class="km-row-name">Іван Мельник</span><span class="km-row-note">Курінний</span></div>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">ОТ</div>
+                  <div class="km-row-main"><span class="km-row-name">Олена Ткаченко</span><span class="km-row-note">Писар</span></div>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">ПС</div>
+                  <div class="km-row-main"><span class="km-row-name">Петро Савчук</span><span class="km-row-note">Скарбник</span></div>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">—</div>
+                  <div class="km-row-main"><span class="km-row-name">—</span><span class="km-row-note">Хорунжий</span></div>
+                  <span class="km-pill km-pill-amber">Вакансія</span>
+                </div>
+              </div>
+              <span class="km-row-note">Курінного призначає лише звʼязковий.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Гуртки -->
+      <section class="km-section">
+        <button class="km-section-header" data-section="2" aria-expanded="false">
+          <span class="km-section-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 3-6 3-6-3 6-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M2 8l6 3 6-3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M2 11l6 3 6-3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="km-section-titles">
+            <span class="km-section-title">Гуртки</span>
+            <span class="km-section-sub">3 активні гуртки</span>
+          </span>
+          <span class="km-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="km-section-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.4,0,.2,1)">
+          <div style="overflow:hidden">
+            <div class="km-section-body-pad">
+              <div class="km-hurtok-list">
+                <div class="km-hurtok-row">
+                  <button class="km-hurtok-header" data-hurtok="0" aria-expanded="false">
+                    <span class="km-hurtok-title-wrap">
+                      <span class="km-hurtok-name">Орлики</span>
+                      <span class="km-hurtok-meta">12 юнаків · з 2019</span>
+                    </span>
+                    <span class="km-chevron" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </button>
+                  <div class="km-hurtok-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms cubic-bezier(.4,0,.2,1)">
+                    <div style="overflow:hidden">
+                      <div class="km-hurtok-body-pad">
+                        <div class="km-member-row"><div class="km-row-avatar">ТШ</div><div class="km-row-main"><span class="km-row-name">Тарас Шевчук</span></div><span class="km-pill km-pill-neutral">Гуртковий</span></div>
+                        <div class="km-member-row"><div class="km-row-avatar">МК</div><div class="km-row-main"><span class="km-row-name">Марія Коваленко</span></div><span class="km-pill km-pill-neutral">Писар</span></div>
+                        <div class="km-member-row"><div class="km-row-avatar">ОЛ</div><div class="km-row-main"><span class="km-row-name">Остап Лозовий</span></div><span class="km-pill km-pill-neutral">Юнак</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="km-hurtok-row">
+                  <button class="km-hurtok-header" data-hurtok="1" aria-expanded="false">
+                    <span class="km-hurtok-title-wrap">
+                      <span class="km-hurtok-name">Соколи</span>
+                      <span class="km-hurtok-meta">9 юнаків · з 2021</span>
+                    </span>
+                    <span class="km-chevron" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </button>
+                  <div class="km-hurtok-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms cubic-bezier(.4,0,.2,1)">
+                    <div style="overflow:hidden">
+                      <div class="km-hurtok-body-pad">
+                        <div class="km-member-row"><div class="km-row-avatar">СГ</div><div class="km-row-main"><span class="km-row-name">Соломія Гнатюк</span></div><span class="km-pill km-pill-neutral">Гуртковий</span></div>
+                        <div class="km-member-row"><div class="km-row-avatar">РБ</div><div class="km-row-main"><span class="km-row-name">Роман Бойко</span></div><span class="km-pill km-pill-neutral">Юнак</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="km-hurtok-row">
+                  <button class="km-hurtok-header" data-hurtok="2" aria-expanded="false">
+                    <span class="km-hurtok-title-wrap">
+                      <span class="km-hurtok-name">Вовки</span>
+                      <span class="km-hurtok-meta">7 юнаків · з 2023</span>
+                    </span>
+                    <span class="km-chevron" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </button>
+                  <div class="km-hurtok-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms cubic-bezier(.4,0,.2,1)">
+                    <div style="overflow:hidden">
+                      <div class="km-hurtok-body-pad">
+                        <div class="km-member-row"><div class="km-row-avatar">ДП</div><div class="km-row-main"><span class="km-row-name">Данило Пришляк</span></div><span class="km-pill km-pill-neutral">Гуртковий</span></div>
+                        <div class="km-member-row"><div class="km-row-avatar">ЮК</div><div class="km-row-main"><span class="km-row-name">Юрко Климчук</span></div><span class="km-pill km-pill-neutral">Юнак</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button class="km-btn km-btn-ghost" style="width: fit-content">+ Новий гурток</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Кадра виховників -->
+      <section class="km-section">
+        <button class="km-section-header" data-section="3" aria-expanded="false">
+          <span class="km-section-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3.4" stroke="currentColor" stroke-width="1.3"/><path d="M6 8.8L5 14l3-1.6L11 14l-1-5.2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="km-section-titles">
+            <span class="km-section-title">Кадра виховників</span>
+            <span class="km-section-sub">Контакти — лише перегляд</span>
+          </span>
+          <span class="km-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="km-section-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.4,0,.2,1)">
+          <div style="overflow:hidden">
+            <div class="km-section-body-pad">
+              <div class="km-row-list">
+                <div class="km-row">
+                  <div class="km-row-avatar">МК</div>
+                  <div class="km-row-main"><span class="km-row-name">Марія Коваленко</span><span class="km-row-note">Орлики · +380 •• •• 123</span></div>
+                  <span class="km-pill km-pill-neutral">Виховник</span>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">РБ</div>
+                  <div class="km-row-main"><span class="km-row-name">Роман Бойко</span><span class="km-row-note">Соколи · +380 •• •• 456</span></div>
+                  <span class="km-pill km-pill-neutral">Виховник</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Список юнацтва -->
+      <section class="km-section">
+        <button class="km-section-header" data-section="4" aria-expanded="false">
+          <span class="km-section-icon" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><circle cx="2.5" cy="4" r="0.9" fill="currentColor"/><circle cx="2.5" cy="8" r="0.9" fill="currentColor"/><circle cx="2.5" cy="12" r="0.9" fill="currentColor"/><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </span>
+          <span class="km-section-titles">
+            <span class="km-section-title">Список юнацтва</span>
+            <span class="km-section-sub">Усі юнаки та юначки куреня</span>
+          </span>
+          <span class="km-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+        <div class="km-section-body-inner" style="display:grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms cubic-bezier(.4,0,.2,1)">
+          <div style="overflow:hidden">
+            <div class="km-section-body-pad">
+              <div class="km-row-list">
+                <div class="km-row">
+                  <div class="km-row-avatar">ТШ</div>
+                  <div class="km-row-main"><span class="km-row-name">Тарас Шевчук</span><span class="km-row-note">Орлики</span></div>
+                  <span class="km-pill km-pill-accent">Активний</span>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">СГ</div>
+                  <div class="km-row-main"><span class="km-row-name">Соломія Гнатюк</span><span class="km-row-note">Соколи</span></div>
+                  <span class="km-pill km-pill-accent">Активний</span>
+                </div>
+                <div class="km-row">
+                  <div class="km-row-avatar">ДП</div>
+                  <div class="km-row-main"><span class="km-row-name">Данило Пришляк</span><span class="km-row-note">Вовки</span></div>
+                  <span class="km-pill km-pill-amber">Новий</span>
+                </div>
+              </div>
+              <button class="km-btn km-btn-text" style="width: fit-content">Переглянути всіх →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Minimal vanilla-JS wiring — just enough to prove the motion/interaction
+  // model from the design spec. The real app wires this through React state,
+  // not this script; this exists only so the file is actually interactive
+  // when opened directly in a browser.
+  (function () {
+    var shell = document.getElementById('shell');
+    var themeToggle = document.getElementById('theme-toggle');
+    var openSection = 0;
+    var openHurtok = -1;
+
+    themeToggle.addEventListener('click', function () {
+      var dark = shell.classList.contains('theme-dark');
+      shell.classList.toggle('theme-dark', !dark);
+      shell.classList.toggle('theme-light', dark);
+    });
+
+    function setRows(body, open) {
+      body.style.gridTemplateRows = open ? '1fr' : '0fr';
+    }
+
+    var sectionHeaders = document.querySelectorAll('[data-section]');
+    sectionHeaders.forEach(function (header) {
+      header.addEventListener('click', function () {
+        var i = Number(header.getAttribute('data-section'));
+        openSection = openSection === i ? -1 : i;
+        sectionHeaders.forEach(function (h) {
+          var hi = Number(h.getAttribute('data-section'));
+          var isOpen = hi === openSection;
+          h.setAttribute('aria-expanded', String(isOpen));
+          h.querySelector('.km-chevron').classList.toggle('open', isOpen);
+          setRows(h.nextElementSibling, isOpen);
+        });
+      });
+    });
+
+    var hurtokHeaders = document.querySelectorAll('[data-hurtok]');
+    hurtokHeaders.forEach(function (header) {
+      header.addEventListener('click', function () {
+        var i = Number(header.getAttribute('data-hurtok'));
+        openHurtok = openHurtok === i ? -1 : i;
+        hurtokHeaders.forEach(function (h) {
+          var hi = Number(h.getAttribute('data-hurtok'));
+          var isOpen = hi === openHurtok;
+          h.setAttribute('aria-expanded', String(isOpen));
+          h.querySelector('.km-chevron').classList.toggle('open', isOpen);
+          setRows(h.nextElementSibling, isOpen);
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

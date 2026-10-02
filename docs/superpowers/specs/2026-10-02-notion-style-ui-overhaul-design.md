@@ -13,6 +13,8 @@ This is too large for one plan (19 pages, 35 e2e spec files, ~60 Playwright test
 
 A visual mockup of `/kurin` was built collaboratively as a reference during brainstorming and approved by the user: https://claude.ai/artifact/Houns6SmVwD3PDuEkVkwrv. All tokens and component shapes below are taken directly from that approved mockup, not re-derived from scratch.
 
+**Binding reference file**: [`docs/superpowers/specs/assets/2026-10-02-notion-style-ui-overhaul-kurin-mockup.html`](assets/2026-10-02-notion-style-ui-overhaul-kurin-mockup.html) is a de-templated, standalone, dependency-free copy of that same approved mockup — open it directly in any browser (no build step, no Artifact platform access needed). It is the actual source the token tables and component list below were transcribed from. **Any implementation task (Project 1 or Project 2) must treat this file as the authoritative visual reference** — read its CSS directly rather than relying solely on this document's summarized tables, and if anything here and the file ever disagree, the file wins.
+
 ## Goals
 
 - Replace the default shadcn grayscale theme with a warm, Notion-inspired light/dark theme, toggleable at runtime.
