@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 export default function DevUiKitPage() {
   return (
@@ -57,6 +58,24 @@ export default function DevUiKitPage() {
             </AccordionContent>
           </AccordionItem>
         </AccordionRoot>
+      </section>
+      <section aria-labelledby="select-heading">
+        <h2 id="select-heading" className="mb-3 font-heading text-lg font-semibold">
+          Select
+        </h2>
+        <Select
+          defaultValue="orlyky"
+          items={{ orlyky: "Орлики", sokoly: "Соколи", vovky: "Вовки" }}
+        >
+          <SelectTrigger className="w-56" aria-label="Гурток">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="orlyky">Орлики</SelectItem>
+            <SelectItem value="sokoly">Соколи</SelectItem>
+            <SelectItem value="vovky">Вовки</SelectItem>
+          </SelectContent>
+        </Select>
       </section>
     </main>
   )
