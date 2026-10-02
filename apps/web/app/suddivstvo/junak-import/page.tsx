@@ -429,7 +429,7 @@ export default function JunakImportPage() {
           <CardContent className="space-y-1 text-sm">
             {results.map((r) => (
               <p key={r.row} className={r.error ? 'text-destructive' : ''}>
-                Рядок {r.row + 1}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
+                Рядок {r.row + 2}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
               </p>
             ))}
           </CardContent>

@@ -88,7 +88,15 @@ export class ProbyProgressService {
     return progress;
   }
 
-  async closeStage(junakId: string, stageId: string, actor: CurrentUserPayload) {
+  /**
+   * `closedAt` defaults to now (a judge confirming in the app right now).
+   * The Книга судді import passes the historical date already recorded in
+   * the sheet instead, so backfilling an old degree doesn't stamp today's
+   * date as the completion date — that date is also what the nightly
+   * write-back sync later pushes back to the sheet, so getting it wrong
+   * here would silently overwrite the sheet's own historical data.
+   */
+  async closeStage(junakId: string, stageId: string, actor: CurrentUserPayload, closedAt: Date = new Date()) {
     const junak = await this.assertCanConfirm(junakId, actor);
     const kurin = await this.prisma.kurin.findUnique({ where: { id: junak.kurinId } });
     if (!kurin) {
@@ -105,13 +113,13 @@ export class ProbyProgressService {
 
     return this.prisma.junakStageProgress.upsert({
       where: { junakId_stageId: { junakId, stageId } },
-      update: { closedAt: new Date(), closedById: actor.userId },
+      update: { closedAt, closedById: actor.userId },
       create: {
         junakId,
         stageId,
-        closedAt: new Date(),
+        closedAt,
         closedById: actor.userId,
-        firstClosedAt: new Date(),
+        firstClosedAt: closedAt,
       },
     });
   }

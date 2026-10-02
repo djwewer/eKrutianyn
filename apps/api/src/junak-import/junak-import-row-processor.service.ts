@@ -14,6 +14,16 @@ export interface ProcessRowOptions {
   restrictProtectedTargets?: boolean;
 }
 
+/**
+ * `rowIndex` arrives from request bodies typed as `unknown[]` (no DTO
+ * validation) — a missing/non-numeric value must not become `NaN + 2` and
+ * crash the whole row through Prisma. Returns `undefined` (leave
+ * judgeBookRowNumber unset) for anything that isn't a valid 0-based index.
+ */
+function toJudgeBookRowNumber(rowIndex: number): number | undefined {
+  return Number.isInteger(rowIndex) && rowIndex >= 0 ? rowIndex + 2 : undefined;
+}
+
 @Injectable()
 export class JunakImportRowProcessorService {
   constructor(
@@ -84,7 +94,8 @@ export class JunakImportRowProcessorService {
         if (row.email && !target.email) updateData.email = row.email;
         if (row.phone && !target.phone) updateData.phone = row.phone;
         if (hurtokId) updateData.hurtokId = hurtokId;
-        updateData.judgeBookRowNumber = rowIndex + 2;
+        const judgeBookRowNumber = toJudgeBookRowNumber(rowIndex);
+        if (judgeBookRowNumber !== undefined) updateData.judgeBookRowNumber = judgeBookRowNumber;
         const updated = await tx.user.update({ where: { id: row.matchedUserId }, data: updateData });
         userId = updated.id;
         result.created = false;
@@ -100,7 +111,7 @@ export class JunakImportRowProcessorService {
             role: Role.JUNAK,
             kurinId,
             hurtokId,
-            judgeBookRowNumber: rowIndex + 2,
+            judgeBookRowNumber: toJudgeBookRowNumber(rowIndex),
           },
         });
         userId = created.id;
@@ -192,7 +203,7 @@ export class JunakImportRowProcessorService {
       for (const pointId of pointIds) {
         await this.probyProgress.confirm(junakId, pointId, actor);
       }
-      await this.probyProgress.closeStage(junakId, stage.id, actor);
+      await this.probyProgress.closeStage(junakId, stage.id, actor, new Date(date));
       touchedAny = true;
     }
     if (touchedAny) {

@@ -257,8 +257,23 @@ describe('JunakImportRowProcessorService', () => {
 
     expect(probyProgress.confirm).toHaveBeenCalledWith('user-1', 'p1', ACTOR);
     expect(probyProgress.confirm).toHaveBeenCalledWith('user-1', 'p2', ACTOR);
-    expect(probyProgress.closeStage).toHaveBeenCalledWith('user-1', 'stage-1', ACTOR);
+    expect(probyProgress.closeStage).toHaveBeenCalledWith('user-1', 'stage-1', ACTOR, new Date('2020-01-01'));
     expect(result.succeededSteps).toContain('proba-progress');
+  });
+
+  it('closes the stage with the sheet\'s own historical date, not the import run\'s date (regression: the nightly sync later pushes this value back to the sheet, so stamping "now" here would silently overwrite the real degree date)', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' });
+    prisma.probyStage.findMany.mockResolvedValue([
+      { id: 'stage-1', name: 'Проба прихильника (Відзнака прихильника)', order: 1, categories: [{ points: [{ id: 'p1' }] }] },
+    ]);
+    probyProgress.getProgressFor.mockResolvedValue({ points: [], stages: [{ stageId: 'stage-1', status: 'OPEN', hasDebt: false }] });
+
+    await service.processRow('kurin-1', baseRow({ degreeDates: { PRYHYLNYK: '2018-05-20' } }), 0, ACTOR);
+
+    const [, , , closedAt] = probyProgress.closeStage.mock.calls[0];
+    expect(closedAt).toEqual(new Date('2018-05-20'));
+    expect(closedAt.getUTCFullYear()).toBe(2018);
   });
 
   it('does not touch a stage that is already CLOSED', async () => {
