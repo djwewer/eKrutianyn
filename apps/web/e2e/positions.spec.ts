@@ -23,7 +23,8 @@ test('lets zvyazkovyi assign and remove kurin positions', async ({ page }) => {
   await page.goto('/kurin');
   await page.getByText('Провід куреня').click();
 
-  await page.getByText('Курінний').locator('..').getByRole('combobox').selectOption({ label: 'Петренко Петро' });
+  await page.getByText('Курінний').locator('..').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Петренко Петро' }).click();
   await page.getByText('Курінний').locator('..').getByRole('button', { name: 'Призначити' }).click();
 
   await expect(page.getByText('Курінний').locator('..').getByText('Петренко Петро')).toBeVisible();
@@ -52,11 +53,13 @@ test('warns before reassigning a junak who already holds another position in the
   await page.goto('/kurin');
   await page.getByText('Провід куреня').click();
 
-  await page.getByText('Курінний').locator('..').getByRole('combobox').selectOption({ label: 'Іваненко Іван' });
+  await page.getByText('Курінний').locator('..').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Іваненко Іван' }).click();
   await page.getByText('Курінний').locator('..').getByRole('button', { name: 'Призначити' }).click();
   await expect(page.getByText('Курінний').locator('..').getByText('Іваненко Іван')).toBeVisible();
 
-  await page.getByText('Суддя').locator('..').getByRole('combobox').selectOption({ label: 'Іваненко Іван' });
+  await page.getByText('Суддя').locator('..').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Іваненко Іван' }).click();
 
   let dialogMessage = '';
   page.once('dialog', (dialog) => {
@@ -114,7 +117,8 @@ test('lets kurinniy edit a non-Курінний slot but not the Курінни�
   await expect(page.getByText('Курінний').locator('..').getByRole('button', { name: 'Зняти' })).toHaveCount(0);
 
   // Писар slot: kurinniy can assign it.
-  await page.getByText('Писар').locator('..').getByRole('combobox').selectOption({ label: 'Петренко Петро' });
+  await page.getByText('Писар').locator('..').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Петренко Петро' }).click();
   await page.getByText('Писар').locator('..').getByRole('button', { name: 'Призначити' }).click();
   await expect(page.getByText('Писар').locator('..').getByText('Петренко Петро')).toBeVisible();
 });

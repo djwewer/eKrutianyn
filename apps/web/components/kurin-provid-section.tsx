@@ -7,6 +7,7 @@ import { useSession } from '@/lib/session-client';
 import { accessErrorMessage } from '@/lib/error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { KurinPosition, PositionType } from '@/lib/types';
 
 const KURIN_POSITION_TYPES: { value: PositionType; label: string }[] = [
@@ -69,18 +70,22 @@ function ProvidSlot({
           </>
         ) : canEdit ? (
           <>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="flex-1 rounded-md border px-2 py-1 text-sm"
+            <Select
+              value={selectedUserId || null}
+              onValueChange={(value) => setSelectedUserId((value as string | null) ?? '')}
+              items={Object.fromEntries(candidates.map((c) => [c.id, `${c.lastName} ${c.firstName}`]))}
             >
-              <option value="">Оберіть юнака</option>
-              {candidates.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.lastName} {c.firstName}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Оберіть юнака" />
+              </SelectTrigger>
+              <SelectContent>
+                {candidates.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.lastName} {c.firstName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               size="sm"
               disabled={!selectedUserId || assign.isPending}
