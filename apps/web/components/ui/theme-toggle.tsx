@@ -15,7 +15,7 @@ function ThemeToggle({
       data-slot="theme-toggle"
       aria-label="Перемкнути темну тему"
       className={cn(
-        "relative inline-flex h-6 w-[42px] shrink-0 cursor-pointer items-center rounded-full border border-border bg-muted transition-colors data-[checked]:bg-accent-soft",
+        "relative inline-flex h-6 w-[42px] shrink-0 cursor-pointer items-center rounded-full border border-border bg-muted outline-none transition-colors data-[checked]:bg-accent-soft focus-visible:ring-3 focus-visible:ring-accent/40",
         className
       )}
       onCheckedChange={(checked, eventDetails) => {
