@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type { Kurin } from '@/lib/types';
 
-export function useKurin() {
+export function useKurin(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['kurin', 'me'],
     queryFn: () => apiFetch<Kurin>('/kurins/me'),
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, apiUpload } from '@/lib/api-client';
 import type { UserDetail } from '@/lib/types';
 
-export function useOwnProfile() {
+export function useOwnProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['users', 'me'],
     queryFn: () => apiFetch<UserDetail>('/users/me'),
+    enabled: options?.enabled ?? true,
   });
 }
 

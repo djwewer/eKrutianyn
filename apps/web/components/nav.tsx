@@ -52,8 +52,8 @@ export function Nav() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-  const { data: kurin } = useKurin();
-  const { data: profile } = useOwnProfile();
+  const { data: kurin } = useKurin({ enabled: !!session });
+  const { data: profile } = useOwnProfile({ enabled: !!session });
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
