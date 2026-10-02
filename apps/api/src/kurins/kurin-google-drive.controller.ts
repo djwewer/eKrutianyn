@@ -64,10 +64,10 @@ export class KurinGoogleDriveController {
     try {
       const kurinId = verifyGoogleDriveState(this.jwtService, state);
       await this.googleDrive.handleCallback(kurinId, code);
-      return { url: `${process.env.FRONTEND_URL}/kurin?driveConnected=1` };
+      return { url: `${process.env.FRONTEND_URL}/inventory?driveConnected=1` };
     } catch (error) {
       this.logger.warn(`Google Drive OAuth callback failed: ${(error as Error).message}`);
-      return { url: `${process.env.FRONTEND_URL}/kurin?driveError=1` };
+      return { url: `${process.env.FRONTEND_URL}/inventory?driveError=1` };
     }
   }
 

@@ -33,6 +33,6 @@ test('shows a message instead of the add form when Google Drive is not connected
   await page.getByText('Діловодство').click();
   await page.getByRole('link', { name: 'Облік реманенту' }).click();
 
-  await expect(page.getByText('Спершу підключіть Google Drive і оберіть папку для реманенту у')).toBeVisible();
+  await expect(page.getByText('Google Drive не підключено.')).toBeVisible();
   await expect(page.getByPlaceholder('Назва (наприклад, Пилка)')).not.toBeVisible();
 });

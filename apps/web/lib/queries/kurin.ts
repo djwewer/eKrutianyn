@@ -25,17 +25,3 @@ export function useChangeProbyProgram(kurinId: string) {
     },
   });
 }
-
-export function useChangeKurinNumber(kurinId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (newNumber: string) =>
-      apiFetch<Kurin>(`/kurins/${kurinId}/kurin-number`, {
-        method: 'PATCH',
-        body: JSON.stringify({ newNumber }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kurin', 'me'] });
-    },
-  });
-}

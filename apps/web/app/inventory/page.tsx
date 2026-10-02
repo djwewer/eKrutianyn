@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/session-client';
 import {
   useInventory,
@@ -15,7 +16,83 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
-import { useGoogleDriveStatus } from '@/lib/queries/google-drive';
+import {
+  useGoogleDriveStatus,
+  useConnectGoogleDrive,
+  useSetGoogleDriveFolder,
+  fetchGoogleDrivePickerToken,
+} from '@/lib/queries/google-drive';
+import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
+
+function GoogleDriveCard({
+  kurinId,
+  isZvyazkovyi,
+  driveStatus,
+  driveConnected,
+  driveError,
+}: {
+  kurinId: string;
+  isZvyazkovyi: boolean;
+  driveStatus: { connected: boolean; email?: string; folderName?: string } | undefined;
+  driveConnected: boolean;
+  driveError: boolean;
+}) {
+  const connectDrive = useConnectGoogleDrive(kurinId);
+  const setDriveFolder = useSetGoogleDriveFolder(kurinId);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+
+  async function handlePickFolder() {
+    setPickerError(null);
+    try {
+      const accessToken = await fetchGoogleDrivePickerToken(kurinId);
+      await openGoogleDriveFolderPicker(accessToken, (folderId, folderName) => {
+        setDriveFolder.mutate({ folderId, folderName });
+      });
+    } catch {
+      setPickerError('Не вдалося відкрити вибір папки. Спробуйте підключити Google Drive повторно.');
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Google Drive</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {driveConnected && <p className="text-sm text-green-600 dark:text-green-400">Google Drive підключено.</p>}
+        {driveError && (
+          <p className="text-sm text-destructive">Не вдалося підключити Google Drive. Спробуйте ще раз.</p>
+        )}
+        {driveStatus?.connected ? (
+          <>
+            <p className="text-sm">Підключено як: {driveStatus.email}</p>
+            <p className="text-sm">
+              Папка для реманенту:{' '}
+              {driveStatus.folderName ?? <span className="text-muted-foreground">не обрана</span>}
+            </p>
+            {isZvyazkovyi && (
+              <Button size="sm" variant="outline" onClick={handlePickFolder}>
+                {driveStatus.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
+              </Button>
+            )}
+            {pickerError && <p className="text-sm text-destructive">{pickerError}</p>}
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">Google Drive не підключено.</p>
+            {isZvyazkovyi ? (
+              <Button size="sm" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
+                Підключити Google Drive
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">Зверніться до звʼязкового куреня.</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function PhotoCarousel({ item, canEdit, kurinId }: { item: InventoryItem; canEdit: boolean; kurinId: string }) {
   const [index, setIndex] = useState(0);
@@ -191,17 +268,30 @@ export default function InventoryPage() {
   const { data: session } = useSession();
   const kurinId = session?.kurinId;
   const { data: items, isLoading, isError, error } = useInventory(kurinId);
-  const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.positions.includes('INTENDANT');
-  const driveStatus = useGoogleDriveStatus(kurinId);
+  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
+  const canEdit = isZvyazkovyi || !!session?.positions.includes('INTENDANT');
+  const driveStatus = useGoogleDriveStatus(canEdit ? kurinId : undefined);
   const driveReady = !!driveStatus.data?.folderId;
+  const searchParams = useSearchParams();
+  const driveConnected = searchParams.get('driveConnected') === '1';
+  const driveError = searchParams.get('driveError') === '1';
 
-  if (isLoading || driveStatus.isLoading) return <p>Завантаження...</p>;
+  if (isLoading || (canEdit && driveStatus.isLoading)) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
   if (!kurinId) return null;
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Облік реманенту</h1>
+      {canEdit && (
+        <GoogleDriveCard
+          kurinId={kurinId}
+          isZvyazkovyi={isZvyazkovyi}
+          driveStatus={driveStatus.data}
+          driveConnected={driveConnected}
+          driveError={driveError}
+        />
+      )}
       {canEdit && driveReady && (
         <Card>
           <CardHeader>
@@ -211,15 +301,6 @@ export default function InventoryPage() {
             <AddItemForm kurinId={kurinId} />
           </CardContent>
         </Card>
-      )}
-      {canEdit && !driveReady && (
-        <p className="text-sm text-muted-foreground">
-          Спершу підключіть Google Drive і оберіть папку для реманенту у{' '}
-          <a href="/kurin" className="underline">
-            налаштуваннях куреня
-          </a>
-          .
-        </p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         {(items ?? []).map((item) => (

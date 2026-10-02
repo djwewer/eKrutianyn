@@ -31,11 +31,13 @@ test('lets zvyazkovyi view kurin settings and change the proby program', async (
   await page.goto('/kurin');
   await page.getByText('Інформація по куреню').click();
 
-  await expect(page.getByText('Поточна програма: Стара')).toBeVisible();
+  const programRow = page.getByText('Пробна програма', { exact: true }).locator('..');
+  await expect(programRow.getByText('Стара', { exact: true })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Редагувати' }).click();
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByLabel('Нова програма').check();
-  await page.getByRole('button', { name: 'Змінити програму' }).click();
+  await page.getByRole('button', { name: 'Зберегти' }).click();
 
-  await expect(page.getByText('Поточна програма: Нова')).toBeVisible();
+  await expect(programRow.getByText('Нова', { exact: true })).toBeVisible();
 });
