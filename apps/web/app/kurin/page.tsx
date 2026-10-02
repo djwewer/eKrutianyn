@@ -1,14 +1,12 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import { useSession } from '@/lib/session-client';
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AccordionRoot, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { KurinInfoSection } from '@/components/kurin-info-section';
 import { KurinProvidSection } from '@/components/kurin-provid-section';
 import { KurinHurtkySection } from '@/components/kurin-hurtky-section';
 import { KurinRosterSection } from '@/components/kurin-roster-section';
-
-type SectionKey = 'info' | 'provid' | 'hurtky' | 'vykhovnyky' | 'junatstvo';
 
 export default function KurinPage() {
   return (
@@ -20,31 +18,18 @@ export default function KurinPage() {
 
 function KurinPageContent() {
   const { data: session } = useSession();
-  const [expanded, setExpanded] = useState<Set<SectionKey>>(new Set());
-
-  function toggle(key: SectionKey) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }
 
   const hasFullAccess =
     session?.role === 'ZVYAZKOVYI' || session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA');
 
-  const sections: { key: SectionKey; title: string; render: () => React.ReactNode }[] = [
+  const sections: { key: string; title: string; render: () => React.ReactNode }[] = [
     { key: 'info', title: 'Інформація по куреню', render: () => <KurinInfoSection /> },
     { key: 'provid', title: 'Провід куреня', render: () => <KurinProvidSection /> },
     { key: 'hurtky', title: 'Гуртки', render: () => <KurinHurtkySection /> },
     ...(hasFullAccess
       ? [
-          { key: 'vykhovnyky' as const, title: 'Кадра виховників', render: () => <KurinRosterSection role="VYKHOVNYK" /> },
-          { key: 'junatstvo' as const, title: 'Список юнацтва', render: () => <KurinRosterSection role="JUNAK" /> },
+          { key: 'vykhovnyky', title: 'Кадра виховників', render: () => <KurinRosterSection role="VYKHOVNYK" /> },
+          { key: 'junatstvo', title: 'Список юнацтва', render: () => <KurinRosterSection role="JUNAK" /> },
         ]
       : []),
   ];
@@ -52,20 +37,14 @@ function KurinPageContent() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Курінь</h1>
-      <div className="space-y-2">
-        {sections.map((section) => {
-          const isExpanded = expanded.has(section.key);
-          return (
-            <Card key={section.key}>
-              <CardHeader className="cursor-pointer" onClick={() => toggle(section.key)}>
-                <CardTitle>{section.title}</CardTitle>
-                <CardAction className="text-muted-foreground">{isExpanded ? '▾' : '▸'}</CardAction>
-              </CardHeader>
-              {isExpanded && <CardContent>{section.render()}</CardContent>}
-            </Card>
-          );
-        })}
-      </div>
+      <AccordionRoot multiple>
+        {sections.map((section) => (
+          <AccordionItem key={section.key} value={section.key}>
+            <AccordionTrigger>{section.title}</AccordionTrigger>
+            <AccordionContent>{section.render()}</AccordionContent>
+          </AccordionItem>
+        ))}
+      </AccordionRoot>
     </div>
   );
 }
