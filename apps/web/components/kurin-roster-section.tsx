@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useSession } from '@/lib/session-client';
 import { useUsers } from '@/lib/queries/users';
 import { ROLE_LABELS } from '@/lib/role-labels';
-import { Card, CardContent } from '@/components/ui/card';
+import { RowList, Row } from '@/components/ui/row-list';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getInitials } from '@/lib/utils';
 import { accessErrorMessage } from '@/lib/error-message';
 import type { Role } from '@/lib/types';
 
@@ -28,20 +30,15 @@ export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' |
           <Button size="sm">Додати людину</Button>
         </Link>
       )}
-      <div className="space-y-2">
+      <RowList>
         {(users ?? []).map((u) => (
           <Link key={u.id} href={`/users/${u.id}`}>
-            <Card>
-              <CardContent className="flex items-center justify-between p-4">
-                <span>
-                  {u.lastName} {u.firstName}
-                </span>
-                <span className="text-sm text-muted-foreground">{ROLE_LABELS[u.role]}</span>
-              </CardContent>
-            </Card>
+            <Row initials={getInitials(u.firstName, u.lastName)} title={`${u.lastName} ${u.firstName}`}>
+              <Badge variant="neutral">{ROLE_LABELS[u.role]}</Badge>
+            </Row>
           </Link>
         ))}
-      </div>
+      </RowList>
     </div>
   );
 }
