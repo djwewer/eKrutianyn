@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar } from '@/components/ui/avatar';
+import { PhotoCropDialog } from '@/components/photo-crop-dialog';
 import { getInitials } from '@/lib/utils';
 import { ApiError } from '@/lib/api-client';
 
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const updatePhoto = useUpdateOwnPhoto();
   const removePhoto = useRemoveOwnPhoto();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoToCrop, setPhotoToCrop] = useState<File | null>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -115,7 +117,7 @@ export default function SettingsPage() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) updatePhoto.mutate(file);
+                if (file) setPhotoToCrop(file);
                 e.target.value = '';
               }}
             />
@@ -127,11 +129,6 @@ export default function SettingsPage() {
                 Видалити фото
               </Button>
             )}
-            {updatePhoto.isError && (
-              <p className="text-sm text-destructive">
-                {apiErrorMessage(updatePhoto.error, 'Не вдалося завантажити фото.')}
-              </p>
-            )}
             {removePhoto.isError && (
               <p className="text-sm text-destructive">
                 {apiErrorMessage(removePhoto.error, 'Не вдалося видалити фото.')}
@@ -140,6 +137,20 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PhotoCropDialog
+        file={photoToCrop}
+        onOpenChange={(open) => {
+          if (!open) setPhotoToCrop(null);
+        }}
+        isSaving={updatePhoto.isPending}
+        errorMessage={updatePhoto.isError ? apiErrorMessage(updatePhoto.error, 'Не вдалося завантажити фото.') : null}
+        onSave={(croppedPhoto) => {
+          updatePhoto.mutate(croppedPhoto, {
+            onSuccess: () => setPhotoToCrop(null),
+          });
+        }}
+      />
 
       <Card>
         <CardHeader>
