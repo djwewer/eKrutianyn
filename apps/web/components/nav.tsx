@@ -103,7 +103,7 @@ export function Nav() {
             >
               Діловодство
             </summary>
-            <div className="absolute right-0 z-10 mt-1 flex flex-col rounded-md border bg-popover p-1 shadow-lg">
+            <div className="absolute left-0 z-10 mt-1 flex flex-col rounded-md border bg-popover p-1 shadow-lg sm:left-auto sm:right-0">
               {DILOVODY_PAGES.map((page) => (
                 <Link
                   key={page.href}
