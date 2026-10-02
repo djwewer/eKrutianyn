@@ -94,7 +94,7 @@ describe('Judge book nightly sync (e2e)', () => {
     expect(calledSpreadsheetId).toBe('sheet-1');
     expect(updates).toEqual(
       expect.arrayContaining([
-        { row: 7, column: 'G', value: '2024-02-10' },
+        { row: 7, column: 'G', value: '10.02.2024' },
         { row: 7, column: 'E', value: '0671112233' },
         { row: 7, column: 'F', value: 'junak@example.com' },
       ]),

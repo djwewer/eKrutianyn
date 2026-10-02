@@ -61,7 +61,7 @@ describe('JudgeBookSyncService', () => {
     expect(spreadsheetId).toBe('sheet-1');
     expect(updates).toEqual(
       expect.arrayContaining([
-        { row: 5, column: 'G', value: '2024-01-15' },
+        { row: 5, column: 'G', value: '15.01.2024' },
         { row: 5, column: 'E', value: '0501112233' },
         { row: 5, column: 'F', value: 'junak1@example.com' },
         { row: 6, column: 'F', value: 'junak2@example.com' },

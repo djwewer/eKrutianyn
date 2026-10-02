@@ -25,8 +25,11 @@ const DEGREE_DATE_FIELDS: { key: DegreeStageKey; field: string }[] = [
 const PHONE_FIELD = 'PHONE';
 const EMAIL_FIELD = 'EMAIL';
 
+/** Matches the sheet's own date convention (DD.MM.YYYY) — the same format `parseUkrainianDate` on the import side expects, so a pushed date stays human-readable and round-trips correctly on the next import. */
 function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${day}.${month}.${date.getUTCFullYear()}`;
 }
 
 /**
