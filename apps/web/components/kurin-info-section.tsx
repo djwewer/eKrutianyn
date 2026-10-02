@@ -53,7 +53,7 @@ export function KurinInfoSection() {
   return (
     <div className="space-y-6 text-sm">
       <div className="space-y-4">
-        <h3 className="font-heading text-sm font-semibold">Дані куреня</h3>
+        <h4 className="font-heading text-sm font-semibold">Дані куреня</h4>
         <div className="grid grid-cols-2 gap-x-6 gap-y-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">Номер</span>
@@ -97,7 +97,7 @@ export function KurinInfoSection() {
         )}
       </div>
       <div className="space-y-4">
-        <h3 className="font-heading text-sm font-semibold">Програма проб</h3>
+        <h4 className="font-heading text-sm font-semibold">Програма проб</h4>
         <p className="text-sm text-muted-foreground">
           Поточна програма: {kurin.probyProgram.version === 'OLD' ? 'Стара' : 'Нова'}
         </p>
@@ -144,8 +144,8 @@ export function KurinInfoSection() {
       </div>
       {canChangeProgram && (
         <div className="space-y-4">
-          <h3 className="font-heading text-sm font-semibold">Google Drive</h3>
-          {driveConnected && <p className="text-sm text-green-600">Google Drive підключено.</p>}
+          <h4 className="font-heading text-sm font-semibold">Google Drive</h4>
+          {driveConnected && <p className="text-sm text-green-600 dark:text-green-400">Google Drive підключено.</p>}
           {driveError && (
             <p className="text-sm text-destructive">Не вдалося підключити Google Drive. Спробуйте ще раз.</p>
           )}

@@ -5,7 +5,9 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@/lib/utils"
 
-function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
+function Select<Value, Multiple extends boolean | undefined = false>(
+  props: SelectPrimitive.Root.Props<Value, Multiple>
+) {
   return <SelectPrimitive.Root {...props} />
 }
 

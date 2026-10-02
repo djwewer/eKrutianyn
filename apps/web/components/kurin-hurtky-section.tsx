@@ -47,13 +47,15 @@ export function KurinHurtkySection() {
         {displayedHurtky.map((h) => (
           <AccordionItem key={h.id} value={h.slug ?? h.id} disabled={!h.slug}>
             <AccordionTrigger>
-              {h.name}
-              {h.number ? ` №${h.number}` : ''}
-              {vykhovnykNameByHurtokId[h.id] && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  · {vykhovnykNameByHurtokId[h.id]}
-                </span>
-              )}
+              <span className="min-w-0 flex-1 truncate">
+                {h.name}
+                {h.number ? ` №${h.number}` : ''}
+                {vykhovnykNameByHurtokId[h.id] && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    · {vykhovnykNameByHurtokId[h.id]}
+                  </span>
+                )}
+              </span>
             </AccordionTrigger>
             {h.slug && (
               <AccordionContent>

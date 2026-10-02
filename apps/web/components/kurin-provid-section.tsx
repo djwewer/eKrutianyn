@@ -5,7 +5,6 @@ import { useKurinPositions, useAssignPosition, useRemovePosition } from '@/lib/q
 import { useUsers } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { accessErrorMessage } from '@/lib/error-message';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { KurinPosition, PositionType } from '@/lib/types';
@@ -72,7 +71,7 @@ function ProvidSlot({
           <>
             <Select
               value={selectedUserId || null}
-              onValueChange={(value) => setSelectedUserId((value as string | null) ?? '')}
+              onValueChange={(value) => setSelectedUserId(value ?? '')}
               items={Object.fromEntries(candidates.map((c) => [c.id, `${c.lastName} ${c.firstName}`]))}
             >
               <SelectTrigger className="flex-1">
@@ -135,23 +134,18 @@ export function KurinProvidSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Провід куреня</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {KURIN_POSITION_TYPES.map((p) => (
-          <ProvidSlot
-            key={p.value}
-            label={p.label}
-            positionType={p.value}
-            current={kurinPositions.find((kp) => kp.positionType === p.value)}
-            candidates={candidates}
-            positionsInScope={kurinPositions}
-            canEdit={canEditSlot(p.value)}
-          />
-        ))}
-      </CardContent>
-    </Card>
+    <div>
+      {KURIN_POSITION_TYPES.map((p) => (
+        <ProvidSlot
+          key={p.value}
+          label={p.label}
+          positionType={p.value}
+          current={kurinPositions.find((kp) => kp.positionType === p.value)}
+          candidates={candidates}
+          positionsInScope={kurinPositions}
+          canEdit={canEditSlot(p.value)}
+        />
+      ))}
+    </div>
   );
 }

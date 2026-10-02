@@ -32,7 +32,7 @@ function Row({
       )}
       {...props}
     >
-      <Avatar initials={initials} />
+      <Avatar initials={initials} aria-hidden="true" />
       <div className="flex min-w-0 flex-grow flex-col gap-px">
         <span className="text-sm font-medium">{title}</span>
         {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}

@@ -29,7 +29,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const theme = cookieStore.get('theme')?.value;
 
   return (
-    <html lang="uk" className={cn(manrope.variable, theme === 'dark' && 'dark')}>
+    <html
+      lang="uk"
+      className={cn(manrope.variable, theme === 'dark' && 'dark')}
+      // For a system-dark visitor with no `theme` cookie yet, the inline
+      // script below adds the `dark` class before React hydrates, which
+      // makes the server-rendered className intentionally not match the
+      // real DOM at hydration time. That's expected, not a bug — without
+      // this, React logs a hydration-mismatch warning for a difference we
+      // already know about and already handle correctly.
+      suppressHydrationWarning
+    >
       <head>
         {theme !== 'light' && theme !== 'dark' && (
           <script dangerouslySetInnerHTML={{ __html: THEME_PREFERENCE_SCRIPT }} />
