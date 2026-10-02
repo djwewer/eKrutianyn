@@ -59,6 +59,28 @@ describe('JunakImportRowProcessorService', () => {
     });
   });
 
+  it('sets judgeBookRowNumber from rowIndex on create (rowIndex + 2 for header + 1-based numbering)', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+
+    await service.processRow('kurin-1', baseRow(), 3, ACTOR);
+
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ judgeBookRowNumber: 5 }),
+    });
+  });
+
+  it('sets judgeBookRowNumber from rowIndex on update (rowIndex + 2 for header + 1-based numbering)', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
+    prisma.user.update.mockResolvedValue({ id: 'user-2' });
+
+    await service.processRow('kurin-1', baseRow({ matchedUserId: 'user-2' }), 3, ACTOR);
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-2' },
+      data: expect.objectContaining({ judgeBookRowNumber: 5 }),
+    });
+  });
+
   it('rejects an update when matchedUserId does not belong to this kurin or is not a JUNAK', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'other-zvyazkovyi', role: 'ZVYAZKOVYI', kurinId: 'kurin-2' });
 

@@ -37,7 +37,7 @@ export class JunakImportRowProcessorService {
   ): Promise<JunakImportRowResult> {
     const result: JunakImportRowResult = { row: rowIndex, succeededSteps: [] };
     try {
-      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, result, options);
+      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, rowIndex, result, options);
       result.junakId = junakId;
 
       await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
@@ -51,6 +51,7 @@ export class JunakImportRowProcessorService {
   private async upsertUserHurtokContacts(
     kurinId: string,
     row: ResolvedJunakRow,
+    rowIndex: number,
     result: JunakImportRowResult,
     options: ProcessRowOptions,
   ): Promise<{ junakId: string; hurtokId?: string }> {
@@ -88,6 +89,7 @@ export class JunakImportRowProcessorService {
         if (row.email) updateData.email = row.email;
         if (row.phone) updateData.phone = row.phone;
         if (hurtokId) updateData.hurtokId = hurtokId;
+        updateData.judgeBookRowNumber = rowIndex + 2;
         const updated = await tx.user.update({ where: { id: row.matchedUserId }, data: updateData });
         userId = updated.id;
         result.created = false;
@@ -103,6 +105,7 @@ export class JunakImportRowProcessorService {
             role: Role.JUNAK,
             kurinId,
             hurtokId,
+            judgeBookRowNumber: rowIndex + 2,
           },
         });
         userId = created.id;
