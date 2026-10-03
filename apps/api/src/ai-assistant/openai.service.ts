@@ -83,11 +83,33 @@ export class OpenAiService {
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       }));
+    const systemInstruction = systemMessage ? { parts: [{ text: systemMessage.content }] } : undefined;
 
+    try {
+      return await this.callGeminiGenerateContent(model, contents, systemInstruction, true);
+    } catch (error) {
+      // Google Search grounding is unavailable on Gemini's free tier (no
+      // billing configured on the project) and can also fail from quota or
+      // a transient outage — none of that should take down the whole AI
+      // assistant when the model could've answered fine without searching.
+      // Retry once, ungrounded, before giving up.
+      this.logger.warn(
+        `Gemini grounded call failed, retrying without search grounding: ${(error as Error).message}`,
+      );
+      return this.callGeminiGenerateContent(model, contents, systemInstruction, false);
+    }
+  }
+
+  private async callGeminiGenerateContent(
+    model: string,
+    contents: { role: string; parts: { text: string }[] }[],
+    systemInstruction: { parts: { text: string }[] } | undefined,
+    withSearch: boolean,
+  ): Promise<string> {
     const body = {
       contents,
-      ...(systemMessage ? { systemInstruction: { parts: [{ text: systemMessage.content }] } } : {}),
-      tools: [{ google_search: {} }],
+      ...(systemInstruction ? { systemInstruction } : {}),
+      ...(withSearch ? { tools: [{ google_search: {} }] } : {}),
     };
 
     const controller = new AbortController();
@@ -109,8 +131,8 @@ export class OpenAiService {
 
     if (!response.ok) {
       // Never log the response body here — it can echo back request details.
-      this.logger.error(`Gemini grounded call failed: status=${response.status}`);
-      throw new Error(`Gemini grounded call failed with status ${response.status}`);
+      this.logger.error(`Gemini call failed: status=${response.status} withSearch=${withSearch}`);
+      throw new Error(`Gemini call failed with status ${response.status}`);
     }
 
     const data = await response.json();

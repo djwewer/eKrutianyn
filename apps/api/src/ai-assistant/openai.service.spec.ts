@@ -123,12 +123,31 @@ describe('OpenAiService', () => {
         ]);
       });
 
-      it('throws when the native call returns a non-ok status', async () => {
+      it('throws when both the grounded call and the ungrounded retry fail', async () => {
         fetchMock.mockResolvedValue({ ok: false, status: 503 });
 
         await expect(
           new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]),
         ).rejects.toThrow('503');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('falls back to an ungrounded retry when the grounded call fails (e.g. no billing configured for Search grounding)', async () => {
+        fetchMock
+          .mockResolvedValueOnce({ ok: false, status: 429 })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ candidates: [{ content: { parts: [{ text: 'Відповідь без пошуку' }] } }] }),
+          });
+
+        const result = await new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]);
+
+        expect(result).toBe('Відповідь без пошуку');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        const firstBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+        const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+        expect(firstBody.tools).toEqual([{ google_search: {} }]);
+        expect(secondBody.tools).toBeUndefined();
       });
 
       it('throws ServiceUnavailableException when the response has no text parts', async () => {
