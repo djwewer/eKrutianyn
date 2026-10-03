@@ -34,7 +34,7 @@ export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' |
   return (
     <div className="space-y-4">
       {canCreate && (
-        <Link href={`/users/new?role=${role}`}>
+        <Link href={`/users/new?role=${role}`} className="inline-block">
           <Button size="sm">Додати людину</Button>
         </Link>
       )}

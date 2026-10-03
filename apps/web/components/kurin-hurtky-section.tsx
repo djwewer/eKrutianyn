@@ -39,7 +39,7 @@ export function KurinHurtkySection() {
   return (
     <div className="space-y-4">
       {session?.role === 'ZVYAZKOVYI' && (
-        <Link href="/hurtky/new">
+        <Link href="/hurtky/new" className="inline-block">
           <Button size="sm">Новий гурток</Button>
         </Link>
       )}

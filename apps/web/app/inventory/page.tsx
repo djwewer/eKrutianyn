@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from '@/lib/session-client';
 import {
@@ -16,13 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
-import {
-  useGoogleDriveStatus,
-  useConnectGoogleDrive,
-  useSetGoogleDriveFolder,
-  useDisconnectGoogleDrive,
-  fetchGoogleDrivePickerToken,
-} from '@/lib/queries/google-drive';
+import { useGoogleDriveStatus, useSetGoogleDriveFolder, fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 
 function GoogleDriveCard({
@@ -38,20 +32,8 @@ function GoogleDriveCard({
   driveConnected: boolean;
   driveError: boolean;
 }) {
-  const connectDrive = useConnectGoogleDrive(kurinId);
   const setDriveFolder = useSetGoogleDriveFolder(kurinId);
-  const disconnectDrive = useDisconnectGoogleDrive(kurinId);
   const [pickerError, setPickerError] = useState<string | null>(null);
-
-  function handleDisconnect() {
-    if (
-      window.confirm(
-        'Відключити Google Drive? Папку для реманенту доведеться обрати заново після повторного підключення. Вже завантажені фото речей не постраждають.',
-      )
-    ) {
-      disconnectDrive.mutate();
-    }
-  }
 
   async function handlePickFolder() {
     setPickerError(null);
@@ -87,30 +69,15 @@ function GoogleDriveCard({
                 <Button size="sm" variant="outline" onClick={handlePickFolder}>
                   {driveStatus.folderName ? 'Змінити папку' : 'Обрати папку для реманенту'}
                 </Button>
-                <Button size="sm" variant="outline" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
-                  Перепідключити
-                </Button>
-                <Button size="sm" variant="outline" disabled={disconnectDrive.isPending} onClick={handleDisconnect}>
-                  Відключити
-                </Button>
               </div>
             )}
             {pickerError && <p className="text-sm text-destructive">{pickerError}</p>}
-            {disconnectDrive.isError && (
-              <p className="text-sm text-destructive">Не вдалося відключити Google Drive. Спробуйте ще раз.</p>
-            )}
           </>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">Google Drive не підключено.</p>
-            {isZvyazkovyi ? (
-              <Button size="sm" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
-                Підключити Google Drive
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">Зверніться до звʼязкового куреня.</p>
-            )}
-          </>
+          <p className="text-sm text-muted-foreground">
+            Google Drive не підключено.
+            {isZvyazkovyi ? ' Підключіть його в налаштуваннях куреня, на сторінці «Курінь».' : ' Зверніться до звʼязкового куреня.'}
+          </p>
         )}
       </CardContent>
     </Card>
@@ -176,6 +143,7 @@ function AddItemForm({ kurinId }: { kurinId: string }) {
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [photos, setPhotos] = useState<File[]>([]);
+  const photosInputRef = useRef<HTMLInputElement>(null);
   const create = useCreateInventoryItem(kurinId);
 
   return (
@@ -189,7 +157,17 @@ function AddItemForm({ kurinId }: { kurinId: string }) {
         onChange={(e) => setQuantity(e.target.value)}
         placeholder="Кількість"
       />
-      <Input type="file" accept="image/*" multiple onChange={(e) => setPhotos(Array.from(e.target.files ?? []))} />
+      <input
+        ref={photosInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => setPhotos(Array.from(e.target.files ?? []))}
+      />
+      <Button type="button" size="sm" variant="outline" onClick={() => photosInputRef.current?.click()}>
+        {photos.length > 0 ? `Обрано фото: ${photos.length}` : 'Додати фото'}
+      </Button>
       <Button
         size="sm"
         disabled={!name || create.isPending}
@@ -222,6 +200,7 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
   const [description, setDescription] = useState(item.description ?? '');
   const [quantity, setQuantity] = useState(String(item.quantity));
   const [newPhoto, setNewPhoto] = useState<File | null>(null);
+  const newPhotoInputRef = useRef<HTMLInputElement>(null);
   const update = useUpdateInventoryItem(kurinId);
   const remove = useDeleteInventoryItem(kurinId);
   const addPhoto = useAddInventoryPhoto(kurinId);
@@ -273,16 +252,32 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Input
+              <input
+                ref={newPhotoInputRef}
                 type="file"
                 accept="image/*"
+                className="hidden"
                 onChange={(e) => setNewPhoto(e.target.files?.[0] ?? null)}
               />
               <Button
+                type="button"
                 size="sm"
+                variant="outline"
+                className="min-w-0 flex-1 shrink truncate"
+                onClick={() => newPhotoInputRef.current?.click()}
+              >
+                {newPhoto ? newPhoto.name : 'Обрати фото'}
+              </Button>
+              <Button
+                size="sm"
+                className="shrink-0"
                 disabled={!newPhoto || addPhoto.isPending}
                 onClick={() => {
-                  if (newPhoto) addPhoto.mutate({ itemId: item.id, photo: newPhoto }, { onSuccess: () => setNewPhoto(null) });
+                  if (newPhoto)
+                    addPhoto.mutate(
+                      { itemId: item.id, photo: newPhoto },
+                      { onSuccess: () => setNewPhoto(null) },
+                    );
                 }}
               >
                 Додати фото

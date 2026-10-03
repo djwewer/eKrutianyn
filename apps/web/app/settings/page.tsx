@@ -182,6 +182,7 @@ export default function SettingsPage() {
               <Input
                 id="birthDate"
                 type="date"
+                className="text-sm"
                 value={birthDate}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setBirthDate(e.target.value)}

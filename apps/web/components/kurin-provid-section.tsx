@@ -55,10 +55,10 @@ function ProvidSlot({
   return (
     <div className="border-b py-2 last:border-b-0">
       <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="w-32 shrink-0 font-medium">{label}</span>
+        <span className="w-20 shrink-0 font-medium sm:w-32">{label}</span>
         {current ? (
           <>
-            <span className="flex-1">
+            <span className="min-w-0 flex-1 truncate">
               {current.user.lastName} {current.user.firstName}
             </span>
             {canEdit && (
@@ -74,7 +74,7 @@ function ProvidSlot({
               onValueChange={(value) => setSelectedUserId(value ?? '')}
               items={Object.fromEntries(candidates.map((c) => [c.id, `${c.lastName} ${c.firstName}`]))}
             >
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="min-w-0 flex-1">
                 <SelectValue placeholder="Оберіть юнака" />
               </SelectTrigger>
               <SelectContent>

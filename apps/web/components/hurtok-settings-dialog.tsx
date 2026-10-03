@@ -113,6 +113,7 @@ export function HurtokSettingsDialog({
             <Input
               id="founded-at"
               type="date"
+              className="min-w-0 flex-1 text-sm"
               value={foundedAt}
               onChange={(e) => setFoundedAt(e.target.value)}
             />
