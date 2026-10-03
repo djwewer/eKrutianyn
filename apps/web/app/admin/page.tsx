@@ -9,12 +9,14 @@ import {
   useFetchAllReferenceSourcesNow,
   useFetchReferenceSourceNow,
 } from '@/lib/queries/admin-reference-sources';
+import { useAdminKurins, useCreateKurin, useUpdateKurin, useDeleteKurin } from '@/lib/queries/admin-kurins';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
+import { ApiError } from '@/lib/api-client';
 import { type AdminCredentials } from '@/lib/queries/admin-credentials';
-import type { AdminProbyPoint, AdminProbyProgram } from '@/lib/types';
+import type { AdminKurin, AdminProbyPoint, AdminProbyProgram } from '@/lib/types';
 
 const STORAGE_KEY = 'plastAdminCredentials';
 
@@ -78,7 +80,7 @@ export default function AdminProbyCatalogPage() {
   if (!credentials) {
     return (
       <div className="mx-auto max-w-sm space-y-4">
-        <h1 className="text-2xl font-bold">Адмін: каталог проби</h1>
+        <h1 className="text-2xl font-bold">Адмін</h1>
         <Card>
           <CardContent className="space-y-3 pt-6">
             <p className="text-sm text-muted-foreground">
@@ -118,11 +120,15 @@ export default function AdminProbyCatalogPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Адмін: каталог проби</h1>
+        <h1 className="text-2xl font-bold">Адмін</h1>
         <Button size="sm" variant="outline" onClick={handleClearCredentials}>
           Вийти
         </Button>
       </div>
+
+      <KurinsSection credentials={credentials} programs={programs ?? []} />
+
+      <h2 className="text-xl font-bold">Каталог проби</h2>
       <p className="text-sm text-muted-foreground">
         Для кожної точки можна додати довідковий матеріал (точні дати, імена, факти) — AI-виховник
         використовуватиме лише ці факти замість того, щоб вигадувати їх.
@@ -178,6 +184,146 @@ export default function AdminProbyCatalogPage() {
       ))}
 
       <ReferenceSourcesSection credentials={credentials} programs={programs ?? []} />
+    </div>
+  );
+}
+
+function kurinConflictMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const body = error.body as { message?: string } | null;
+  return body?.message ?? 'Конфлікт: курінь із таким числом вже існує, або курінь ще не порожній.';
+}
+
+function KurinsSection({ credentials, programs }: { credentials: AdminCredentials; programs: AdminProbyProgram[] }) {
+  const { data: kurins, isLoading } = useAdminKurins(credentials);
+  const create = useCreateKurin(credentials);
+
+  const [name, setName] = useState('');
+  const [kurinNumber, setKurinNumber] = useState('');
+  const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
+  const [stanytsia, setStanytsia] = useState('');
+  const [probyProgramId, setProbyProgramId] = useState('');
+
+  function handleCreate() {
+    if (!name.trim() || !stanytsia.trim() || !probyProgramId) return;
+    create.mutate(
+      { name: name.trim(), kurinNumber: kurinNumber.trim() || undefined, gender, stanytsia: stanytsia.trim(), probyProgramId },
+      {
+        onSuccess: () => {
+          setName('');
+          setKurinNumber('');
+          setStanytsia('');
+          setProbyProgramId('');
+        },
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Курені</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Єдине місце для створення, перейменування/перенумерації та видалення куренів. Курінь із учасниками або
+          гуртками видалити не можна — спершу перепризначте або заархівуйте їх.
+        </p>
+
+        {isLoading && <p className="text-sm text-muted-foreground">Завантаження...</p>}
+
+        <div className="space-y-2">
+          {(kurins ?? []).map((kurin) => (
+            <KurinRow key={kurin.id} kurin={kurin} credentials={credentials} />
+          ))}
+        </div>
+
+        <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-medium">Додати курінь</p>
+          <Input placeholder="Назва (напр. «курінь Лісові Мандрівники»)" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder="Число (необов'язково — згенерується автоматично)" value={kurinNumber} onChange={(e) => setKurinNumber(e.target.value)} />
+          <Input placeholder="Станиця" value={stanytsia} onChange={(e) => setStanytsia(e.target.value)} />
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE')}
+            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+          >
+            <option value="MALE">Хлопці</option>
+            <option value="FEMALE">Дівчата</option>
+          </select>
+          <select
+            value={probyProgramId}
+            onChange={(e) => setProbyProgramId(e.target.value)}
+            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+          >
+            <option value="">— оберіть програму проби —</option>
+            {programs.map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.name} ({program.version})
+              </option>
+            ))}
+          </select>
+          <Button size="sm" disabled={!name.trim() || !stanytsia.trim() || !probyProgramId || create.isPending} onClick={handleCreate}>
+            Створити
+          </Button>
+          {create.isError && (
+            <span className="block text-xs text-destructive">
+              {kurinConflictMessage(create.error) ?? 'Не вдалося створити курінь'}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: AdminCredentials }) {
+  // Each row owns its own mutation instances — sharing one from the parent
+  // across every row would make every row's isSuccess/isError/isPending
+  // reflect whichever row was edited last, not just this one.
+  const onUpdate = useUpdateKurin(credentials);
+  const onDelete = useDeleteKurin(credentials);
+  const [name, setName] = useState(kurin.name);
+  const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber);
+  const dirty = name !== kurin.name || kurinNumber !== kurin.kurinNumber;
+  const canDelete = kurin.userCount === 0 && kurin.hurtokCount === 0;
+
+  function handleSave() {
+    onUpdate.mutate({ id: kurin.id, name: name.trim(), kurinNumber: kurinNumber.trim() });
+  }
+
+  function handleDelete() {
+    if (!confirm(`Видалити курінь «${kurin.name}»? Це незворотньо.`)) return;
+    onDelete.mutate(kurin.id);
+  }
+
+  return (
+    <div className="space-y-1.5 rounded-md border border-border p-3" data-testid={`kurin-row-${kurin.id}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={kurinNumber} onChange={(e) => setKurinNumber(e.target.value)} className="w-24" />
+        <Input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1" />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {kurin.stanytsia} · {kurin.gender === 'FEMALE' ? 'Дівчата' : 'Хлопці'} · {kurin.userCount} учасн., {kurin.hurtokCount} гуртків
+      </p>
+      <div className="flex items-center gap-2">
+        <Button size="sm" disabled={!dirty || onUpdate.isPending} onClick={handleSave}>
+          Зберегти
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={!canDelete || onDelete.isPending}
+          title={canDelete ? undefined : 'Курінь ще не порожній'}
+          onClick={handleDelete}
+        >
+          Видалити
+        </Button>
+        {!dirty && onUpdate.isSuccess && <span className="text-xs text-muted-foreground">Збережено</span>}
+        {onUpdate.isError && (
+          <span className="text-xs text-destructive">{kurinConflictMessage(onUpdate.error) ?? 'Не вдалося зберегти'}</span>
+        )}
+      </div>
     </div>
   );
 }

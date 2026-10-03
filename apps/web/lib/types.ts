@@ -182,6 +182,18 @@ export interface AdminProbyProgram {
   stages: AdminProbyStage[];
 }
 
+export interface AdminKurin {
+  id: string;
+  name: string;
+  kurinNumber: string;
+  gender: 'MALE' | 'FEMALE';
+  stanytsia: string;
+  probyProgramId: string;
+  createdAt: string;
+  userCount: number;
+  hurtokCount: number;
+}
+
 export interface AdminReferenceSource {
   id: string;
   url: string;

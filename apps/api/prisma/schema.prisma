@@ -66,28 +66,35 @@ enum ApprovalActionType {
 }
 
 model Kurin {
-  id                       String       @id @default(uuid())
-  name                     String
-  kurinNumber              String       @unique
-  gender                   KurinGender
-  stanytsia                String
-  probyProgramId           String
-  probyProgram             ProbyProgram @relation(fields: [probyProgramId], references: [id])
-  createdAt                DateTime     @default(now())
-  updatedAt                DateTime     @updatedAt
-  driveFolderId            String?
-  driveFolderName          String?
-  driveRefreshToken        String?
-  driveConnectedEmail      String?
-  driveConnectedAt         DateTime?
-  judgeBookSpreadsheetId   String?
-  judgeBookSpreadsheetName String?
+  id                           String       @id @default(uuid())
+  name                         String
+  kurinNumber                  String       @unique
+  gender                       KurinGender
+  stanytsia                    String
+  probyProgramId               String
+  probyProgram                 ProbyProgram @relation(fields: [probyProgramId], references: [id])
+  createdAt                    DateTime     @default(now())
+  updatedAt                    DateTime     @updatedAt
+  driveFolderId                String?
+  driveFolderName              String?
+  driveRefreshToken            String?
+  driveConnectedEmail          String?
+  driveConnectedAt             DateTime?
+  judgeBookSpreadsheetId       String?
+  judgeBookSpreadsheetName     String?
+  // The treasurer's manually-entered "current cash on hand" baseline when
+  // they start using Скарбництво — not synced from anywhere (Google Sheets
+  // linking is a deliberate later addition, not part of this feature).
+  // Current balance = this + sum(INCOME) - sum(EXPENSE) transactions.
+  treasuryStartingBalanceCents Int          @default(0)
 
-  hurtky             Hurtok[]
-  inventoryItems     InventoryItem[]
-  users              User[]
-  positions          KurinPosition[]
-  junakImportMapping JunakImportMapping?
+  hurtky               Hurtok[]
+  inventoryItems       InventoryItem[]
+  users                User[]
+  positions            KurinPosition[]
+  junakImportMapping   JunakImportMapping?
+  treasuryTransactions TreasuryTransaction[]
+  calendarEvents       KurinCalendarEvent[]
 }
 
 model JunakImportMapping {
@@ -144,23 +151,26 @@ model User {
   archivedUsers      User[]    @relation("UserArchivedBy")
   hurtokArchivedByMe Hurtok[]  @relation("HurtokArchivedBy")
 
-  vykhovnykAssignments  VykhovnykHurtok[]    @relation("VykhovnykAssignments")
-  progressEntries       JunakProgress[]      @relation("JunakProgressEntries")
-  confirmedProgress     JunakProgress[]      @relation("ConfirmedByUser")
-  auditLogEntries       ProgressAuditLog[]   @relation("ActorAuditLogs")
-  initiatedRequests     ApprovalRequest[]    @relation("InitiatedRequests")
-  decidedRequests       ApprovalRequest[]    @relation("DecidedRequests")
+  vykhovnykAssignments  VykhovnykHurtok[]     @relation("VykhovnykAssignments")
+  progressEntries       JunakProgress[]       @relation("JunakProgressEntries")
+  confirmedProgress     JunakProgress[]       @relation("ConfirmedByUser")
+  auditLogEntries       ProgressAuditLog[]    @relation("ActorAuditLogs")
+  initiatedRequests     ApprovalRequest[]     @relation("InitiatedRequests")
+  decidedRequests       ApprovalRequest[]     @relation("DecidedRequests")
   passwordResetTokens   PasswordResetToken[]
   emailChangeRequests   EmailChangeRequest[]
   profileChangeLogs     ProfileChangeLog[]
-  positionsHeld         KurinPosition[]      @relation("PositionHolder")
-  positionsAssigned     KurinPosition[]      @relation("PositionAssignedBy")
-  positionsRemoved      KurinPosition[]      @relation("PositionRemovedBy")
-  guardianContacts      GuardianContact[]    @relation("JunakGuardians")
+  positionsHeld         KurinPosition[]       @relation("PositionHolder")
+  positionsAssigned     KurinPosition[]       @relation("PositionAssignedBy")
+  positionsRemoved      KurinPosition[]       @relation("PositionRemovedBy")
+  guardianContacts      GuardianContact[]     @relation("JunakGuardians")
   createdInventoryItems InventoryItem[]
-  stageProgressEntries  JunakStageProgress[] @relation("JunakStageProgressEntries")
-  stageClosedLogs       JunakStageProgress[] @relation("StageClosedByUser")
+  stageProgressEntries  JunakStageProgress[]  @relation("JunakStageProgressEntries")
+  stageClosedLogs       JunakStageProgress[]  @relation("StageClosedByUser")
   aiConversations       AiConversation[]
+  treasuryTransactions  TreasuryTransaction[]
+  calendarEvents        KurinCalendarEvent[]
+  activityEntries       JunakActivityEntry[]  @relation("JunakActivityEntries")
 }
 
 model KurinPosition {
@@ -203,6 +213,61 @@ model InventoryItemPhoto {
   driveFileId String
   url         String
   createdAt   DateTime      @default(now())
+}
+
+enum TreasuryTransactionType {
+  INCOME
+  EXPENSE
+}
+
+model TreasuryTransaction {
+  id          String                  @id @default(uuid())
+  kurinId     String
+  kurin       Kurin                   @relation(fields: [kurinId], references: [id])
+  type        TreasuryTransactionType
+  amountCents Int
+  description String
+  occurredAt  DateTime
+  createdById String
+  createdBy   User                    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime                @default(now())
+
+  @@index([kurinId, occurredAt])
+}
+
+model KurinCalendarEvent {
+  id          String    @id @default(uuid())
+  kurinId     String
+  kurin       Kurin     @relation(fields: [kurinId], references: [id])
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([kurinId, startDate])
+}
+
+enum JunakActivityRole {
+  PARTICIPANT
+  PROVID
+}
+
+model JunakActivityEntry {
+  id          String            @id @default(uuid())
+  junakId     String
+  junak       User              @relation("JunakActivityEntries", fields: [junakId], references: [id])
+  title       String
+  occurredAt  DateTime
+  role        JunakActivityRole
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([junakId, occurredAt])
 }
 
 model GuardianContact {
@@ -257,21 +322,21 @@ model ProbyCategory {
 }
 
 model ProbyPoint {
-  id          String        @id @default(uuid())
-  categoryId  String
-  category    ProbyCategory @relation(fields: [categoryId], references: [id])
-  order       Int
-  description String
+  id            String        @id @default(uuid())
+  categoryId    String
+  category      ProbyCategory @relation(fields: [categoryId], references: [id])
+  order         Int
+  description   String
   // Curated factual material (dates, names, specifics) for the AI-виховник's
   // system prompt — kept separate from `description` so a short official label
   // can coexist with a longer reference text, and so a point without curated
   // content just falls back to grounding on `description` alone.
-  referenceText String? @db.Text
+  referenceText String?       @db.Text
 
-  progressEntries    JunakProgress[] @relation("PointProgress")
-  transferredEntries JunakProgress[] @relation("TransferredFromPoint")
-  mappingsAsOld      PointMapping[]  @relation("OldPoint")
-  mappingsAsNew      PointMapping[]  @relation("NewPoint")
+  progressEntries    JunakProgress[]   @relation("PointProgress")
+  transferredEntries JunakProgress[]   @relation("TransferredFromPoint")
+  mappingsAsOld      PointMapping[]    @relation("OldPoint")
+  mappingsAsNew      PointMapping[]    @relation("NewPoint")
   aiMessages         AiMessage[]
   referenceSources   ReferenceSource[]
 }
