@@ -46,7 +46,7 @@ describe('AiAssistantService', () => {
 
   beforeEach(() => {
     prisma = {
-      kurin: { findUnique: jest.fn().mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' }) },
+      kurin: { findUnique: jest.fn().mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1', gender: 'MALE' }) },
       probyPoint: { findUnique: jest.fn().mockResolvedValue(makePoint()) },
       aiConversation: {
         findUnique: jest.fn().mockResolvedValue(makeConversation()),
@@ -185,6 +185,46 @@ describe('AiAssistantService', () => {
     const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
     expect(systemMessage.content).not.toContain('Ще не завантажено');
     expect(systemMessage.content).not.toContain('Додаткові джерела');
+  });
+
+  it('instructs a "друже" greeting for a male (MALE) kurin on the first message', async () => {
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1', gender: 'MALE' });
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('СКОБ, друже!');
+    expect(systemMessage.content).not.toContain('подруго');
+  });
+
+  it('instructs a "подруго" greeting for a female (FEMALE) kurin on the first message', async () => {
+    prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1', gender: 'FEMALE' });
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('СКОБ, подруго!');
+  });
+
+  it('tells the model not to repeat the "СКОБ" greeting on a later message in the conversation', async () => {
+    prisma.aiMessage.findMany.mockResolvedValue([
+      { role: 'USER', content: 'перше повідомлення', createdAt: new Date(), probyPointId: 'point-1' },
+      { role: 'ASSISTANT', content: 'СКОБ, друже! ...', createdAt: new Date(), probyPointId: 'point-1' },
+    ]);
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'ще питання' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).not.toContain('СКОБ, друже!');
+    expect(systemMessage.content).toContain('не вітайся словом "СКОБ" знову');
+  });
+
+  it('instructs the model to skip filler intro/outro phrases and answer straight to the point', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Ось стислий і структурований матеріал');
+    expect(systemMessage.content).toContain('Сподіваюсь, це допоможе');
   });
 
   it("rejects a probyPointId that doesn't belong to the actor's kurin's program", async () => {

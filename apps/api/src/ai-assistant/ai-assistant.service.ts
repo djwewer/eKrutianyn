@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { AiMessageRole, Role } from '@prisma/client';
+import { AiMessageRole, KurinGender, Role } from '@prisma/client';
 import { APIError } from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -63,8 +63,7 @@ export class AiAssistantService {
 
   async sendMessage(conversationId: string, dto: SendMessageDto, actor: CurrentUserPayload) {
     const conversation = await this.findOwnedConversation(conversationId, actor);
-    const point = await this.loadEligiblePoint(dto.probyPointId, actor);
-    const systemPrompt = this.buildSystemPrompt(point);
+    const { point, kurinGender } = await this.loadEligiblePoint(dto.probyPointId, actor);
 
     const recentHistory = await this.prisma.aiMessage.findMany({
       where: { conversationId: conversation.id },
@@ -75,6 +74,8 @@ export class AiAssistantService {
     // handing the transcript to the model.
     const chronologicalHistory = [...recentHistory].reverse();
     const isFirstMessage = recentHistory.length === 0;
+
+    const systemPrompt = this.buildSystemPrompt(point, kurinGender, isFirstMessage);
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -162,7 +163,10 @@ export class AiAssistantService {
     return conversation;
   }
 
-  private async loadEligiblePoint(pointId: string, actor: CurrentUserPayload): Promise<EligiblePoint> {
+  private async loadEligiblePoint(
+    pointId: string,
+    actor: CurrentUserPayload,
+  ): Promise<{ point: EligiblePoint; kurinGender: KurinGender }> {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: actor.kurinId } });
     if (!kurin) {
       throw new NotFoundException('Proby point not found');
@@ -195,10 +199,10 @@ export class AiAssistantService {
     // ZVYAZKOVYI: no point/stage filtering at all — any point in the kurin's program
     // is accepted, by design (see Global Constraints).
 
-    return point;
+    return { point, kurinGender: kurin.gender };
   }
 
-  private buildSystemPrompt(point: EligiblePoint): string {
+  private buildSystemPrompt(point: EligiblePoint, kurinGender: KurinGender, isFirstMessage: boolean): string {
     // Additive only: a point with no curated referenceText yet gets the exact
     // same prompt as before this field existed. Appended after the point's own
     // description so the verbatim guardrail instructions below are untouched.
@@ -207,7 +211,14 @@ export class AiAssistantService {
       : '';
     const sourcesBlock = this.buildReferenceSourcesBlock(point.referenceSources);
 
+    const greetingWord = kurinGender === KurinGender.FEMALE ? 'подруго' : 'друже';
+    const greetingInstruction = isFirstMessage
+      ? `Це перше повідомлення в розмові — почни відповідь рівно зі слів "СКОБ, ${greetingWord}!" на окремому рядку, і більше нічого в привітання не додавай. Не вигадуй інших форм привітання (ніколи не пиши "Спе Скобе" чи подібне).`
+      : `Це не перше повідомлення в розмові — не вітайся словом "СКОБ" знову, одразу переходь до відповіді.`;
+
     return `Ти — AI-виховник, асистент для юнака пластового куреня, який готується до проби.
+
+${greetingInstruction}
 
 Юнак зараз працює над точкою:
 Ступінь: ${point.category.stage.name}
@@ -218,6 +229,10 @@ export class AiAssistantService {
 1. Якщо прохання юнака справді стосується підготовки до ЦІЄЇ точки — підготуй для нього стислий, інформативний документ, яким він може скористатися для підготовки. Без зайвої води, без філерних фраз — лише те, що реально потрібно знати чи вміти для цієї точки.
 2. Якщо прохання юнака НЕ відповідає тому, що реально вимагає ця точка (наприклад, він просить щось значно ширше, вужче, або геть не пов'язане з наведеним описом) — НЕ виконуй прохання як є. Прямо скажи, що саме вимагає ця точка за офіційним описом, і запропонуй підготувати матеріал саме під цю вимогу. Запитай окреме підтвердження, перш ніж продовжити.
 3. Якщо прохання юнака взагалі не стосується підготовки до проби чи пластового життя (наприклад, прохання виконати шкільне домашнє завдання, написати код для стороннього проекту, чи будь-яке інше завдання, не пов'язане з точкою проби) — ввічливо відмов і поясни, що ти допомагаєш тільки з підготовкою до точок проби.
+
+Формат відповіді — суворо:
+- Жодних вступних фраз перед матеріалом: не пиши "Ось стислий і структурований матеріал...", "Залюбки допоможу...", "Ось інформація, яка тобі знадобиться..." чи щось подібне. Одразу після привітання (якщо воно є) переходь до самого матеріалу по суті.
+- Жодних завершальних фраз-філерів на кшталт "Сподіваюсь, це допоможе", "Готуйся, і все пройде чудово", "Чи маєш ще питання" — просто закінчуй матеріалом, без закруглення розмови зайвими реченнями.
 
 Завжди лишайся доброзичливим, говори українською мовою.`;
   }
