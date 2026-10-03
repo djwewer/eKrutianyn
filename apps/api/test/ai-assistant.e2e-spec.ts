@@ -193,6 +193,23 @@ describe('AI assistant (e2e)', () => {
       .expect(404);
   });
 
+  it('rejects a message whose content exceeds the 4000-character cap (400)', async () => {
+    const { kurin, openPoint } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
+    });
+    const token = issueTokenFor(jwtService, junak);
+
+    await request(app.getHttpServer())
+      .post('/ai-assistant/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: openPoint.id, content: 'a'.repeat(4001) })
+      .expect(400);
+
+    expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
+  });
+
   it('does not store an assistant message when the OpenAI call fails, but keeps the stored user message', async () => {
     const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });

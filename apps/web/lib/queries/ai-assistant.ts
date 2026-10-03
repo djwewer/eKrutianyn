@@ -19,7 +19,11 @@ export function useSendAiMessage() {
         method: 'POST',
         body: JSON.stringify(dto),
       }),
-    onSuccess: () => {
+    onSettled: () => {
+      // Invalidate regardless of outcome: the backend persists the user's message
+      // even when the OpenAI call fails, so a failed send must still refresh the
+      // thread (otherwise the user's own message is missing and retrying would
+      // create a duplicate stored message).
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'conversation'] });
     },
   });

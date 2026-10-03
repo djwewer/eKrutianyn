@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AiMessageRole, Role } from '@prisma/client';
+import { APIError } from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { ProbyProgressService } from '../proby-progress/proby-progress.service';
@@ -21,6 +22,8 @@ type EligiblePoint = {
 
 @Injectable()
 export class AiAssistantService {
+  private readonly logger = new Logger(AiAssistantService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly openAiService: OpenAiService,
@@ -74,8 +77,16 @@ export class AiAssistantService {
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
-      // Never surface the raw SDK error (it can carry request headers, including the
-      // API key) back to the client or into a log line here — only a generic message.
+      // Log only safe, structured fields from the SDK's APIError (status/name/code) —
+      // never the full error object or anything from process.env, since the raw SDK
+      // error can carry request headers, including the API key.
+      if (error instanceof APIError) {
+        this.logger.error(
+          `OpenAI call failed: status=${error.status} name=${error.name} code=${error.code}`,
+        );
+      } else {
+        this.logger.error(`OpenAI call failed: name=${(error as Error)?.name}`);
+      }
       throw new ServiceUnavailableException('AI assistant is temporarily unavailable');
     }
 
@@ -142,11 +153,14 @@ export class AiAssistantService {
   }
 
   private async getOrCreateConversation(userId: string) {
-    const existing = await this.prisma.aiConversation.findUnique({ where: { userId } });
-    if (existing) {
-      return existing;
-    }
-    return this.prisma.aiConversation.create({ data: { userId } });
+    // A single upsert instead of findUnique-then-create: two concurrent first-ever
+    // requests from the same user would otherwise race and one would hit the
+    // unique constraint on userId.
+    return this.prisma.aiConversation.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+    });
   }
 
   private async serializeMessages(conversationId: string) {

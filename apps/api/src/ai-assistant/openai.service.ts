@@ -10,14 +10,24 @@ const DEFAULT_MODEL = 'gpt-4o';
 
 @Injectable()
 export class OpenAiService {
-  private readonly client: OpenAI;
+  private client: OpenAI | null = null;
 
-  constructor() {
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  private getClient(): OpenAI {
+    if (!this.client) {
+      // Constructed lazily (on first actual call) rather than in the constructor:
+      // the SDK throws synchronously when OPENAI_API_KEY is unset, and doing that
+      // at DI/bootstrap time would crash the entire Nest app, not just this feature.
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        timeout: 60_000,
+        maxRetries: 1,
+      });
+    }
+    return this.client;
   }
 
   async createChatCompletion(messages: ChatMessage[]): Promise<string> {
-    const response = await this.client.chat.completions.create({
+    const response = await this.getClient().chat.completions.create({
       model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
       messages,
     });

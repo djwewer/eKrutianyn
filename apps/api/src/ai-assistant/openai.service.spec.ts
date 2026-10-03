@@ -32,7 +32,23 @@ describe('OpenAiService', () => {
     process.env.OPENAI_MODEL = originalModel;
   });
 
+  it('does not throw when constructed without OPENAI_API_KEY', () => {
+    delete process.env.OPENAI_API_KEY;
+
+    expect(() => new OpenAiService()).not.toThrow();
+  });
+
   describe('createChatCompletion', () => {
+    it('rejects the call (not the construction) when OPENAI_API_KEY is missing', async () => {
+      delete process.env.OPENAI_API_KEY;
+      const unconfiguredService = new OpenAiService();
+      mockChatCompletionsCreate.mockRejectedValue(new Error('Missing credentials'));
+
+      await expect(
+        unconfiguredService.createChatCompletion([{ role: 'user', content: 'Привіт' }]),
+      ).rejects.toThrow('Missing credentials');
+    });
+
     it('returns the assistant message content as a plain string', async () => {
       mockChatCompletionsCreate.mockResolvedValue({
         choices: [{ message: { content: 'Привіт, виховнику!' } }],

@@ -36,8 +36,11 @@ describe('AiAssistantService', () => {
       kurin: { findUnique: jest.fn().mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' }) },
       probyPoint: { findUnique: jest.fn().mockResolvedValue(makePoint()) },
       aiConversation: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockImplementation(({ data }: any) => Promise.resolve({ id: 'conversation-1', ...data })),
+        upsert: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve({ id: 'conversation-1', userId: where.userId, createdAt: new Date() }),
+          ),
       },
       aiMessage: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -121,26 +124,19 @@ describe('AiAssistantService', () => {
     expect(result.reply).toBe('Ось твоя відповідь.');
   });
 
-  it('creates the conversation on the first message for a user with none yet, reuses it on a second', async () => {
+  it('gets-or-creates the conversation via a single upsert keyed by userId (race-safe)', async () => {
     await service.sendMessage({ probyPointId: 'point-1', content: 'перше' }, ACTOR_JUNAK);
-    expect(prisma.aiConversation.create).toHaveBeenCalledTimes(1);
-    expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
-
-    prisma.aiConversation.findUnique.mockResolvedValue({
-      id: 'conversation-1',
-      userId: ACTOR_JUNAK.userId,
-      createdAt: new Date(),
+    expect(prisma.aiConversation.upsert).toHaveBeenCalledWith({
+      where: { userId: ACTOR_JUNAK.userId },
+      create: { userId: ACTOR_JUNAK.userId },
+      update: {},
     });
+
     await service.sendMessage({ probyPointId: 'point-1', content: 'друге' }, ACTOR_JUNAK);
-    expect(prisma.aiConversation.create).toHaveBeenCalledTimes(1);
+    expect(prisma.aiConversation.upsert).toHaveBeenCalledTimes(2);
   });
 
   it('caps history sent to OpenAI at the last 20 stored messages, most recent and in chronological order', async () => {
-    prisma.aiConversation.findUnique.mockResolvedValue({
-      id: 'conversation-1',
-      userId: ACTOR_JUNAK.userId,
-      createdAt: new Date(),
-    });
     const now = Date.now();
     const seeded = Array.from({ length: 25 }, (_, i) => ({
       id: `msg-${i}`,
