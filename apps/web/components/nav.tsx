@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -90,14 +91,13 @@ export function Nav() {
   return (
     <nav className="flex flex-wrap items-center justify-between gap-6 border-b px-4 py-5 sm:px-8">
       <div className="flex min-w-0 items-center gap-3.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-base font-bold text-accent-foreground">
-          К
-        </span>
+        <Image src="/logo.webp" alt="" width={36} height={36} className="size-9 shrink-0 rounded-md" />
+
         <div className="flex min-w-0 flex-col">
           <span className="text-xs font-semibold tracking-wide text-accent">єПластун</span>
           {kurin && (
             <h1 className="truncate text-[19px] font-bold tracking-tight">
-              Курінь ч. {kurin.kurinNumber} «{kurin.name}»
+              Курінь ч.{kurin.kurinNumber} {kurin.name.replace(/^курінь\s+/i, '')}
             </h1>
           )}
         </div>

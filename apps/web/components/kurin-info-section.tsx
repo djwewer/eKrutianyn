@@ -68,32 +68,6 @@ export function KurinInfoSection() {
         </div>
       </div>
 
-      {canEdit && (
-        <div className="space-y-2">
-          <h4 className="font-heading text-sm font-semibold">Google Drive</h4>
-          {driveStatus.data?.connected ? (
-            <>
-              <p className="text-sm text-muted-foreground">Підключено як: {driveStatus.data.email}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
-                  Перепідключити
-                </Button>
-                <Button size="sm" variant="outline" disabled={disconnectDrive.isPending} onClick={handleDisconnectDrive}>
-                  Відключити
-                </Button>
-              </div>
-              {disconnectDrive.isError && (
-                <p className="text-sm text-destructive">Не вдалося відключити Google Drive. Спробуйте ще раз.</p>
-              )}
-            </>
-          ) : (
-            <Button size="sm" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
-              Підключити Google Drive
-            </Button>
-          )}
-        </div>
-      )}
-
       {canEdit && !isEditing && (
         <Button size="sm" variant="outline" onClick={startEditing}>
           Редагувати
@@ -102,6 +76,29 @@ export function KurinInfoSection() {
 
       {canEdit && isEditing && (
         <div className="space-y-4 rounded-lg border p-4">
+          <div className="space-y-2">
+            <h4 className="font-heading text-sm font-semibold">Google Drive</h4>
+            {driveStatus.data?.connected ? (
+              <>
+                <p className="text-sm text-muted-foreground">Підключено як: {driveStatus.data.email}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
+                    Перепідключити
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={disconnectDrive.isPending} onClick={handleDisconnectDrive}>
+                    Відключити
+                  </Button>
+                </div>
+                {disconnectDrive.isError && (
+                  <p className="text-sm text-destructive">Не вдалося відключити Google Drive. Спробуйте ще раз.</p>
+                )}
+              </>
+            ) : (
+              <Button size="sm" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
+                Підключити Google Drive
+              </Button>
+            )}
+          </div>
           <div className="space-y-2">
             <Label>Пробна програма</Label>
             <div className="flex items-center gap-2">

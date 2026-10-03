@@ -61,7 +61,11 @@ test('crops a selected photo before upload and updates the avatar', async ({ pag
 
   // Dialog closes and the avatar now renders the uploaded (cropped) photo.
   await expect(page.getByText('Обрізати фото')).toBeHidden();
-  const avatarPhoto = page.locator('img[alt]').first();
+  // Scoped to the "Фото профілю" card specifically — the Nav also renders
+  // an Avatar for the same logged-in user, so an unscoped avatar locator
+  // would match two elements.
+  const photoCard = page.locator('[data-slot="card"]', { has: page.getByText('Фото профілю') });
+  const avatarPhoto = photoCard.locator('[data-slot="avatar"] img');
   await expect(avatarPhoto).toHaveAttribute('src', /\/api\/backend\/users\/.+\/photo\?v=/);
   await expect(page.getByRole('button', { name: 'Змінити фото' })).toBeVisible();
 });

@@ -84,7 +84,7 @@ function AccordionContent({
       )}
       {...props}
     >
-      <div className="px-5 pb-5">{children}</div>
+      <div className="px-5 pt-4 pb-5">{children}</div>
     </AccordionPrimitive.Panel>
   )
 }
