@@ -7,6 +7,7 @@ import { JunakImportRowProcessorService } from '../junak-import/junak-import-row
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { UsersService } from '../users/users.service';
+import { columnLetterToIndex } from '../common/sheet-column.util';
 
 @Injectable()
 export class ApprovalRequestsService {
@@ -281,16 +282,9 @@ export class ApprovalRequestsService {
       hurtokName?: string;
     },
   ): string[] {
-    const columnIndex = (column: string): number => {
-      let index = 0;
-      for (const char of column) {
-        index = index * 26 + (char.charCodeAt(0) - 'A'.charCodeAt(0) + 1);
-      }
-      return index - 1;
-    };
     const values: string[] = [];
     for (const { column, field } of columnMapping) {
-      const idx = columnIndex(column);
+      const idx = columnLetterToIndex(column);
       let value = '';
       if (field === 'FIRST_LAST_NAME') value = `${junak.firstName} ${junak.lastName}`;
       else if (field === 'NICKNAME') value = junak.nickname ?? '';

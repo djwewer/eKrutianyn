@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { DEGREE_STAGE_PREFIXES, DegreeStageKey } from '../common/degree-stages.util';
+import { columnLetterToIndex } from '../common/sheet-column.util';
 
 interface ColumnMappingEntry {
   column: string;
@@ -24,6 +25,11 @@ const DEGREE_DATE_FIELDS: { key: DegreeStageKey; field: string }[] = [
 
 const PHONE_FIELD = 'PHONE';
 const EMAIL_FIELD = 'EMAIL';
+const NAME_FIELD = 'FIRST_LAST_NAME';
+
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
 
 /** Matches the sheet's own date convention (DD.MM.YYYY) — the same format `parseUkrainianDate` on the import side expects, so a pushed date stays human-readable and round-trips correctly on the next import. */
 function formatDate(date: Date): string {
@@ -89,10 +95,34 @@ export class JudgeBookSyncService {
       }
     }
 
+    // Humans maintain this sheet directly — they insert, sort, and delete
+    // rows. judgeBookRowNumber is captured once at import time and never
+    // re-validated, so before trusting it we re-read the sheet's own name
+    // column (when mapped) and skip any junak whose row no longer shows
+    // their name, rather than silently writing their data into whoever
+    // else's row that now is.
+    const nameColumn = fieldToColumn.get(NAME_FIELD);
+    let sheetRows: string[][] | null = null;
+    if (nameColumn && junaky.length > 0) {
+      sheetRows = await this.googleDrive.readSheetValues(kurinId, kurin.judgeBookSpreadsheetId);
+    }
+    const nameColIndex = nameColumn ? columnLetterToIndex(nameColumn) : -1;
+
     const updates: CellUpdate[] = [];
     for (const junak of junaky) {
       const row = junak.judgeBookRowNumber;
       if (row == null) continue;
+
+      if (sheetRows) {
+        const actualName = normalizeName(sheetRows[row - 1]?.[nameColIndex] ?? '');
+        const expectedName = normalizeName(`${junak.firstName} ${junak.lastName}`);
+        if (actualName !== expectedName) {
+          this.logger.warn(
+            `Skipping Книга судді push for junak ${junak.id} (kurin ${kurinId}): row ${row} now shows "${actualName}", expected "${expectedName}" — the sheet row likely moved or was edited since import`,
+          );
+          continue;
+        }
+      }
 
       for (const { key, field } of DEGREE_DATE_FIELDS) {
         const column = fieldToColumn.get(field);

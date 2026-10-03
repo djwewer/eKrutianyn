@@ -10,11 +10,11 @@ import { JudgeBookSyncService } from '../src/kurins/judge-book-sync.service';
 describe('Judge book nightly sync (e2e)', () => {
   let app: INestApplication;
   let service: JudgeBookSyncService;
-  let fakeGoogleDrive: { updateCellValues: jest.Mock };
+  let fakeGoogleDrive: { updateCellValues: jest.Mock; readSheetValues: jest.Mock };
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
-    fakeGoogleDrive = { updateCellValues: jest.fn().mockResolvedValue(undefined) };
+    fakeGoogleDrive = { updateCellValues: jest.fn().mockResolvedValue(undefined), readSheetValues: jest.fn() };
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(GoogleDriveService)
       .useValue(fakeGoogleDrive)
@@ -33,6 +33,7 @@ describe('Judge book nightly sync (e2e)', () => {
   beforeEach(async () => {
     await cleanDatabase(prisma);
     fakeGoogleDrive.updateCellValues.mockClear();
+    fakeGoogleDrive.readSheetValues.mockReset();
   });
 
   async function setupProgramWithPryhylnykStage() {
@@ -105,6 +106,34 @@ describe('Judge book nightly sync (e2e)', () => {
   it('does not push for a junak never imported from the sheet (no judgeBookRowNumber)', async () => {
     const { kurin } = await setupConnectedKurin();
     await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+
+    await service.syncKurinToSheet(kurin.id);
+
+    expect(fakeGoogleDrive.updateCellValues).toHaveBeenCalledWith(kurin.id, 'sheet-1', []);
+  });
+
+  it('skips a junak whose stored row no longer shows their name in the sheet', async () => {
+    const { kurin } = await setupConnectedKurin();
+    await prisma.junakImportMapping.update({
+      where: { kurinId: kurin.id },
+      data: {
+        columnMapping: [
+          { column: 'B', header: 'ПІБ', field: 'FIRST_LAST_NAME' },
+          { column: 'E', header: 'Телефон', field: 'PHONE' },
+        ],
+      },
+    });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.user.update({
+      where: { id: junak.id },
+      data: { firstName: 'Іван', lastName: 'Петренко', judgeBookRowNumber: 4, phone: '0671112233' },
+    });
+    fakeGoogleDrive.readSheetValues.mockResolvedValue([
+      ['#', 'ПІБ'],
+      [],
+      [],
+      ['', 'Хтось Інший'],
+    ]);
 
     await service.syncKurinToSheet(kurin.id);
 

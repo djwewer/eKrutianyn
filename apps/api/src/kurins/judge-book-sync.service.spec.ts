@@ -13,7 +13,7 @@ describe('JudgeBookSyncService', () => {
       probyStage: { findMany: jest.fn() },
       junakStageProgress: { findMany: jest.fn() },
     };
-    googleDrive = { updateCellValues: jest.fn() };
+    googleDrive = { updateCellValues: jest.fn(), readSheetValues: jest.fn() };
     service = new JudgeBookSyncService(prisma, googleDrive);
   });
 
@@ -41,17 +41,29 @@ describe('JudgeBookSyncService', () => {
     { id: 'stage-rozviduvach', programId: 'program-1', name: 'Проба розвідувача (Крок)' },
   ];
 
+  // Column B (index 1) is the mapped FIRST_LAST_NAME column in these fixtures;
+  // row N sits at array index N-1 (array index 0 = sheet row 1, the header).
+  const SHEET_ROWS = [
+    ['#', 'ПІБ'],
+    [],
+    [],
+    [],
+    ['', 'Іван Петренко'],
+    ['', 'Петро Сидоренко'],
+  ];
+
   it('builds one batched updateCellValues call for a kurin with a synced junak and an empty junak', async () => {
     prisma.kurin.findUnique.mockResolvedValue(KURIN);
     prisma.junakImportMapping.findUnique.mockResolvedValue(MAPPING);
     prisma.user.findMany.mockResolvedValue([
-      { id: 'junak-1', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
-      { id: 'junak-2', judgeBookRowNumber: 6, phone: null, email: 'junak2@example.com' },
+      { id: 'junak-1', firstName: 'Іван', lastName: 'Петренко', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
+      { id: 'junak-2', firstName: 'Петро', lastName: 'Сидоренко', judgeBookRowNumber: 6, phone: null, email: 'junak2@example.com' },
     ]);
     prisma.probyStage.findMany.mockResolvedValue(STAGES);
     prisma.junakStageProgress.findMany.mockResolvedValue([
       { junakId: 'junak-1', stageId: 'stage-pryhylnyk', firstClosedAt: new Date('2024-01-15T00:00:00.000Z') },
     ]);
+    googleDrive.readSheetValues.mockResolvedValue(SHEET_ROWS);
 
     await service.syncKurinToSheet('kurin-1');
 
@@ -91,14 +103,63 @@ describe('JudgeBookSyncService', () => {
       positionValueMapping: [],
     });
     prisma.user.findMany.mockResolvedValue([
-      { id: 'junak-1', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
+      { id: 'junak-1', firstName: 'Іван', lastName: 'Петренко', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
+    ]);
+    prisma.probyStage.findMany.mockResolvedValue(STAGES);
+    prisma.junakStageProgress.findMany.mockResolvedValue([]);
+    googleDrive.readSheetValues.mockResolvedValue(SHEET_ROWS);
+
+    await service.syncKurinToSheet('kurin-1');
+
+    expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', []);
+  });
+
+  it('skips a junak whose row no longer shows their name, instead of pushing into whoever is there now', async () => {
+    prisma.kurin.findUnique.mockResolvedValue(KURIN);
+    prisma.junakImportMapping.findUnique.mockResolvedValue(MAPPING);
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'junak-1', firstName: 'Іван', lastName: 'Петренко', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
+      { id: 'junak-2', firstName: 'Петро', lastName: 'Сидоренко', judgeBookRowNumber: 6, phone: '0679998877', email: 'junak2@example.com' },
+    ]);
+    prisma.probyStage.findMany.mockResolvedValue(STAGES);
+    prisma.junakStageProgress.findMany.mockResolvedValue([]);
+    // Row 5 (index 4) now shows someone else — the sheet was reordered or
+    // edited after import. Row 6 still matches junak-2.
+    googleDrive.readSheetValues.mockResolvedValue([
+      ['#', 'ПІБ'],
+      [],
+      [],
+      [],
+      ['', 'Зовсім Інший'],
+      ['', 'Петро Сидоренко'],
+    ]);
+
+    await service.syncKurinToSheet('kurin-1');
+
+    expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', [
+      { row: 6, column: 'E', value: '0679998877' },
+      { row: 6, column: 'F', value: 'junak2@example.com' },
+    ]);
+  });
+
+  it('does not re-read the sheet when no FIRST_LAST_NAME column is mapped (nothing to verify against)', async () => {
+    prisma.kurin.findUnique.mockResolvedValue(KURIN);
+    prisma.junakImportMapping.findUnique.mockResolvedValue({
+      columnMapping: [{ column: 'E', header: 'Телефон', field: 'PHONE' }],
+      positionValueMapping: [],
+    });
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'junak-1', firstName: 'Іван', lastName: 'Петренко', judgeBookRowNumber: 5, phone: '0501112233', email: 'junak1@example.com' },
     ]);
     prisma.probyStage.findMany.mockResolvedValue(STAGES);
     prisma.junakStageProgress.findMany.mockResolvedValue([]);
 
     await service.syncKurinToSheet('kurin-1');
 
-    expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', []);
+    expect(googleDrive.readSheetValues).not.toHaveBeenCalled();
+    expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', [
+      { row: 5, column: 'E', value: '0501112233' },
+    ]);
   });
 
   it('does nothing when the kurin has no judgeBookSpreadsheetId', async () => {
