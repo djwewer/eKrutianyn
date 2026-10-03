@@ -8,6 +8,8 @@ import { cleanDatabase } from './utils/clean-db';
 describe('Admin reference sources (e2e)', () => {
   let app: INestApplication;
   let adminKey: string;
+  let adminUsername: string;
+  let adminPassword: string;
   let fetchSpy: jest.SpyInstance;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
@@ -17,6 +19,8 @@ describe('Admin reference sources (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     adminKey = process.env.ADMIN_API_KEY ?? 'dev-admin-key-change-me';
+    adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
+    adminPassword = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
   });
 
   afterAll(async () => {
@@ -46,23 +50,33 @@ describe('Admin reference sources (e2e)', () => {
     const createRes = await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://pryvatri.de/himny', label: 'Гімни і молитви', probyPointId: point.id })
       .expect(201);
     expect(createRes.body).toMatchObject({ url: 'https://pryvatri.de/himny', label: 'Гімни і молитви', probyPointId: point.id });
 
-    const listRes = await request(app.getHttpServer()).get('/admin/reference-sources').set('x-admin-key', adminKey).expect(200);
+    const listRes = await request(app.getHttpServer()).get('/admin/reference-sources').set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword).expect(200);
     expect(listRes.body).toHaveLength(1);
     expect(listRes.body[0].probyPoint).toMatchObject({ id: point.id, description: 'Заспіває пластові пісні' });
 
     const updateRes = await request(app.getHttpServer())
       .patch(`/admin/reference-sources/${createRes.body.id}`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ label: 'Гімни, молитви і присяга' })
       .expect(200);
     expect(updateRes.body.label).toBe('Гімни, молитви і присяга');
 
-    await request(app.getHttpServer()).delete(`/admin/reference-sources/${createRes.body.id}`).set('x-admin-key', adminKey).expect(204);
-    const afterDelete = await request(app.getHttpServer()).get('/admin/reference-sources').set('x-admin-key', adminKey).expect(200);
+    await request(app.getHttpServer()).delete(`/admin/reference-sources/${createRes.body.id}`).set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword).expect(204);
+    const afterDelete = await request(app.getHttpServer()).get('/admin/reference-sources').set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword).expect(200);
     expect(afterDelete.body).toHaveLength(0);
   });
 
@@ -70,6 +84,8 @@ describe('Admin reference sources (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://www.wikispiv.com/wiki/Категорія:Пластові_пісні', label: 'Пластові пісні (wikispiv)' })
       .expect(201);
     expect(res.body.probyPointId).toBeNull();
@@ -79,11 +95,15 @@ describe('Admin reference sources (e2e)', () => {
     await request(app.getHttpServer())
       .patch('/admin/reference-sources/00000000-0000-0000-0000-000000000000')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ label: 'x' })
       .expect(404);
     await request(app.getHttpServer())
       .delete('/admin/reference-sources/00000000-0000-0000-0000-000000000000')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .expect(404);
   });
 
@@ -91,6 +111,8 @@ describe('Admin reference sources (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'not-a-url', label: 'Bad' })
       .expect(400);
     await request(app.getHttpServer()).get('/admin/reference-sources').expect(401);
@@ -100,6 +122,8 @@ describe('Admin reference sources (e2e)', () => {
     const createRes = await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://pryvatri.de/himny', label: 'Гімни і молитви' })
       .expect(201);
 
@@ -110,6 +134,8 @@ describe('Admin reference sources (e2e)', () => {
     const fetchNowRes = await request(app.getHttpServer())
       .post(`/admin/reference-sources/${createRes.body.id}/fetch-now`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .expect(201);
 
     expect(fetchNowRes.body.extractedText).toBe('Гімн Пласту Цвіт України і краса');
@@ -121,6 +147,8 @@ describe('Admin reference sources (e2e)', () => {
     const createRes = await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://pryvatri.de/down', label: 'Гімни і молитви' })
       .expect(201);
 
@@ -129,12 +157,16 @@ describe('Admin reference sources (e2e)', () => {
       status: 200,
       text: async () => '<body>Перший успішний фетч</body>',
     } as Response);
-    await request(app.getHttpServer()).post(`/admin/reference-sources/${createRes.body.id}/fetch-now`).set('x-admin-key', adminKey).expect(201);
+    await request(app.getHttpServer()).post(`/admin/reference-sources/${createRes.body.id}/fetch-now`).set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword).expect(201);
 
     fetchSpy.mockRejectedValueOnce(new Error('connection reset'));
     const secondFetch = await request(app.getHttpServer())
       .post(`/admin/reference-sources/${createRes.body.id}/fetch-now`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .expect(201);
 
     expect(secondFetch.body.extractedText).toBe('Перший успішний фетч');
@@ -145,11 +177,15 @@ describe('Admin reference sources (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://pryvatri.de/ok', label: 'OK source' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/admin/reference-sources')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ url: 'https://pryvatri.de/bad', label: 'Bad source' })
       .expect(201);
 
@@ -159,7 +195,9 @@ describe('Admin reference sources (e2e)', () => {
       return Promise.resolve({ ok: true, status: 200, text: async () => '<body>OK</body>' } as Response);
     });
 
-    const res = await request(app.getHttpServer()).post('/admin/reference-sources/fetch-all').set('x-admin-key', adminKey).expect(201);
+    const res = await request(app.getHttpServer()).post('/admin/reference-sources/fetch-all').set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword).expect(201);
     expect(res.body).toEqual({ succeeded: 1, failed: 1 });
   });
 });

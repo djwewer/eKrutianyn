@@ -9,6 +9,8 @@ import { createProbyProgramTree } from './utils/fixtures';
 describe('Admin point mappings (e2e)', () => {
   let app: INestApplication;
   let adminKey: string;
+  let adminUsername: string;
+  let adminPassword: string;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
@@ -17,6 +19,8 @@ describe('Admin point mappings (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     adminKey = process.env.ADMIN_API_KEY ?? 'dev-admin-key-change-me';
+    adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
+    adminPassword = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
   });
 
   afterAll(async () => {
@@ -36,6 +40,8 @@ describe('Admin point mappings (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/admin/point-mappings')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ oldPointId: oldTree.points[0].id, newPointId: newTree.points[0].id })
       .expect(201);
 
@@ -49,6 +55,8 @@ describe('Admin point mappings (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/point-mappings')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ oldPointId: oldTree.points[0].id, newPointId: '00000000-0000-0000-0000-000000000000' })
       .expect(404);
   });
@@ -60,12 +68,16 @@ describe('Admin point mappings (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/point-mappings')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ oldPointId: oldTree.points[0].id, newPointId: newTree.points[0].id })
       .expect(201);
 
     await request(app.getHttpServer())
       .post('/admin/point-mappings')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ oldPointId: oldTree.points[0].id, newPointId: newTree.points[0].id })
       .expect(409);
   });

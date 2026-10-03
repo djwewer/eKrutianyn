@@ -12,7 +12,13 @@ test('lets a user reset a forgotten password end to end', async ({ page, request
 
   const mailRes = await request.get(
     `http://localhost:3001/admin/test-mail?to=${encodeURIComponent(zvyazkovyiEmail)}`,
-    { headers: { 'x-admin-key': 'dev-admin-key' } },
+    {
+      headers: {
+        'x-admin-key': process.env.ADMIN_API_KEY ?? 'dev-admin-key',
+        'x-admin-username': process.env.ADMIN_USERNAME ?? 'admin',
+        'x-admin-password': process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me',
+      },
+    },
   );
   const mail = await mailRes.json();
   expect(mail.type).toBe('password-reset');

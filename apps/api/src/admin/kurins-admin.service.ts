@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { CreateKurinDto } from './dto/create-kurin.dto';
+import { UpdateKurinDto } from './dto/update-kurin.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 
 @Injectable()
@@ -11,6 +12,62 @@ export class KurinsAdminService {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
   ) {}
+
+  async listKurins() {
+    const kurins = await this.prisma.kurin.findMany({
+      orderBy: { kurinNumber: 'asc' },
+      include: { _count: { select: { users: true, hurtky: true } } },
+    });
+    return kurins.map((k) => ({
+      id: k.id,
+      name: k.name,
+      kurinNumber: k.kurinNumber,
+      gender: k.gender,
+      stanytsia: k.stanytsia,
+      probyProgramId: k.probyProgramId,
+      createdAt: k.createdAt,
+      userCount: k._count.users,
+      hurtokCount: k._count.hurtky,
+    }));
+  }
+
+  async updateKurin(id: string, dto: UpdateKurinDto) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    if (dto.kurinNumber && dto.kurinNumber !== kurin.kurinNumber) {
+      const existing = await this.prisma.kurin.findUnique({ where: { kurinNumber: dto.kurinNumber } });
+      if (existing) {
+        throw new ConflictException('This kurin number is already in use');
+      }
+    }
+    return this.prisma.kurin.update({
+      where: { id },
+      data: { name: dto.name, kurinNumber: dto.kurinNumber },
+    });
+  }
+
+  async deleteKurin(id: string): Promise<void> {
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id },
+      include: { _count: { select: { users: true, hurtky: true } } },
+    });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    // Deleting a kurin with members or hurtky would either orphan them (FK
+    // violation, since neither relation cascades) or silently delete people's
+    // accounts along with it — neither is a safe default for an admin button.
+    // The operator has to empty it out first (archive/move its members) so a
+    // delete here is always an intentional, inert cleanup.
+    if (kurin._count.users > 0 || kurin._count.hurtky > 0) {
+      throw new ConflictException(
+        'This kurin still has members or hurtky attached — remove or reassign them before deleting it',
+      );
+    }
+    await this.prisma.kurin.delete({ where: { id } });
+  }
 
   async createKurin(dto: CreateKurinDto) {
     const program = await this.prisma.probyProgram.findUnique({ where: { id: dto.probyProgramId } });

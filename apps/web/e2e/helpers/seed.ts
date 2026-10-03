@@ -1,10 +1,17 @@
 const API_URL = 'http://localhost:3001';
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
 
 async function adminPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_API_KEY },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-key': ADMIN_API_KEY,
+      'x-admin-username': ADMIN_USERNAME,
+      'x-admin-password': ADMIN_PASSWORD,
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {

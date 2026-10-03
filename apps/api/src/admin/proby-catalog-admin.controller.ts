@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AdminKeyGuard } from '../common/guards/admin-key.guard';
+import { AdminCredentialsGuard } from '../common/guards/admin-credentials.guard';
 import { ProbyCatalogAdminService } from './proby-catalog-admin.service';
 import { CreateProbyProgramDto } from './dto/create-proby-program.dto';
 import { CreateProbyStageDto } from './dto/create-proby-stage.dto';
@@ -7,7 +8,7 @@ import { CreateProbyCategoryDto } from './dto/create-proby-category.dto';
 import { CreateProbyPointDto } from './dto/create-proby-point.dto';
 import { UpdateProbyPointReferenceDto } from './dto/update-proby-point-reference.dto';
 
-@UseGuards(AdminKeyGuard)
+@UseGuards(AdminKeyGuard, AdminCredentialsGuard)
 @Controller('admin')
 export class ProbyCatalogAdminController {
   constructor(private readonly service: ProbyCatalogAdminService) {}

@@ -3,6 +3,8 @@ import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
 
 test('lets an admin curate a point\'s reference text, and it persists across reload', async ({ page }) => {
   // The admin page lists the full catalog across every program ever created in
@@ -19,6 +21,8 @@ test('lets an admin curate a point\'s reference text, and it persists across rel
   await page.goto('/admin');
 
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
+  await page.getByPlaceholder('Логін').fill(ADMIN_USERNAME);
+  await page.getByPlaceholder('Пароль').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Увійти' }).click();
 
   const stageDetails = page.locator('details', { hasText: uniqueDescription });
@@ -47,7 +51,9 @@ test('shows an error for a wrong admin key instead of the catalog', async ({ pag
   await page.goto('/admin');
 
   await page.getByPlaceholder('Адмін-ключ').fill('definitely-wrong-key');
+  await page.getByPlaceholder('Логін').fill(ADMIN_USERNAME);
+  await page.getByPlaceholder('Пароль').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Увійти' }).click();
 
-  await expect(page.getByText('Ввести інший ключ')).toBeVisible();
+  await expect(page.getByText('Ввести дані знову')).toBeVisible();
 });

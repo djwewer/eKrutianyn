@@ -13,13 +13,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
+import { type AdminCredentials } from '@/lib/queries/admin-credentials';
 import type { AdminProbyPoint, AdminProbyProgram } from '@/lib/types';
 
-const STORAGE_KEY = 'plastAdminKey';
+const STORAGE_KEY = 'plastAdminCredentials';
 
-function readStoredKey(): string | null {
+function readStoredCredentials(): AdminCredentials | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.key || !parsed?.username || !parsed?.password) return null;
+    return parsed as AdminCredentials;
   } catch {
     return null;
   }
@@ -31,52 +36,77 @@ export default function AdminProbyCatalogPage() {
   // non-React-owned source runs before paint — not a cascading render loop,
   // which is what the lint rule is meant to catch. Same pattern as
   // components/ui/theme-toggle.tsx's dark-mode sync.
-  const [adminKey, setAdminKeyState] = useState<string | null>(null);
+  const [credentials, setCredentialsState] = useState<AdminCredentials | null>(null);
   const [keyInput, setKeyInput] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
 
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAdminKeyState(readStoredKey());
+    setCredentialsState(readStoredCredentials());
   }, []);
 
-  function handleSetKey() {
-    const trimmed = keyInput.trim();
-    if (!trimmed) return;
+  function handleSetCredentials() {
+    const next: AdminCredentials = {
+      key: keyInput.trim(),
+      username: usernameInput.trim(),
+      password: passwordInput.trim(),
+    };
+    if (!next.key || !next.username || !next.password) return;
     try {
-      localStorage.setItem(STORAGE_KEY, trimmed);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
-      // Private browsing / blocked storage — the key just won't persist across reloads.
+      // Private browsing / blocked storage — the credentials just won't persist across reloads.
     }
-    setAdminKeyState(trimmed);
+    setCredentialsState(next);
   }
 
-  function handleClearKey() {
+  function handleClearCredentials() {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       // ignore
     }
-    setAdminKeyState(null);
+    setCredentialsState(null);
     setKeyInput('');
+    setUsernameInput('');
+    setPasswordInput('');
   }
 
-  const { data: programs, isLoading, isError, error } = useAdminProbyPrograms(adminKey);
+  const { data: programs, isLoading, isError, error } = useAdminProbyPrograms(credentials);
 
-  if (!adminKey) {
+  if (!credentials) {
     return (
       <div className="mx-auto max-w-sm space-y-4">
         <h1 className="text-2xl font-bold">Адмін: каталог проби</h1>
         <Card>
           <CardContent className="space-y-3 pt-6">
-            <p className="text-sm text-muted-foreground">Введіть адмін-ключ (ADMIN_API_KEY з середовища бекенда).</p>
+            <p className="text-sm text-muted-foreground">
+              Потрібні два незалежні фактори: адмін-ключ (ADMIN_API_KEY) та логін+пароль (ADMIN_USERNAME /
+              ADMIN_PASSWORD) з середовища бекенда.
+            </p>
             <Input
               type="password"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSetKey()}
               placeholder="Адмін-ключ"
             />
-            <Button onClick={handleSetKey} disabled={!keyInput.trim()}>
+            <Input
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              placeholder="Логін"
+            />
+            <Input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSetCredentials()}
+              placeholder="Пароль"
+            />
+            <Button
+              onClick={handleSetCredentials}
+              disabled={!keyInput.trim() || !usernameInput.trim() || !passwordInput.trim()}
+            >
               Увійти
             </Button>
           </CardContent>
@@ -89,7 +119,7 @@ export default function AdminProbyCatalogPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Адмін: каталог проби</h1>
-        <Button size="sm" variant="outline" onClick={handleClearKey}>
+        <Button size="sm" variant="outline" onClick={handleClearCredentials}>
           Вийти
         </Button>
       </div>
@@ -103,8 +133,8 @@ export default function AdminProbyCatalogPage() {
         <Card>
           <CardContent className="space-y-3 pt-6">
             <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Невірний ключ.'}</p>
-            <Button size="sm" variant="outline" onClick={handleClearKey}>
-              Ввести інший ключ
+            <Button size="sm" variant="outline" onClick={handleClearCredentials}>
+              Ввести дані знову
             </Button>
           </CardContent>
         </Card>
@@ -135,7 +165,7 @@ export default function AdminProbyCatalogPage() {
                             .slice()
                             .sort((a, b) => a.order - b.order)
                             .map((point) => (
-                              <PointRow key={point.id} point={point} adminKey={adminKey} />
+                              <PointRow key={point.id} point={point} credentials={credentials} />
                             ))}
                         </div>
                       </div>
@@ -147,17 +177,17 @@ export default function AdminProbyCatalogPage() {
         </Card>
       ))}
 
-      <ReferenceSourcesSection adminKey={adminKey} programs={programs ?? []} />
+      <ReferenceSourcesSection credentials={credentials} programs={programs ?? []} />
     </div>
   );
 }
 
-function ReferenceSourcesSection({ adminKey, programs }: { adminKey: string; programs: AdminProbyProgram[] }) {
-  const { data: sources, isLoading } = useAdminReferenceSources(adminKey);
-  const create = useCreateReferenceSource(adminKey);
-  const deleteSource = useDeleteReferenceSource(adminKey);
-  const fetchNow = useFetchReferenceSourceNow(adminKey);
-  const fetchAllNow = useFetchAllReferenceSourcesNow(adminKey);
+function ReferenceSourcesSection({ credentials, programs }: { credentials: AdminCredentials; programs: AdminProbyProgram[] }) {
+  const { data: sources, isLoading } = useAdminReferenceSources(credentials);
+  const create = useCreateReferenceSource(credentials);
+  const deleteSource = useDeleteReferenceSource(credentials);
+  const fetchNow = useFetchReferenceSourceNow(credentials);
+  const fetchAllNow = useFetchAllReferenceSourcesNow(credentials);
 
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
@@ -263,9 +293,9 @@ function ReferenceSourcesSection({ adminKey, programs }: { adminKey: string; pro
   );
 }
 
-function PointRow({ point, adminKey }: { point: AdminProbyPoint; adminKey: string }) {
+function PointRow({ point, credentials }: { point: AdminProbyPoint; credentials: AdminCredentials }) {
   const [text, setText] = useState(point.referenceText ?? '');
-  const update = useUpdateProbyPointReference(adminKey);
+  const update = useUpdateProbyPointReference(credentials);
   const dirty = text !== (point.referenceText ?? '');
 
   function handleSave() {

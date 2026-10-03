@@ -3,6 +3,8 @@ import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
 
 test('lets an admin add a reference source linked to a point, and it persists across reload', async ({ page }) => {
   const uniqueDescription = `Заспіває пластові пісні ${Date.now()}`;
@@ -13,6 +15,8 @@ test('lets an admin add a reference source linked to a point, and it persists ac
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/admin');
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
+  await page.getByPlaceholder('Логін').fill(ADMIN_USERNAME);
+  await page.getByPlaceholder('Пароль').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Увійти' }).click();
 
   const section = page.getByText('Джерела в інтернеті (пісні, гімни тощо)').locator('..').locator('..');
@@ -37,6 +41,8 @@ test('lets an admin delete a reference source', async ({ page }) => {
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/admin');
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
+  await page.getByPlaceholder('Логін').fill(ADMIN_USERNAME);
+  await page.getByPlaceholder('Пароль').fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Увійти' }).click();
 
   const section = page.getByText('Джерела в інтернеті (пісні, гімни тощо)').locator('..').locator('..');

@@ -1,9 +1,10 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AdminKeyGuard } from '../common/guards/admin-key.guard';
+import { AdminCredentialsGuard } from '../common/guards/admin-credentials.guard';
 import { PointMappingAdminService } from './point-mapping-admin.service';
 import { CreatePointMappingDto } from './dto/create-point-mapping.dto';
 
-@UseGuards(AdminKeyGuard)
+@UseGuards(AdminKeyGuard, AdminCredentialsGuard)
 @Controller('admin/point-mappings')
 export class PointMappingAdminController {
   constructor(private readonly service: PointMappingAdminService) {}

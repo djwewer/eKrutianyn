@@ -8,6 +8,8 @@ import { cleanDatabase } from './utils/clean-db';
 describe('Admin proby catalog (e2e)', () => {
   let app: INestApplication;
   let adminKey: string;
+  let adminUsername: string;
+  let adminPassword: string;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
@@ -16,6 +18,8 @@ describe('Admin proby catalog (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     adminKey = process.env.ADMIN_API_KEY ?? 'dev-admin-key-change-me';
+    adminUsername = process.env.ADMIN_USERNAME ?? 'admin';
+    adminPassword = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
   });
 
   afterAll(async () => {
@@ -32,24 +36,32 @@ describe('Admin proby catalog (e2e)', () => {
     const programRes = await request(app.getHttpServer())
       .post('/admin/proby-programs')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
       .expect(201);
 
     const stageRes = await request(app.getHttpServer())
       .post(`/admin/proby-programs/${programRes.body.id}/stages`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, name: 'Перший ступінь' })
       .expect(201);
 
     const categoryRes = await request(app.getHttpServer())
       .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ name: 'Практичне пластування' })
       .expect(201);
 
     const pointRes = await request(app.getHttpServer())
       .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, description: "В'язати 5 вузлів" })
       .expect(201);
 
@@ -60,6 +72,8 @@ describe('Admin proby catalog (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/proby-programs/00000000-0000-0000-0000-000000000000/stages')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, name: 'Перший ступінь' })
       .expect(404);
   });
@@ -75,27 +89,37 @@ describe('Admin proby catalog (e2e)', () => {
     const programRes = await request(app.getHttpServer())
       .post('/admin/proby-programs')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
       .expect(201);
     const stageRes = await request(app.getHttpServer())
       .post(`/admin/proby-programs/${programRes.body.id}/stages`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, name: 'Перший ступінь' })
       .expect(201);
     const categoryRes = await request(app.getHttpServer())
       .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ name: 'Історія' })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, description: 'Описати заснування Пласту' })
       .expect(201);
 
     const listRes = await request(app.getHttpServer())
       .get('/admin/proby-programs')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .expect(200);
 
     const program = listRes.body.find((p: { id: string }) => p.id === programRes.body.id);
@@ -113,27 +137,37 @@ describe('Admin proby catalog (e2e)', () => {
     const programRes = await request(app.getHttpServer())
       .post('/admin/proby-programs')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
       .expect(201);
     const stageRes = await request(app.getHttpServer())
       .post(`/admin/proby-programs/${programRes.body.id}/stages`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, name: 'Перший ступінь' })
       .expect(201);
     const categoryRes = await request(app.getHttpServer())
       .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ name: 'Історія' })
       .expect(201);
     const pointRes = await request(app.getHttpServer())
       .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, description: 'Описати заснування Пласту' })
       .expect(201);
 
     const updateRes = await request(app.getHttpServer())
       .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ referenceText: 'Пласт засновано 12 квітня 1912 року у Львові.' })
       .expect(200);
     expect(updateRes.body.referenceText).toBe('Пласт засновано 12 квітня 1912 року у Львові.');
@@ -141,6 +175,8 @@ describe('Admin proby catalog (e2e)', () => {
     const clearRes = await request(app.getHttpServer())
       .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ referenceText: null })
       .expect(200);
     expect(clearRes.body.referenceText).toBeNull();
@@ -150,6 +186,8 @@ describe('Admin proby catalog (e2e)', () => {
     await request(app.getHttpServer())
       .patch('/admin/proby-points/00000000-0000-0000-0000-000000000000/reference')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ referenceText: 'щось' })
       .expect(404);
   });
@@ -158,27 +196,37 @@ describe('Admin proby catalog (e2e)', () => {
     const programRes = await request(app.getHttpServer())
       .post('/admin/proby-programs')
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
       .expect(201);
     const stageRes = await request(app.getHttpServer())
       .post(`/admin/proby-programs/${programRes.body.id}/stages`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, name: 'Перший ступінь' })
       .expect(201);
     const categoryRes = await request(app.getHttpServer())
       .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ name: 'Історія' })
       .expect(201);
     const pointRes = await request(app.getHttpServer())
       .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ order: 1, description: 'Описати заснування Пласту' })
       .expect(201);
 
     await request(app.getHttpServer())
       .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
       .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
       .send({ referenceText: 'a'.repeat(4001) })
       .expect(400);
   });

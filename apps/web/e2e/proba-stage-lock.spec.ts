@@ -5,11 +5,18 @@ import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed'
 
 const API_URL = 'http://localhost:3001';
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
 
 async function adminPost<T>(path: string, body: unknown, adminKey = ADMIN_API_KEY): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-key': adminKey,
+      'x-admin-username': ADMIN_USERNAME,
+      'x-admin-password': ADMIN_PASSWORD,
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
