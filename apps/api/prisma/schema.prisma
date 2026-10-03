@@ -66,27 +66,27 @@ enum ApprovalActionType {
 }
 
 model Kurin {
-  id             String      @id @default(uuid())
-  name           String
-  kurinNumber    String      @unique
-  gender         KurinGender
-  stanytsia      String
-  probyProgramId String
-  probyProgram   ProbyProgram @relation(fields: [probyProgramId], references: [id])
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  driveFolderId        String?
-  driveFolderName      String?
-  driveRefreshToken    String?
-  driveConnectedEmail  String?
-  driveConnectedAt     DateTime?
+  id                       String       @id @default(uuid())
+  name                     String
+  kurinNumber              String       @unique
+  gender                   KurinGender
+  stanytsia                String
+  probyProgramId           String
+  probyProgram             ProbyProgram @relation(fields: [probyProgramId], references: [id])
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  driveFolderId            String?
+  driveFolderName          String?
+  driveRefreshToken        String?
+  driveConnectedEmail      String?
+  driveConnectedAt         DateTime?
   judgeBookSpreadsheetId   String?
   judgeBookSpreadsheetName String?
 
-  hurtky Hurtok[]
-  inventoryItems InventoryItem[]
-  users  User[]
-  positions KurinPosition[]
+  hurtky             Hurtok[]
+  inventoryItems     InventoryItem[]
+  users              User[]
+  positions          KurinPosition[]
   junakImportMapping JunakImportMapping?
 }
 
@@ -100,12 +100,12 @@ model JunakImportMapping {
 }
 
 model Hurtok {
-  id      String  @id @default(uuid())
-  kurinId String
-  kurin   Kurin   @relation(fields: [kurinId], references: [id])
-  name    String
-  slug    String?
-  number  String?
+  id           String    @id @default(uuid())
+  kurinId      String
+  kurin        Kurin     @relation(fields: [kurinId], references: [id])
+  name         String
+  slug         String?
+  number       String?
   foundedAt    DateTime?
   archivedAt   DateTime?
   archivedById String?
@@ -113,53 +113,54 @@ model Hurtok {
 
   junaky               User[]            @relation("JunakHurtok")
   vykhovnykAssignments VykhovnykHurtok[]
-  positions KurinPosition[]
+  positions            KurinPosition[]
 }
 
 model User {
-  id           String    @id @default(uuid())
-  firstName    String
-  lastName     String
-  nickname     String?
-  email        String    @unique
-  passwordHash String?
-  googleId     String?   @unique
-  role         Role
-  birthDate    DateTime?
-  notes        String?
-  phone        String?
+  id                 String    @id @default(uuid())
+  firstName          String
+  lastName           String
+  nickname           String?
+  email              String    @unique
+  passwordHash       String?
+  googleId           String?   @unique
+  role               Role
+  birthDate          DateTime?
+  notes              String?
+  phone              String?
   judgeBookRowNumber Int?
-  photoData       Bytes?
-  photoMimeType   String?
-  photoUpdatedAt  DateTime?
-  kurinId      String
-  kurin        Kurin     @relation(fields: [kurinId], references: [id])
-  hurtokId     String?
-  hurtok       Hurtok?   @relation("JunakHurtok", fields: [hurtokId], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  archivedAt   DateTime?
-  archivedById String?
-  archivedBy   User?     @relation("UserArchivedBy", fields: [archivedById], references: [id])
-  archivedUsers User[]   @relation("UserArchivedBy")
-  hurtokArchivedByMe Hurtok[] @relation("HurtokArchivedBy")
+  photoData          Bytes?
+  photoMimeType      String?
+  photoUpdatedAt     DateTime?
+  kurinId            String
+  kurin              Kurin     @relation(fields: [kurinId], references: [id])
+  hurtokId           String?
+  hurtok             Hurtok?   @relation("JunakHurtok", fields: [hurtokId], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  archivedAt         DateTime?
+  archivedById       String?
+  archivedBy         User?     @relation("UserArchivedBy", fields: [archivedById], references: [id])
+  archivedUsers      User[]    @relation("UserArchivedBy")
+  hurtokArchivedByMe Hurtok[]  @relation("HurtokArchivedBy")
 
-  vykhovnykAssignments VykhovnykHurtok[]  @relation("VykhovnykAssignments")
-  progressEntries      JunakProgress[]    @relation("JunakProgressEntries")
-  confirmedProgress    JunakProgress[]    @relation("ConfirmedByUser")
-  auditLogEntries      ProgressAuditLog[] @relation("ActorAuditLogs")
-  initiatedRequests    ApprovalRequest[]  @relation("InitiatedRequests")
-  decidedRequests      ApprovalRequest[]  @relation("DecidedRequests")
-  passwordResetTokens  PasswordResetToken[]
-  emailChangeRequests  EmailChangeRequest[]
-  profileChangeLogs    ProfileChangeLog[]
-  positionsHeld     KurinPosition[] @relation("PositionHolder")
-  positionsAssigned KurinPosition[] @relation("PositionAssignedBy")
-  positionsRemoved  KurinPosition[] @relation("PositionRemovedBy")
-  guardianContacts  GuardianContact[] @relation("JunakGuardians")
+  vykhovnykAssignments  VykhovnykHurtok[]    @relation("VykhovnykAssignments")
+  progressEntries       JunakProgress[]      @relation("JunakProgressEntries")
+  confirmedProgress     JunakProgress[]      @relation("ConfirmedByUser")
+  auditLogEntries       ProgressAuditLog[]   @relation("ActorAuditLogs")
+  initiatedRequests     ApprovalRequest[]    @relation("InitiatedRequests")
+  decidedRequests       ApprovalRequest[]    @relation("DecidedRequests")
+  passwordResetTokens   PasswordResetToken[]
+  emailChangeRequests   EmailChangeRequest[]
+  profileChangeLogs     ProfileChangeLog[]
+  positionsHeld         KurinPosition[]      @relation("PositionHolder")
+  positionsAssigned     KurinPosition[]      @relation("PositionAssignedBy")
+  positionsRemoved      KurinPosition[]      @relation("PositionRemovedBy")
+  guardianContacts      GuardianContact[]    @relation("JunakGuardians")
   createdInventoryItems InventoryItem[]
-  stageProgressEntries JunakStageProgress[] @relation("JunakStageProgressEntries")
-  stageClosedLogs      JunakStageProgress[] @relation("StageClosedByUser")
+  stageProgressEntries  JunakStageProgress[] @relation("JunakStageProgressEntries")
+  stageClosedLogs       JunakStageProgress[] @relation("StageClosedByUser")
+  aiConversation        AiConversation?
 }
 
 model KurinPosition {
@@ -227,7 +228,7 @@ model VykhovnykHurtok {
 }
 
 model ProbyProgram {
-  id      String               @id @default(uuid())
+  id      String              @id @default(uuid())
   version ProbyProgramVersion
   name    String
 
@@ -242,7 +243,7 @@ model ProbyStage {
   order     Int
   name      String
 
-  categories ProbyCategory[]
+  categories           ProbyCategory[]
   stageProgressEntries JunakStageProgress[]
 }
 
@@ -266,6 +267,7 @@ model ProbyPoint {
   transferredEntries JunakProgress[] @relation("TransferredFromPoint")
   mappingsAsOld      PointMapping[]  @relation("OldPoint")
   mappingsAsNew      PointMapping[]  @relation("NewPoint")
+  aiMessages         AiMessage[]
 }
 
 model PointMapping {
@@ -362,4 +364,30 @@ model ProfileChangeLog {
   oldValue  String?
   newValue  String?
   createdAt DateTime @default(now())
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AiConversation {
+  id        String      @id @default(uuid())
+  userId    String      @unique
+  user      User        @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+  messages  AiMessage[]
+}
+
+model AiMessage {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id])
+  role           AiMessageRole
+  content        String         @db.Text
+  probyPointId   String?
+  probyPoint     ProbyPoint?    @relation(fields: [probyPointId], references: [id])
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
 }
