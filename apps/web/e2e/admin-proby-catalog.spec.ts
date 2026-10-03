@@ -16,7 +16,7 @@ test('lets an admin curate a point\'s reference text, and it persists across rel
   // auth-gating middleware applies here too) — the admin key is a second,
   // separate gate on top of that, not a replacement for it.
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/admin/proby-catalog');
+  await page.goto('/admin');
 
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
   await page.getByRole('button', { name: 'Увійти' }).click();
@@ -44,7 +44,7 @@ test('shows an error for a wrong admin key instead of the catalog', async ({ pag
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/admin/proby-catalog');
+  await page.goto('/admin');
 
   await page.getByPlaceholder('Адмін-ключ').fill('definitely-wrong-key');
   await page.getByRole('button', { name: 'Увійти' }).click();

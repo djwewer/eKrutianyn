@@ -11,7 +11,7 @@ test('lets an admin add a reference source linked to a point, and it persists ac
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/admin/proby-catalog');
+  await page.goto('/admin');
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
   await page.getByRole('button', { name: 'Увійти' }).click();
 
@@ -35,7 +35,7 @@ test('lets an admin delete a reference source', async ({ page }) => {
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.goto('/admin/proby-catalog');
+  await page.goto('/admin');
   await page.getByPlaceholder('Адмін-ключ').fill(ADMIN_API_KEY);
   await page.getByRole('button', { name: 'Увійти' }).click();
 

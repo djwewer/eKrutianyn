@@ -14,7 +14,7 @@ async function adminPost<T>(path: string, body: unknown): Promise<T> {
 }
 
 export async function seedProbyProgram(pointDescriptions: string[] = ['Точка 1']) {
-  const program = await adminPost<{ id: string }>('/admin/proby-programs', {
+  const program = await adminPost<{ id: string; name: string }>('/admin/proby-programs', {
     version: 'OLD',
     name: `Програма ${Date.now()}`,
   });
