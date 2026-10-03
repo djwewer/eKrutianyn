@@ -4,6 +4,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
   await prisma.$transaction([
     prisma.aiMessage.deleteMany(),
     prisma.aiConversation.deleteMany(),
+    prisma.referenceSource.deleteMany(),
     prisma.progressAuditLog.deleteMany(),
     prisma.approvalRequest.deleteMany(),
     prisma.junakProgress.deleteMany(),

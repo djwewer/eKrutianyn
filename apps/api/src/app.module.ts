@@ -18,6 +18,7 @@ import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.mo
 import { InventoryModule } from './inventory/inventory.module';
 import { JunakImportModule } from './junak-import/junak-import.module';
 import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
+import { ReferenceSourcesModule } from './reference-sources/reference-sources.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
     InventoryModule,
     JunakImportModule,
     AiAssistantModule,
+    ReferenceSourcesModule,
   ],
   controllers: [HealthController],
 })

@@ -182,6 +182,17 @@ export interface AdminProbyProgram {
   stages: AdminProbyStage[];
 }
 
+export interface AdminReferenceSource {
+  id: string;
+  url: string;
+  label: string;
+  probyPointId: string | null;
+  probyPoint: { id: string; description: string } | null;
+  extractedText: string | null;
+  lastFetchedAt: string | null;
+  lastError: string | null;
+}
+
 export interface HurtokMember extends UserSummary {
   positions: { positionType: PositionType; scope: PositionScope; hurtokId: string | null }[];
 }

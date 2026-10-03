@@ -47,7 +47,11 @@ async function proxy(request: NextRequest, path: string[]) {
       responseHeaders[name] = value;
     }
   }
-  return new NextResponse(responseBody, {
+  // The Fetch spec forbids a body (even an empty one) on a null-body status —
+  // passing the (zero-length) ArrayBuffer through unconditionally throws
+  // "Invalid response status code 204" for every 204/205/304 the backend sends.
+  const hasNullBodyStatus = [204, 205, 304].includes(response.status);
+  return new NextResponse(hasNullBodyStatus ? null : responseBody, {
     status: response.status,
     headers: responseHeaders,
   });

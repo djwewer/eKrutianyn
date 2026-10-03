@@ -15,6 +15,7 @@ function makePoint(overrides: Partial<any> = {}) {
     id: 'point-1',
     description: 'Описати історію Пласту',
     referenceText: null,
+    referenceSources: [],
     categoryId: 'category-1',
     category: {
       id: 'category-1',
@@ -155,6 +156,35 @@ describe('AiAssistantService', () => {
 
     const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
     expect(systemMessage.content).not.toContain('Довідковий матеріал');
+  });
+
+  it('includes fetched ReferenceSource text, labeled, with its own only-use-these-facts instruction', async () => {
+    prisma.probyPoint.findUnique.mockResolvedValue(
+      makePoint({
+        referenceSources: [
+          { label: 'Гімни і молитви (pryvatri.de)', extractedText: 'Гімн Пласту: Цвіт України і краса...' },
+        ],
+      }),
+    );
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'Заспівай гімн' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Гімни і молитви (pryvatri.de)');
+    expect(systemMessage.content).toContain('Гімн Пласту: Цвіт України і краса...');
+    expect(systemMessage.content).toContain('не маєш його, а не вигадуй');
+  });
+
+  it('skips a ReferenceSource that has never been successfully fetched (null extractedText)', async () => {
+    prisma.probyPoint.findUnique.mockResolvedValue(
+      makePoint({ referenceSources: [{ label: 'Ще не завантажено', extractedText: null }] }),
+    );
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).not.toContain('Ще не завантажено');
+    expect(systemMessage.content).not.toContain('Додаткові джерела');
   });
 
   it("rejects a probyPointId that doesn't belong to the actor's kurin's program", async () => {

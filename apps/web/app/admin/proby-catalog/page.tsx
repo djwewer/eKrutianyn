@@ -2,11 +2,18 @@
 
 import { useLayoutEffect, useState } from 'react';
 import { useAdminProbyPrograms, useUpdateProbyPointReference } from '@/lib/queries/admin-proby-catalog';
+import {
+  useAdminReferenceSources,
+  useCreateReferenceSource,
+  useDeleteReferenceSource,
+  useFetchAllReferenceSourcesNow,
+  useFetchReferenceSourceNow,
+} from '@/lib/queries/admin-reference-sources';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accessErrorMessage } from '@/lib/error-message';
-import type { AdminProbyPoint } from '@/lib/types';
+import type { AdminProbyPoint, AdminProbyProgram } from '@/lib/types';
 
 const STORAGE_KEY = 'plastAdminKey';
 
@@ -139,7 +146,120 @@ export default function AdminProbyCatalogPage() {
           </CardContent>
         </Card>
       ))}
+
+      <ReferenceSourcesSection adminKey={adminKey} programs={programs ?? []} />
     </div>
+  );
+}
+
+function ReferenceSourcesSection({ adminKey, programs }: { adminKey: string; programs: AdminProbyProgram[] }) {
+  const { data: sources, isLoading } = useAdminReferenceSources(adminKey);
+  const create = useCreateReferenceSource(adminKey);
+  const deleteSource = useDeleteReferenceSource(adminKey);
+  const fetchNow = useFetchReferenceSourceNow(adminKey);
+  const fetchAllNow = useFetchAllReferenceSourcesNow(adminKey);
+
+  const [label, setLabel] = useState('');
+  const [url, setUrl] = useState('');
+  const [probyPointId, setProbyPointId] = useState('');
+
+  const allPoints = programs.flatMap((program) =>
+    program.stages.flatMap((stage) =>
+      stage.categories.flatMap((category) =>
+        category.points.map((point) => ({ id: point.id, label: `${program.name} / ${stage.name} / ${point.description}` })),
+      ),
+    ),
+  );
+
+  function handleCreate() {
+    if (!label.trim() || !url.trim()) return;
+    create.mutate(
+      { label: label.trim(), url: url.trim(), probyPointId: probyPointId || null },
+      {
+        onSuccess: () => {
+          setLabel('');
+          setUrl('');
+          setProbyPointId('');
+        },
+      },
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle>Джерела в інтернеті (пісні, гімни тощо)</CardTitle>
+        <Button size="sm" variant="outline" disabled={fetchAllNow.isPending} onClick={() => fetchAllNow.mutate()}>
+          Оновити всі зараз
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Сторінка фетчиться й кешується автоматично раз на тиждень. AI-виховник бачить лише те, що тут уже успішно
+          завантажено — додайте джерело і натисніть «Оновити зараз», щоб не чекати тиждень.
+        </p>
+
+        {fetchAllNow.isSuccess && (
+          <p className="text-xs text-muted-foreground">
+            Оновлено: {fetchAllNow.data.succeeded} успішно, {fetchAllNow.data.failed} з помилкою.
+          </p>
+        )}
+
+        {isLoading && <p className="text-sm text-muted-foreground">Завантаження...</p>}
+
+        <div className="space-y-2">
+          {(sources ?? []).map((source) => (
+            <div key={source.id} className="space-y-1.5 rounded-md border border-border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium">{source.label}</p>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" disabled={fetchNow.isPending} onClick={() => fetchNow.mutate(source.id)}>
+                    Оновити
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => deleteSource.mutate(source.id)}>
+                    Видалити
+                  </Button>
+                </div>
+              </div>
+              <a href={source.url} target="_blank" rel="noreferrer" className="block truncate text-xs text-muted-foreground underline">
+                {source.url}
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Точка: {source.probyPoint?.description ?? '— не прив\'язано —'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {source.lastFetchedAt
+                  ? `Востаннє завантажено: ${new Date(source.lastFetchedAt).toLocaleString('uk-UA')}`
+                  : 'Ще не завантажено жодного разу'}
+              </p>
+              {source.lastError && <p className="text-xs text-destructive">Помилка: {source.lastError}</p>}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2 rounded-md border border-dashed border-border p-3">
+          <p className="text-sm font-medium">Додати джерело</p>
+          <Input placeholder="Назва (напр. «Гімни і молитви, pryvatri.de»)" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <Input placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} />
+          <select
+            value={probyPointId}
+            onChange={(e) => setProbyPointId(e.target.value)}
+            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+          >
+            <option value="">— не прив&apos;язувати до точки —</option>
+            {allPoints.map((point) => (
+              <option key={point.id} value={point.id}>
+                {point.label}
+              </option>
+            ))}
+          </select>
+          <Button size="sm" disabled={!label.trim() || !url.trim() || create.isPending} onClick={handleCreate}>
+            Додати
+          </Button>
+          {create.isError && <span className="block text-xs text-destructive">Не вдалося додати (перевірте URL)</span>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -9,11 +9,16 @@ import { SendMessageDto } from './dto/send-message.dto';
 
 const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
+// Each linked ReferenceSource's cached text is already capped at 8000 chars
+// in the DB; truncated further here so one page (or several linked to the
+// same point) can't blow out the whole system prompt's size/cost.
+const SOURCE_PROMPT_TEXT_MAX_LENGTH = 3000;
 
 type EligiblePoint = {
   id: string;
   description: string;
   referenceText: string | null;
+  referenceSources: { label: string; extractedText: string | null }[];
   category: {
     id: string;
     name: string;
@@ -165,7 +170,10 @@ export class AiAssistantService {
 
     const point = await this.prisma.probyPoint.findUnique({
       where: { id: pointId },
-      include: { category: { include: { stage: true } } },
+      include: {
+        category: { include: { stage: true } },
+        referenceSources: { select: { label: true, extractedText: true } },
+      },
     });
 
     if (!point || point.category.stage.programId !== kurin.probyProgramId) {
@@ -197,13 +205,14 @@ export class AiAssistantService {
     const referenceBlock = point.referenceText
       ? `\n\nДовідковий матеріал для цієї точки (перевірені факти — дати, імена, цифри):\n${point.referenceText}\n\nКоли наводиш конкретні дати, імена чи цифри — бери їх лише з цього довідкового матеріалу. Якщо потрібного факту там немає, прямо скажи, що не маєш точних даних, а не вигадуй його.`
       : '';
+    const sourcesBlock = this.buildReferenceSourcesBlock(point.referenceSources);
 
     return `Ти — AI-виховник, асистент для юнака пластового куреня, який готується до проби.
 
 Юнак зараз працює над точкою:
 Ступінь: ${point.category.stage.name}
 Категорія: ${point.category.name}
-Точка: ${point.description}${referenceBlock}
+Точка: ${point.description}${referenceBlock}${sourcesBlock}
 
 Твоя задача:
 1. Якщо прохання юнака справді стосується підготовки до ЦІЄЇ точки — підготуй для нього стислий, інформативний документ, яким він може скористатися для підготовки. Без зайвої води, без філерних фраз — лише те, що реально потрібно знати чи вміти для цієї точки.
@@ -211,6 +220,19 @@ export class AiAssistantService {
 3. Якщо прохання юнака взагалі не стосується підготовки до проби чи пластового життя (наприклад, прохання виконати шкільне домашнє завдання, написати код для стороннього проекту, чи будь-яке інше завдання, не пов'язане з точкою проби) — ввічливо відмов і поясни, що ти допомагаєш тільки з підготовкою до точок проби.
 
 Завжди лишайся доброзичливим, говори українською мовою.`;
+  }
+
+  private buildReferenceSourcesBlock(sources: { label: string; extractedText: string | null }[]): string {
+    // Only sources that have actually been fetched at least once contribute —
+    // a source whose weekly cron run hasn't happened yet (or keeps failing)
+    // just isn't mentioned, same as a point with no referenceText at all.
+    const fetched = sources.filter((s): s is { label: string; extractedText: string } => !!s.extractedText);
+    if (fetched.length === 0) return '';
+
+    const sections = fetched
+      .map((s) => `--- ${s.label} ---\n${s.extractedText.slice(0, SOURCE_PROMPT_TEXT_MAX_LENGTH)}`)
+      .join('\n\n');
+    return `\n\nДодаткові джерела, автоматично завантажені з інтернету (оновлюються раз на тиждень, можуть бути неповними):\n${sections}\n\nЯкщо потрібного факту чи тексту (наприклад, слів пісні) немає і в цих джерелах — прямо скажи, що не маєш його, а не вигадуй.`;
   }
 
   private async serializeMessages(conversationId: string) {

@@ -273,6 +273,28 @@ model ProbyPoint {
   mappingsAsOld      PointMapping[]  @relation("OldPoint")
   mappingsAsNew      PointMapping[]  @relation("NewPoint")
   aiMessages         AiMessage[]
+  referenceSources   ReferenceSource[]
+}
+
+// A web page the AI-виховник grounds its answers in, refreshed on a weekly
+// cron instead of fetched live per chat message (cheaper, no new per-message
+// failure mode, and the cached text survives the source site being briefly
+// down). probyPointId is optional: a source can stand on its own (e.g. a
+// specific song page) and be found by label/URL rather than tied to one
+// catalog point.
+model ReferenceSource {
+  id            String      @id @default(uuid())
+  url           String
+  label         String
+  probyPointId  String?
+  probyPoint    ProbyPoint? @relation(fields: [probyPointId], references: [id])
+  extractedText String?     @db.Text
+  lastFetchedAt DateTime?
+  lastError     String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([probyPointId])
 }
 
 model PointMapping {
