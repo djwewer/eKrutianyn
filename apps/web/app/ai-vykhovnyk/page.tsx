@@ -5,12 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSession } from '@/lib/session-client';
 import { useProbyProgram, useJunakProgress } from '@/lib/queries/proby';
-import type { ProbyStage } from '@/lib/types';
 import {
   useAiConversations,
   useAiConversation,
   useCreateAiConversation,
   useSendAiMessage,
+  useDeleteAiConversation,
 } from '@/lib/queries/ai-assistant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
+import type { AiMessage, ProbyStage } from '@/lib/types';
 
 const MARKDOWN_CLASSES = cn(
   '[&_h1]:mt-3 [&_h1]:mb-1.5 [&_h1]:text-base [&_h1]:font-bold [&_h1]:first:mt-0',
@@ -40,6 +41,10 @@ const MARKDOWN_CLASSES = cn(
   '[&_a]:underline',
 );
 
+function newDraftKey() {
+  return `draft-${Math.random().toString(36).slice(2)}`;
+}
+
 export default function AiVykhovnykPage() {
   const { data: session } = useSession();
   const isJunak = session?.role === 'JUNAK';
@@ -53,16 +58,33 @@ export default function AiVykhovnykPage() {
   const { data: progress } = useJunakProgress(isJunak ? session?.userId : undefined);
 
   const { data: conversations, isLoading: conversationsLoading } = useAiConversations();
-  const createConversation = useCreateAiConversation();
-  const [explicitSelectionId, setExplicitSelectionId] = useState<string | null>(null);
-  // Default to the most recently active conversation until the person explicitly
-  // picks one themselves — derived during render, no effect needed.
-  const selectedConversationId = explicitSelectionId ?? conversations?.[0]?.id ?? null;
+  const deleteConversation = useDeleteAiConversation();
+
+  // `panelKey` controls which ConversationPanel instance is mounted: it only
+  // changes on a deliberate navigation (picking a different chat, or starting a
+  // new one), so a conversation created lazily mid-send doesn't remount and lose
+  // its in-flight state. `activeConversationId` is only for sidebar highlighting
+  // and starts null — landing on this page always opens a fresh, unsaved chat
+  // rather than resuming whatever was last active.
+  const [panelKey, setPanelKey] = useState(newDraftKey);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+  function handleSelectConversation(id: string) {
+    setActiveConversationId(id);
+    setPanelKey(id);
+  }
 
   function handleNewConversation() {
-    createConversation.mutate(undefined, {
-      onSuccess: (created) => setExplicitSelectionId(created.id),
-    });
+    setActiveConversationId(null);
+    setPanelKey(newDraftKey());
+  }
+
+  function handleDeleteConversation(id: string) {
+    if (!window.confirm('Видалити цю розмову? Її не можна буде відновити.')) return;
+    deleteConversation.mutate(id);
+    if (id === activeConversationId) {
+      handleNewConversation();
+    }
   }
 
   // For JUNAK, narrow the tree down to points that still make sense to pick:
@@ -118,13 +140,7 @@ export default function AiVykhovnykPage() {
           <CardTitle className="text-base">Розмови</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            disabled={createConversation.isPending}
-            onClick={handleNewConversation}
-          >
+          <Button size="sm" variant="outline" className="w-full" onClick={handleNewConversation}>
             + Нова розмова
           </Button>
           <div className="space-y-1">
@@ -133,19 +149,33 @@ export default function AiVykhovnykPage() {
               <p className="text-sm text-muted-foreground">Ще немає розмов.</p>
             )}
             {(conversations ?? []).map((c) => (
-              <button
+              <div
                 key={c.id}
-                type="button"
-                onClick={() => setExplicitSelectionId(c.id)}
                 className={cn(
-                  'w-full truncate rounded-md px-2.5 py-1.5 text-left text-sm',
-                  c.id === selectedConversationId
-                    ? 'bg-accent-soft font-medium text-accent-text'
-                    : 'hover:bg-accent-soft/50',
+                  'group flex items-center gap-1 rounded-md',
+                  c.id === activeConversationId ? 'bg-accent-soft' : 'hover:bg-accent-soft/50',
                 )}
               >
-                {c.title ?? 'Нова розмова'}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectConversation(c.id)}
+                  className={cn(
+                    'min-w-0 flex-1 truncate px-2.5 py-1.5 text-left text-sm',
+                    c.id === activeConversationId ? 'font-medium text-accent-text' : '',
+                  )}
+                >
+                  {c.title ?? 'Нова розмова'}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Видалити розмову"
+                  title="Видалити розмову"
+                  onClick={() => handleDeleteConversation(c.id)}
+                  className="shrink-0 rounded px-1.5 py-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         </CardContent>
@@ -153,54 +183,99 @@ export default function AiVykhovnykPage() {
 
       <div className="min-w-0 flex-1 space-y-4">
         <h1 className="text-2xl font-bold">AI-виховник</h1>
+        <ConversationPanel
+          key={panelKey}
+          initialConversationId={activeConversationId}
+          onConversationCreated={setActiveConversationId}
+          stages={stages}
+          pointLabelById={pointLabelById}
+        />
+      </div>
+    </div>
+  );
+}
 
-        {!selectedConversationId ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Натисни «+ Нова розмова», щоб почати.
-            </CardContent>
-          </Card>
-        ) : (
-          // Keyed by conversation id so switching conversations remounts this panel
-          // fresh — the natural, effect-free way to reset its local point/draft state.
-          <ConversationPanel key={selectedConversationId} conversationId={selectedConversationId} stages={stages} pointLabelById={pointLabelById} />
-        )}
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div role="status" aria-label="Генерує відповідь" className="flex items-center gap-1 rounded-lg bg-muted px-3.5 py-3">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            className="size-1.5 animate-bounce rounded-full bg-muted-foreground"
+            style={{ animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
 function ConversationPanel({
-  conversationId,
+  initialConversationId,
+  onConversationCreated,
   stages,
   pointLabelById,
 }: {
-  conversationId: string;
+  initialConversationId: string | null;
+  onConversationCreated: (id: string) => void;
   stages: ProbyStage[];
   pointLabelById: Record<string, string>;
 }) {
+  const [conversationId, setConversationId] = useState(initialConversationId);
   const {
     data: conversation,
     isLoading: conversationLoading,
     isError: conversationIsError,
     error: conversationError,
   } = useAiConversation(conversationId);
-  const sendMessage = useSendAiMessage(conversationId);
+  const createConversation = useCreateAiConversation();
+  const sendMessage = useSendAiMessage();
 
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [pendingUserMessage, setPendingUserMessage] = useState<AiMessage | null>(null);
+  const [isAwaitingReply, setIsAwaitingReply] = useState(false);
+  const [sendError, setSendError] = useState<unknown>(null);
 
-  const messages = conversation?.messages ?? [];
-  const canSend = !!selectedPointId && draft.trim().length > 0 && !sendMessage.isPending;
+  const serverMessages = conversation?.messages ?? [];
+  // The optimistic message is shown immediately on send and cleared once the
+  // real response is written into the cache above — never both at once, since
+  // by then serverMessages already includes it.
+  const messages = pendingUserMessage ? [...serverMessages, pendingUserMessage] : serverMessages;
+  const canSend = !!selectedPointId && draft.trim().length > 0 && !isAwaitingReply;
 
-  function handleSend() {
+  async function handleSend() {
     if (!selectedPointId) return;
     const content = draft.trim();
     if (!content) return;
-    sendMessage.mutate(
-      { probyPointId: selectedPointId, content },
-      { onSuccess: () => setDraft('') },
-    );
+
+    setDraft('');
+    setSendError(null);
+    setPendingUserMessage({
+      role: 'USER',
+      content,
+      probyPointId: selectedPointId,
+      createdAt: new Date().toISOString(),
+    });
+    setIsAwaitingReply(true);
+
+    try {
+      let targetId = conversationId;
+      if (!targetId) {
+        const created = await createConversation.mutateAsync();
+        targetId = created.id;
+        setConversationId(targetId);
+        onConversationCreated(targetId);
+      }
+      await sendMessage.mutateAsync({ conversationId: targetId, probyPointId: selectedPointId, content });
+    } catch (error) {
+      setSendError(error);
+    } finally {
+      setPendingUserMessage(null);
+      setIsAwaitingReply(false);
+    }
   }
 
   return (
@@ -278,13 +353,7 @@ function ConversationPanel({
                 </div>
               </div>
             ))}
-            {sendMessage.isPending && (
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-                  Генерує відповідь...
-                </div>
-              </div>
-            )}
+            {isAwaitingReply && <TypingIndicator />}
           </div>
 
           <div className="space-y-2 pt-2">
@@ -303,9 +372,9 @@ function ConversationPanel({
                 <span className="text-xs text-muted-foreground">Спершу оберіть точку проби</span>
               )}
             </div>
-            {sendMessage.isError && (
+            {sendError !== null && (
               <p className="text-sm text-destructive">
-                {accessErrorMessage(sendMessage.error) ?? 'Не вдалося надіслати повідомлення. Спробуйте ще раз.'}
+                {accessErrorMessage(sendError) ?? 'Не вдалося надіслати повідомлення. Спробуйте ще раз.'}
               </p>
             )}
           </div>

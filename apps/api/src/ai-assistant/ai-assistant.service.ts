@@ -135,6 +135,17 @@ export class AiAssistantService {
     return { reply, messages: updatedMessages };
   }
 
+  async deleteConversation(conversationId: string, actor: CurrentUserPayload) {
+    await this.findOwnedConversation(conversationId, actor);
+    // Messages have an ON DELETE RESTRICT fk to their conversation, so they must
+    // go first; both in one transaction so a failure can't leave an orphaned
+    // conversation with no messages or vice versa.
+    await this.prisma.$transaction([
+      this.prisma.aiMessage.deleteMany({ where: { conversationId } }),
+      this.prisma.aiConversation.delete({ where: { id: conversationId } }),
+    ]);
+  }
+
   private async findOwnedConversation(conversationId: string, actor: CurrentUserPayload) {
     const conversation = await this.prisma.aiConversation.findUnique({ where: { id: conversationId } });
     // Same 404 whether the conversation doesn't exist at all or belongs to someone

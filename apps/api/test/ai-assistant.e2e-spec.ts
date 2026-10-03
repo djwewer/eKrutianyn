@@ -163,6 +163,71 @@ describe('AI assistant (e2e)', () => {
     expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
   });
 
+  it('lets a JUNAK delete their own conversation, which then disappears from the list and 404s on GET', async () => {
+    const { kurin } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
+
+    await request(app.getHttpServer())
+      .delete(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const listResponse = await request(app.getHttpServer())
+      .get('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(listResponse.body).toHaveLength(0);
+  });
+
+  it('deletes a conversation and its messages without leaving an FK-orphaned row', async () => {
+    const { kurin, openPoint } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
+    });
+    const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
+    await request(app.getHttpServer())
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: openPoint.id, content: 'hi' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .delete(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    expect(await prisma.aiMessage.count({ where: { conversationId } })).toBe(0);
+    expect(await prisma.aiConversation.findUnique({ where: { id: conversationId } })).toBeNull();
+  });
+
+  it("404s a JUNAK trying to delete another user's conversation, and doesn't delete it", async () => {
+    const { kurin } = await setup();
+    const owner = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const intruder = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const ownerToken = issueTokenFor(jwtService, owner);
+    const intruderToken = issueTokenFor(jwtService, intruder);
+    const conversationId = await createConversation(ownerToken);
+
+    await request(app.getHttpServer())
+      .delete(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${intruderToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+  });
+
   it('lets that JUNAK POST a message about one of their own open points and gets a stored user+assistant exchange', async () => {
     const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });

@@ -51,11 +51,14 @@ describe('AiAssistantService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue(makeConversation()),
         update: jest.fn().mockResolvedValue(makeConversation()),
+        delete: jest.fn().mockResolvedValue(makeConversation()),
       },
       aiMessage: {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
     openAi = { createChatCompletion: jest.fn().mockResolvedValue('Ось твоя відповідь.') };
     probyProgress = {
@@ -81,6 +84,27 @@ describe('AiAssistantService', () => {
       const result = await service.createConversation(ACTOR_JUNAK);
       expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
       expect(result.messages).toEqual([]);
+    });
+  });
+
+  describe('deleteConversation', () => {
+    it('deletes the messages before the conversation, in one transaction', async () => {
+      await service.deleteConversation('conversation-1', ACTOR_JUNAK);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.aiMessage.deleteMany).toHaveBeenCalledWith({ where: { conversationId: 'conversation-1' } });
+      expect(prisma.aiConversation.delete).toHaveBeenCalledWith({ where: { id: 'conversation-1' } });
+    });
+
+    it("404s deleting a conversation that doesn't exist", async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(null);
+      await expect(service.deleteConversation('missing', ACTOR_JUNAK)).rejects.toThrow(NotFoundException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("404s deleting another user's conversation, and doesn't touch the database", async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ userId: 'someone-else' }));
+      await expect(service.deleteConversation('conversation-1', ACTOR_JUNAK)).rejects.toThrow(NotFoundException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 

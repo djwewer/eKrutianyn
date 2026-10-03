@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -35,5 +35,11 @@ export class AiAssistantController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.service.sendMessage(id, dto, user);
+  }
+
+  @Delete('conversations/:id')
+  @HttpCode(204)
+  deleteConversation(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.deleteConversation(id, user);
   }
 }
