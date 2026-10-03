@@ -27,6 +27,7 @@
     "google-auth-library": "^9.14.1",
     "googleapis": "^180.0.0",
     "nodemailer": "^9.1.1",
+    "openai": "^7.27.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
