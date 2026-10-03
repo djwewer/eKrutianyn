@@ -13,23 +13,53 @@ jest.mock('openai', () => {
   };
 });
 
+import OpenAI from 'openai';
 import { OpenAiService } from './openai.service';
+
+const MockedOpenAI = OpenAI as unknown as jest.Mock;
 
 describe('OpenAiService', () => {
   let service: OpenAiService;
   const originalApiKey = process.env.OPENAI_API_KEY;
   const originalModel = process.env.OPENAI_MODEL;
+  const originalBaseUrl = process.env.OPENAI_BASE_URL;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.OPENAI_API_KEY = 'test-api-key';
     delete process.env.OPENAI_MODEL;
+    delete process.env.OPENAI_BASE_URL;
     service = new OpenAiService();
   });
 
   afterAll(() => {
     process.env.OPENAI_API_KEY = originalApiKey;
     process.env.OPENAI_MODEL = originalModel;
+    process.env.OPENAI_BASE_URL = originalBaseUrl;
+  });
+
+  describe('OPENAI_BASE_URL (OpenAI-compatible providers, e.g. Groq)', () => {
+    it('passes a custom base URL through to the client when set', async () => {
+      process.env.OPENAI_BASE_URL = 'https://api.groq.com/openai/v1';
+      mockChatCompletionsCreate.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+      const groqService = new OpenAiService();
+
+      await groqService.createChatCompletion([{ role: 'user', content: 'Привіт' }]);
+
+      expect(MockedOpenAI).toHaveBeenCalledWith(
+        expect.objectContaining({ baseURL: 'https://api.groq.com/openai/v1' }),
+      );
+    });
+
+    it('leaves the base URL undefined (real OpenAI) when unset or empty', async () => {
+      process.env.OPENAI_BASE_URL = '';
+      mockChatCompletionsCreate.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+      const defaultService = new OpenAiService();
+
+      await defaultService.createChatCompletion([{ role: 'user', content: 'Привіт' }]);
+
+      expect(MockedOpenAI).toHaveBeenCalledWith(expect.objectContaining({ baseURL: undefined }));
+    });
   });
 
   it('does not throw when constructed without OPENAI_API_KEY', () => {

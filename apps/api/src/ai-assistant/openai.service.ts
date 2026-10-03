@@ -19,6 +19,9 @@ export class OpenAiService {
       // at DI/bootstrap time would crash the entire Nest app, not just this feature.
       this.client = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
+        // Lets this point at any OpenAI-compatible endpoint (e.g. Groq) instead of
+        // the real OpenAI API — unset, the SDK defaults to OpenAI's own endpoint.
+        baseURL: process.env.OPENAI_BASE_URL || undefined,
         timeout: 60_000,
         maxRetries: 1,
       });
