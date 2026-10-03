@@ -1,4 +1,12 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { AiMessageRole, KurinGender, Role } from '@prisma/client';
 import { APIError } from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +17,15 @@ import { SendMessageDto } from './dto/send-message.dto';
 
 const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
+// Caps how many messages a single JUNAK can send per rolling 24h window —
+// without this, one enthusiastic (or careless) junak could burn through a
+// kurin's whole token/search budget in a single day. Only JUNAK is capped:
+// ZVYAZKOVYI is the one trusted adult account per kurin, typically far fewer
+// in number and already relied on for day-to-day admin, so it's left
+// unlimited. Configurable (not code) since the right number depends on the
+// kurin's actual usage and budget — not something to hardcode confidently.
+const JUNAK_DAILY_MESSAGE_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_DAILY_MESSAGE_LIMIT ?? '20');
+const DAILY_MESSAGE_WINDOW_MS = 24 * 60 * 60 * 1000;
 // Each linked ReferenceSource's cached text is already capped at 8000 chars
 // in the DB; truncated further here so one page (or several linked to the
 // same point) can't blow out the whole system prompt's size/cost.
@@ -63,6 +80,11 @@ export class AiAssistantService {
 
   async sendMessage(conversationId: string, dto: SendMessageDto, actor: CurrentUserPayload) {
     const conversation = await this.findOwnedConversation(conversationId, actor);
+    // Checked before any paid work (prompt build, AI call) so a junak over
+    // their limit never costs a single token or search query.
+    if (actor.role === Role.JUNAK) {
+      await this.enforceJunakDailyMessageLimit(actor.userId);
+    }
     const { point, kurinGender } = await this.loadEligiblePoint(dto.probyPointId, actor);
 
     const recentHistory = await this.prisma.aiMessage.findMany({
@@ -163,6 +185,23 @@ export class AiAssistantService {
     return conversation;
   }
 
+  private async enforceJunakDailyMessageLimit(userId: string): Promise<void> {
+    const windowStart = new Date(Date.now() - DAILY_MESSAGE_WINDOW_MS);
+    const sentInWindow = await this.prisma.aiMessage.count({
+      where: {
+        role: AiMessageRole.USER,
+        conversation: { userId },
+        createdAt: { gte: windowStart },
+      },
+    });
+    if (sentInWindow >= JUNAK_DAILY_MESSAGE_LIMIT) {
+      throw new HttpException(
+        `Досягнуто денного ліміту повідомлень AI-виховника (${JUNAK_DAILY_MESSAGE_LIMIT} за добу). Спробуй знову пізніше.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
   private async loadEligiblePoint(
     pointId: string,
     actor: CurrentUserPayload,
@@ -214,7 +253,7 @@ export class AiAssistantService {
     // search tool (currently: Gemini via its native API) — never claim this
     // capability to the model for a provider that doesn't really have it.
     const searchBlock = this.openAiService.isSearchGroundingEnabled()
-      ? `\n\nУ тебе є доступ до пошуку в інтернеті. Якщо для відповіді потрібен конкретний факт (дата, ім'я, цифра, актуальна подія), якого немає в довідковому матеріалі вище — спробуй знайти його пошуком, а не вигадуй і не обмежуйся фразою "не маю цієї інформації", якщо можеш це перевірити. Використовуй пошук лише коли дійсно потрібно перевірити конкретний факт, а не для кожної відповіді.`
+      ? `\n\nУ тебе є доступ до пошуку в інтернеті, але це — крайній засіб, не перший крок. Спочатку завжди намагайся відповісти на основі довідкового матеріалу вище та власних знань. Звертайся до пошуку лише тоді, коли для відповіді дійсно потрібен конкретний факт (дата, ім'я, цифра, актуальна подія), якого немає в довідковому матеріалі і в якому ти не впевнений — а не вигадуй його. Не використовуй пошук, якщо можеш відповісти і без нього: кожен виклик пошуку коштує ресурсів спільноти, тож він має лишатися рідкісним винятком, а не звичкою.`
       : '';
 
     const greetingWord = kurinGender === KurinGender.FEMALE ? 'подруго' : 'друже';

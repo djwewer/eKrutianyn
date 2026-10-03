@@ -59,6 +59,7 @@ describe('AiAssistantService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({}),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        count: jest.fn().mockResolvedValue(0),
       },
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
@@ -230,13 +231,14 @@ describe('AiAssistantService', () => {
     expect(systemMessage.content).toContain('Сподіваюсь, це допоможе');
   });
 
-  it('tells the model it can search the web when Gemini grounding is enabled', async () => {
+  it('tells the model it can search the web when Gemini grounding is enabled, framed as a last resort', async () => {
     openAi.isSearchGroundingEnabled.mockReturnValue(true);
 
     await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
 
     const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
     expect(systemMessage.content).toContain('У тебе є доступ до пошуку в інтернеті');
+    expect(systemMessage.content).toContain('крайній засіб');
   });
 
   it('says nothing about web search when Gemini grounding is not enabled', async () => {
@@ -386,5 +388,66 @@ describe('AiAssistantService', () => {
       expect(error).toBeInstanceOf(ServiceUnavailableException);
       expect(JSON.stringify(error.getResponse())).not.toContain('sk-super-secret-key');
     }
+  });
+
+  describe('daily message rate limit (JUNAK only)', () => {
+    it('rejects a JUNAK who has hit the daily message limit with a 429, before calling the AI', async () => {
+      prisma.aiMessage.count.mockResolvedValue(20);
+
+      await expect(
+        service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      ).rejects.toMatchObject({ status: 429 });
+      expect(openAi.createChatCompletion).not.toHaveBeenCalled();
+      expect(prisma.aiMessage.create).not.toHaveBeenCalled();
+    });
+
+    it('includes the configured limit in the 429 message', async () => {
+      prisma.aiMessage.count.mockResolvedValue(20);
+
+      try {
+        await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+        fail('expected sendMessage to throw');
+      } catch (error: any) {
+        expect(error.getResponse()).toContain('20');
+      }
+    });
+
+    it('lets a JUNAK under the daily limit send a message normally', async () => {
+      prisma.aiMessage.count.mockResolvedValue(19);
+
+      const result = await service.sendMessage(
+        'conversation-1',
+        { probyPointId: 'point-1', content: 'hi' },
+        ACTOR_JUNAK,
+      );
+
+      expect(result.reply).toBe('Ось твоя відповідь.');
+    });
+
+    it('counts only the actor own messages sent within the last rolling 24h window', async () => {
+      await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+      expect(prisma.aiMessage.count).toHaveBeenCalledWith({
+        where: {
+          role: 'USER',
+          conversation: { userId: ACTOR_JUNAK.userId },
+          createdAt: { gte: expect.any(Date) },
+        },
+      });
+    });
+
+    it('never rate-limits a ZVYAZKOVYI actor, regardless of message count', async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ userId: ACTOR_ZVYAZKOVYI.userId }));
+      prisma.aiMessage.count.mockResolvedValue(999);
+
+      const result = await service.sendMessage(
+        'conversation-1',
+        { probyPointId: 'point-1', content: 'hi' },
+        ACTOR_ZVYAZKOVYI,
+      );
+
+      expect(prisma.aiMessage.count).not.toHaveBeenCalled();
+      expect(result.reply).toBe('Ось твоя відповідь.');
+    });
   });
 });
