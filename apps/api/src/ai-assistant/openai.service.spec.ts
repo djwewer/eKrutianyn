@@ -123,15 +123,6 @@ describe('OpenAiService', () => {
         ]);
       });
 
-      it('throws when both the grounded call and the ungrounded retry fail', async () => {
-        fetchMock.mockResolvedValue({ ok: false, status: 503 });
-
-        await expect(
-          new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]),
-        ).rejects.toThrow('503');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
-      });
-
       it('falls back to an ungrounded retry when the grounded call fails (e.g. no billing configured for Search grounding)', async () => {
         fetchMock
           .mockResolvedValueOnce({ ok: false, status: 429 })
@@ -144,14 +135,38 @@ describe('OpenAiService', () => {
 
         expect(result).toBe('Відповідь без пошуку');
         expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(mockChatCompletionsCreate).not.toHaveBeenCalled();
         const firstBody = JSON.parse(fetchMock.mock.calls[0][1].body);
         const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body);
         expect(firstBody.tools).toEqual([{ google_search: {} }]);
         expect(secondBody.tools).toBeUndefined();
       });
 
-      it('throws ServiceUnavailableException when the response has no text parts', async () => {
+      it('falls all the way back to the OpenAI-compatible SDK when both native calls fail (e.g. a depleted prepay balance 402s every native call)', async () => {
+        fetchMock.mockResolvedValue({ ok: false, status: 402 });
+        mockChatCompletionsCreate.mockResolvedValue({ choices: [{ message: { content: 'Відповідь через SDK' } }] });
+
+        const result = await new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]);
+
+        expect(result).toBe('Відповідь через SDK');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(mockChatCompletionsCreate).toHaveBeenCalledTimes(1);
+      });
+
+      it('throws when the grounded call, the ungrounded retry, and the SDK fallback all fail', async () => {
+        fetchMock.mockResolvedValue({ ok: false, status: 503 });
+        mockChatCompletionsCreate.mockRejectedValue(new Error('SDK also down'));
+
+        await expect(
+          new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]),
+        ).rejects.toThrow('SDK also down');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(mockChatCompletionsCreate).toHaveBeenCalledTimes(1);
+      });
+
+      it('throws ServiceUnavailableException when every tier returns an empty response', async () => {
         fetchMock.mockResolvedValue({ ok: true, json: async () => ({ candidates: [] }) });
+        mockChatCompletionsCreate.mockResolvedValue({ choices: [] });
 
         await expect(
           new OpenAiService().createChatCompletion([{ role: 'user', content: 'hi' }]),

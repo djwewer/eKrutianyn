@@ -62,7 +62,10 @@ export class OpenAiService {
     if (shouldUseGeminiGrounding()) {
       return this.createGeminiGroundedCompletion(messages);
     }
+    return this.createSdkChatCompletion(messages);
+  }
 
+  private async createSdkChatCompletion(messages: ChatMessage[]): Promise<string> {
     const response = await this.getClient().chat.completions.create({
       model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
       messages,
@@ -87,16 +90,32 @@ export class OpenAiService {
 
     try {
       return await this.callGeminiGenerateContent(model, contents, systemInstruction, true);
-    } catch (error) {
+    } catch (groundedError) {
       // Google Search grounding is unavailable on Gemini's free tier (no
       // billing configured on the project) and can also fail from quota or
       // a transient outage — none of that should take down the whole AI
       // assistant when the model could've answered fine without searching.
       // Retry once, ungrounded, before giving up.
       this.logger.warn(
-        `Gemini grounded call failed, retrying without search grounding: ${(error as Error).message}`,
+        `Gemini grounded call failed, retrying without search grounding: ${(groundedError as Error).message}`,
       );
-      return this.callGeminiGenerateContent(model, contents, systemInstruction, false);
+      try {
+        return await this.callGeminiGenerateContent(model, contents, systemInstruction, false);
+      } catch (ungroundedError) {
+        // The native generateContent endpoint can itself be unavailable for
+        // reasons that have nothing to do with search — e.g. linking a
+        // billing account (to enable grounding in the first place) can flip
+        // the whole API key from free-tier to prepay billing, and an empty
+        // prepay balance then 402s every native call, grounded or not. Fall
+        // all the way back to the OpenAI-compatible SDK path this service
+        // used before grounding existed, so enabling search can only ever
+        // add a capability — it can never make the assistant less reliable
+        // than it was before this feature shipped.
+        this.logger.warn(
+          `Gemini native call failed too, falling back to the OpenAI-compatible endpoint: ${(ungroundedError as Error).message}`,
+        );
+        return this.createSdkChatCompletion(messages);
+      }
     }
   }
 
