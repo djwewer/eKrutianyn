@@ -4,6 +4,11 @@ const DATABASE_URL_TEST =
   process.env.DATABASE_URL_TEST ?? 'postgresql://plast:plast@localhost:5432/plast_test';
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-jwt-secret';
+// OpenAiService's constructor eagerly builds an OpenAI client and throws if no
+// key is present at all, so the API can't even boot for e2e without this —
+// no test here is meant to make a real OpenAI call (ai-vykhovnyk.spec.ts mocks
+// the AI-assistant endpoints), this just needs to look like a key.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'test-openai-key';
 
 export default defineConfig({
   testDir: './e2e',
@@ -28,6 +33,7 @@ export default defineConfig({
         MAIL_MODE: 'test',
         MAIL_FROM: 'test@example.com',
         FRONTEND_URL: 'http://localhost:3000',
+        OPENAI_API_KEY,
       },
     },
     {

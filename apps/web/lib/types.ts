@@ -128,6 +128,25 @@ export interface JunakProgressResponse {
   stages: { stageId: string; status: StageStatus; hasDebt: boolean }[];
 }
 
+export type AiMessageRole = 'USER' | 'ASSISTANT';
+
+export interface AiMessage {
+  role: AiMessageRole;
+  content: string;
+  probyPointId: string | null;
+  createdAt: string;
+}
+
+export interface AiConversation {
+  id: string;
+  messages: AiMessage[];
+}
+
+export interface SendAiMessageResponse {
+  reply: string;
+  messages: AiMessage[];
+}
+
 export interface HurtokMember extends UserSummary {
   positions: { positionType: PositionType; scope: PositionScope; hurtokId: string | null }[];
 }
