@@ -54,6 +54,7 @@ describe('AiAssistantService', () => {
         create: jest.fn().mockResolvedValue(makeConversation()),
         update: jest.fn().mockResolvedValue(makeConversation()),
         delete: jest.fn().mockResolvedValue(makeConversation()),
+        count: jest.fn().mockResolvedValue(0),
       },
       aiMessage: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -390,9 +391,55 @@ describe('AiAssistantService', () => {
     }
   });
 
-  describe('daily message rate limit (JUNAK only)', () => {
-    it('rejects a JUNAK who has hit the daily message limit with a 429, before calling the AI', async () => {
-      prisma.aiMessage.count.mockResolvedValue(20);
+  describe('daily new-chat limit (JUNAK only)', () => {
+    it('rejects a JUNAK who has hit the daily new-chat limit with a 429, without creating a conversation', async () => {
+      prisma.aiConversation.count.mockResolvedValue(5);
+
+      await expect(service.createConversation(ACTOR_JUNAK)).rejects.toMatchObject({ status: 429 });
+      expect(prisma.aiConversation.create).not.toHaveBeenCalled();
+    });
+
+    it('includes the configured limit in the 429 message', async () => {
+      prisma.aiConversation.count.mockResolvedValue(5);
+
+      try {
+        await service.createConversation(ACTOR_JUNAK);
+        fail('expected createConversation to throw');
+      } catch (error: any) {
+        expect(error.getResponse()).toContain('5');
+      }
+    });
+
+    it('lets a JUNAK under the daily limit create a new conversation normally', async () => {
+      prisma.aiConversation.count.mockResolvedValue(4);
+
+      const result = await service.createConversation(ACTOR_JUNAK);
+
+      expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
+      expect(result.messages).toEqual([]);
+    });
+
+    it('counts only conversations created within the last rolling 24h window', async () => {
+      await service.createConversation(ACTOR_JUNAK);
+
+      expect(prisma.aiConversation.count).toHaveBeenCalledWith({
+        where: { userId: ACTOR_JUNAK.userId, createdAt: { gte: expect.any(Date) } },
+      });
+    });
+
+    it('never rate-limits a ZVYAZKOVYI actor creating a conversation, regardless of count', async () => {
+      prisma.aiConversation.count.mockResolvedValue(999);
+
+      const result = await service.createConversation(ACTOR_ZVYAZKOVYI);
+
+      expect(prisma.aiConversation.count).not.toHaveBeenCalled();
+      expect(result.messages).toEqual([]);
+    });
+  });
+
+  describe('messages-per-chat limit (JUNAK only)', () => {
+    it('rejects a JUNAK who has hit the per-chat message limit with a 429, before calling the AI', async () => {
+      prisma.aiMessage.count.mockResolvedValue(5);
 
       await expect(
         service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
@@ -402,18 +449,18 @@ describe('AiAssistantService', () => {
     });
 
     it('includes the configured limit in the 429 message', async () => {
-      prisma.aiMessage.count.mockResolvedValue(20);
+      prisma.aiMessage.count.mockResolvedValue(5);
 
       try {
         await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
         fail('expected sendMessage to throw');
       } catch (error: any) {
-        expect(error.getResponse()).toContain('20');
+        expect(error.getResponse()).toContain('5');
       }
     });
 
-    it('lets a JUNAK under the daily limit send a message normally', async () => {
-      prisma.aiMessage.count.mockResolvedValue(19);
+    it('lets a JUNAK under the per-chat limit send a message normally', async () => {
+      prisma.aiMessage.count.mockResolvedValue(4);
 
       const result = await service.sendMessage(
         'conversation-1',
@@ -424,19 +471,15 @@ describe('AiAssistantService', () => {
       expect(result.reply).toBe('Ось твоя відповідь.');
     });
 
-    it('counts only the actor own messages sent within the last rolling 24h window', async () => {
+    it('counts only USER messages already in this conversation (not other conversations)', async () => {
       await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
 
       expect(prisma.aiMessage.count).toHaveBeenCalledWith({
-        where: {
-          role: 'USER',
-          conversation: { userId: ACTOR_JUNAK.userId },
-          createdAt: { gte: expect.any(Date) },
-        },
+        where: { conversationId: 'conversation-1', role: 'USER' },
       });
     });
 
-    it('never rate-limits a ZVYAZKOVYI actor, regardless of message count', async () => {
+    it('never rate-limits a ZVYAZKOVYI actor sending a message, regardless of count', async () => {
       prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ userId: ACTOR_ZVYAZKOVYI.userId }));
       prisma.aiMessage.count.mockResolvedValue(999);
 

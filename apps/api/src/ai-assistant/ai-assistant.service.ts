@@ -17,15 +17,19 @@ import { SendMessageDto } from './dto/send-message.dto';
 
 const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
-// Caps how many messages a single JUNAK can send per rolling 24h window —
-// without this, one enthusiastic (or careless) junak could burn through a
-// kurin's whole token/search budget in a single day. Only JUNAK is capped:
-// ZVYAZKOVYI is the one trusted adult account per kurin, typically far fewer
-// in number and already relied on for day-to-day admin, so it's left
-// unlimited. Configurable (not code) since the right number depends on the
-// kurin's actual usage and budget — not something to hardcode confidently.
-const JUNAK_DAILY_MESSAGE_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_DAILY_MESSAGE_LIMIT ?? '20');
-const DAILY_MESSAGE_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Two caps, both JUNAK-only (ZVYAZKOVYI is the one trusted adult account per
+// kurin, typically far fewer in number and already relied on for day-to-day
+// admin, so it's left unlimited):
+// - a rolling 24h cap on NEW conversations, so one junak can't open an
+//   unbounded number of fresh chats in a day;
+// - a per-conversation cap on user messages ("edits"), so a single chat
+//   can't be used to loop the model indefinitely and burn through the
+//   kurin's token/search budget.
+// Both configurable (not code) since the right numbers depend on the kurin's
+// actual usage and budget — not something to hardcode confidently.
+const JUNAK_DAILY_NEW_CHAT_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_DAILY_NEW_CHAT_LIMIT ?? '5');
+const JUNAK_MESSAGES_PER_CHAT_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_MESSAGES_PER_CHAT_LIMIT ?? '5');
+const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
 // Each linked ReferenceSource's cached text is already capped at 8000 chars
 // in the DB; truncated further here so one page (or several linked to the
 // same point) can't blow out the whole system prompt's size/cost.
@@ -68,6 +72,9 @@ export class AiAssistantService {
   }
 
   async createConversation(actor: CurrentUserPayload) {
+    if (actor.role === Role.JUNAK) {
+      await this.enforceJunakDailyNewChatLimit(actor.userId);
+    }
     const conversation = await this.prisma.aiConversation.create({ data: { userId: actor.userId } });
     return { id: conversation.id, title: conversation.title, messages: [] };
   }
@@ -83,7 +90,7 @@ export class AiAssistantService {
     // Checked before any paid work (prompt build, AI call) so a junak over
     // their limit never costs a single token or search query.
     if (actor.role === Role.JUNAK) {
-      await this.enforceJunakDailyMessageLimit(actor.userId);
+      await this.enforceJunakMessagesPerChatLimit(conversation.id);
     }
     const { point, kurinGender } = await this.loadEligiblePoint(dto.probyPointId, actor);
 
@@ -185,18 +192,26 @@ export class AiAssistantService {
     return conversation;
   }
 
-  private async enforceJunakDailyMessageLimit(userId: string): Promise<void> {
-    const windowStart = new Date(Date.now() - DAILY_MESSAGE_WINDOW_MS);
-    const sentInWindow = await this.prisma.aiMessage.count({
-      where: {
-        role: AiMessageRole.USER,
-        conversation: { userId },
-        createdAt: { gte: windowStart },
-      },
+  private async enforceJunakDailyNewChatLimit(userId: string): Promise<void> {
+    const windowStart = new Date(Date.now() - DAILY_WINDOW_MS);
+    const createdInWindow = await this.prisma.aiConversation.count({
+      where: { userId, createdAt: { gte: windowStart } },
     });
-    if (sentInWindow >= JUNAK_DAILY_MESSAGE_LIMIT) {
+    if (createdInWindow >= JUNAK_DAILY_NEW_CHAT_LIMIT) {
       throw new HttpException(
-        `Досягнуто денного ліміту повідомлень AI-виховника (${JUNAK_DAILY_MESSAGE_LIMIT} за добу). Спробуй знову пізніше.`,
+        `Досягнуто денного ліміту нових розмов з AI-виховником (${JUNAK_DAILY_NEW_CHAT_LIMIT} за добу). Спробуй знову пізніше або продовж одну з наявних розмов.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  private async enforceJunakMessagesPerChatLimit(conversationId: string): Promise<void> {
+    const sentInChat = await this.prisma.aiMessage.count({
+      where: { conversationId, role: AiMessageRole.USER },
+    });
+    if (sentInChat >= JUNAK_MESSAGES_PER_CHAT_LIMIT) {
+      throw new HttpException(
+        `Досягнуто ліміту повідомлень для цієї розмови (${JUNAK_MESSAGES_PER_CHAT_LIMIT}). Почни нову розмову, щоб продовжити.`,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }

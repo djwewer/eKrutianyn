@@ -367,7 +367,7 @@ describe('AI assistant (e2e)', () => {
     expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
   });
 
-  it('rejects a JUNAK who has already hit the daily message limit with a 429, without calling the AI', async () => {
+  it('rejects a JUNAK who has already hit the per-chat message limit with a 429, without calling the AI', async () => {
     const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     await prisma.junakProgress.create({
@@ -375,9 +375,9 @@ describe('AI assistant (e2e)', () => {
     });
     const token = issueTokenFor(jwtService, junak);
     const conversationId = await createConversation(token);
-    // Default limit is 20 — seed it directly instead of sending 20 real requests.
+    // Default per-chat limit is 5 — seed it directly instead of sending 5 real requests.
     await prisma.aiMessage.createMany({
-      data: Array.from({ length: 20 }, () => ({
+      data: Array.from({ length: 5 }, () => ({
         conversationId,
         role: 'USER' as const,
         content: 'попереднє повідомлення',
@@ -391,17 +391,32 @@ describe('AI assistant (e2e)', () => {
       .send({ probyPointId: openPoint.id, content: 'ще одне питання' })
       .expect(429);
 
-    expect(response.body.message).toContain('20');
+    expect(response.body.message).toContain('5');
     expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
   });
 
-  it("never rate-limits a ZVYAZKOVYI, even past the JUNAK daily limit's message count", async () => {
+  it('rejects a JUNAK who has already hit the daily new-chat limit with a 429, without creating a conversation', async () => {
+    const { kurin } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, junak);
+    // Default daily new-chat limit is 5 — create them for real so createdAt ordering is realistic.
+    for (let i = 0; i < 5; i++) {
+      await createConversation(token);
+    }
+
+    await request(app.getHttpServer())
+      .post('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(429);
+  });
+
+  it("never rate-limits a ZVYAZKOVYI, even past the JUNAK per-chat and daily new-chat limits", async () => {
     const { kurin, openPoint } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
     const conversationId = await createConversation(token);
     await prisma.aiMessage.createMany({
-      data: Array.from({ length: 25 }, () => ({
+      data: Array.from({ length: 10 }, () => ({
         conversationId,
         role: 'USER' as const,
         content: 'попереднє повідомлення',
@@ -414,6 +429,13 @@ describe('AI assistant (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: openPoint.id, content: 'ще одне питання' })
       .expect((res) => expect([200, 201]).toContain(res.status));
+
+    for (let i = 0; i < 6; i++) {
+      await request(app.getHttpServer())
+        .post('/ai-assistant/conversations')
+        .set('Authorization', `Bearer ${token}`)
+        .expect((res) => expect([200, 201]).toContain(res.status));
+    }
   });
 
   it('does not store an assistant message when the OpenAI call fails, but keeps the stored user message', async () => {
