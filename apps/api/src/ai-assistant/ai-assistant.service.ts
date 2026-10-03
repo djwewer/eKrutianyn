@@ -210,6 +210,12 @@ export class AiAssistantService {
       ? `\n\nДовідковий матеріал для цієї точки (перевірені факти — дати, імена, цифри):\n${point.referenceText}\n\nКоли наводиш конкретні дати, імена чи цифри — бери їх лише з цього довідкового матеріалу. Якщо потрібного факту там немає, прямо скажи, що не маєш точних даних, а не вигадуй його.`
       : '';
     const sourcesBlock = this.buildReferenceSourcesBlock(point.referenceSources);
+    // Only true for providers where createChatCompletion actually attaches a
+    // search tool (currently: Gemini via its native API) — never claim this
+    // capability to the model for a provider that doesn't really have it.
+    const searchBlock = this.openAiService.isSearchGroundingEnabled()
+      ? `\n\nУ тебе є доступ до пошуку в інтернеті. Якщо для відповіді потрібен конкретний факт (дата, ім'я, цифра, актуальна подія), якого немає в довідковому матеріалі вище — спробуй знайти його пошуком, а не вигадуй і не обмежуйся фразою "не маю цієї інформації", якщо можеш це перевірити. Використовуй пошук лише коли дійсно потрібно перевірити конкретний факт, а не для кожної відповіді.`
+      : '';
 
     const greetingWord = kurinGender === KurinGender.FEMALE ? 'подруго' : 'друже';
     const greetingInstruction = isFirstMessage
@@ -223,7 +229,7 @@ ${greetingInstruction}
 Юнак зараз працює над точкою:
 Ступінь: ${point.category.stage.name}
 Категорія: ${point.category.name}
-Точка: ${point.description}${referenceBlock}${sourcesBlock}
+Точка: ${point.description}${referenceBlock}${sourcesBlock}${searchBlock}
 
 Твоя задача:
 1. Якщо прохання юнака справді стосується підготовки до ЦІЄЇ точки — підготуй для нього стислий, інформативний документ, яким він може скористатися для підготовки. Без зайвої води, без філерних фраз — лише те, що реально потрібно знати чи вміти для цієї точки.

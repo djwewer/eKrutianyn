@@ -11,11 +11,11 @@ import { OpenAiService } from '../src/ai-assistant/openai.service';
 describe('AI assistant (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
-  let fakeOpenAiService: { createChatCompletion: jest.Mock };
+  let fakeOpenAiService: { createChatCompletion: jest.Mock; isSearchGroundingEnabled: jest.Mock };
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
-    fakeOpenAiService = { createChatCompletion: jest.fn() };
+    fakeOpenAiService = { createChatCompletion: jest.fn(), isSearchGroundingEnabled: jest.fn().mockReturnValue(false) };
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(OpenAiService)
       .useValue(fakeOpenAiService)

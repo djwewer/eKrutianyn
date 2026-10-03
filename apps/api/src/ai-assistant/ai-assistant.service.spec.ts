@@ -62,7 +62,10 @@ describe('AiAssistantService', () => {
       },
       $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
     };
-    openAi = { createChatCompletion: jest.fn().mockResolvedValue('Ось твоя відповідь.') };
+    openAi = {
+      createChatCompletion: jest.fn().mockResolvedValue('Ось твоя відповідь.'),
+      isSearchGroundingEnabled: jest.fn().mockReturnValue(false),
+    };
     probyProgress = {
       getProgressFor: jest
         .fn()
@@ -225,6 +228,24 @@ describe('AiAssistantService', () => {
     const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
     expect(systemMessage.content).toContain('Ось стислий і структурований матеріал');
     expect(systemMessage.content).toContain('Сподіваюсь, це допоможе');
+  });
+
+  it('tells the model it can search the web when Gemini grounding is enabled', async () => {
+    openAi.isSearchGroundingEnabled.mockReturnValue(true);
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('У тебе є доступ до пошуку в інтернеті');
+  });
+
+  it('says nothing about web search when Gemini grounding is not enabled', async () => {
+    openAi.isSearchGroundingEnabled.mockReturnValue(false);
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).not.toContain('доступ до пошуку в інтернеті');
   });
 
   it("rejects a probyPointId that doesn't belong to the actor's kurin's program", async () => {

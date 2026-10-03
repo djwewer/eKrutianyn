@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import OpenAI from 'openai';
 
 export type ChatMessage = {
@@ -7,9 +7,31 @@ export type ChatMessage = {
 };
 
 const DEFAULT_MODEL = 'gpt-4o';
+const GEMINI_NATIVE_TIMEOUT_MS = 60_000;
+
+function isGeminiBaseUrl(baseUrl: string | undefined): boolean {
+  return !!baseUrl && baseUrl.includes('generativelanguage.googleapis.com');
+}
+
+// Google Search grounding (the model deciding, per-turn, whether it needs a
+// live web search) is a server-side Gemini tool that is NOT exposed through
+// the OpenAI-compatibility endpoint the rest of this service uses — Google's
+// own docs/forums confirm `tools: [{ google_search: {} }]` only works against
+// the native generateContent REST API. So when OPENAI_BASE_URL points at
+// Gemini, grounded calls bypass the `openai` SDK entirely and hit that native
+// endpoint directly; every other provider (real OpenAI, Groq, ...) is
+// unaffected and keeps using the SDK path below.
+function shouldUseGeminiGrounding(): boolean {
+  if (!isGeminiBaseUrl(process.env.OPENAI_BASE_URL)) return false;
+  // Opt-out valve: grounding bills per search query the model decides to run,
+  // on top of normal token costs — this flag lets it be switched off without
+  // a code change if that cost becomes a problem.
+  return process.env.GEMINI_SEARCH_GROUNDING !== 'false';
+}
 
 @Injectable()
 export class OpenAiService {
+  private readonly logger = new Logger(OpenAiService.name);
   private client: OpenAI | null = null;
 
   private getClient(): OpenAI {
@@ -29,7 +51,18 @@ export class OpenAiService {
     return this.client;
   }
 
+  // Lets callers decide whether to tell the model (in its own prompt) that it
+  // actually has live search available — never claim that for a provider
+  // where createChatCompletion wouldn't actually attach the tool.
+  isSearchGroundingEnabled(): boolean {
+    return shouldUseGeminiGrounding();
+  }
+
   async createChatCompletion(messages: ChatMessage[]): Promise<string> {
+    if (shouldUseGeminiGrounding()) {
+      return this.createGeminiGroundedCompletion(messages);
+    }
+
     const response = await this.getClient().chat.completions.create({
       model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
       messages,
@@ -39,5 +72,58 @@ export class OpenAiService {
       throw new ServiceUnavailableException('OpenAI returned an empty response');
     }
     return content;
+  }
+
+  private async createGeminiGroundedCompletion(messages: ChatMessage[]): Promise<string> {
+    const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
+    const systemMessage = messages.find((m) => m.role === 'system');
+    const contents = messages
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
+
+    const body = {
+      contents,
+      ...(systemMessage ? { systemInstruction: { parts: [{ text: systemMessage.content }] } } : {}),
+      tools: [{ google_search: {} }],
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), GEMINI_NATIVE_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': process.env.OPENAI_API_KEY ?? '',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      // Never log the response body here — it can echo back request details.
+      this.logger.error(`Gemini grounded call failed: status=${response.status}`);
+      throw new Error(`Gemini grounded call failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const parts = data?.candidates?.[0]?.content?.parts;
+    const text = Array.isArray(parts)
+      ? parts
+          .map((p: { text?: string }) => p.text ?? '')
+          .join('')
+          .trim()
+      : '';
+    if (!text) {
+      throw new ServiceUnavailableException('Gemini returned an empty response');
+    }
+    return text;
   }
 }
