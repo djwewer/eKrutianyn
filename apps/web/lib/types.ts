@@ -73,6 +73,22 @@ export interface InventoryItem {
   photos: InventoryItemPhoto[];
 }
 
+export interface TreasuryTransaction {
+  id: string;
+  kurinId: string;
+  type: 'INCOME' | 'EXPENSE';
+  amountCents: number;
+  description: string;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface TreasurySummary {
+  startingBalanceCents: number;
+  currentBalanceCents: number;
+  transactions: TreasuryTransaction[];
+}
+
 export interface GuardianContact {
   id: string;
   name: string;
