@@ -17,6 +17,7 @@ import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { JunakImportModule } from './junak-import/junak-import.module';
+import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { JunakImportModule } from './junak-import/junak-import.module';
     GuardianContactsModule,
     InventoryModule,
     JunakImportModule,
+    AiAssistantModule,
   ],
   controllers: [HealthController],
 })
