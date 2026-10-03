@@ -118,6 +118,21 @@ test('opens a fresh, unsaved chat automatically on page load — no "+ Нова 
   await expect(page.getByText('Ще немає розмов.')).toBeVisible();
 });
 
+test('shows the "може помилятися" disclaimer under the page title', async ({ page }) => {
+  const { program } = await seedProbyProgram(['Орієнтування на місцевості']);
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+  const { email, password } = await seedJunak(zvyazkovyiToken, 'junak-ai-disclaimer');
+  await mockAiAssistantApi(page, 'Ось план підготовки.');
+
+  await loginAs(page, email, password);
+  await page.goto('/ai-vykhovnyk');
+
+  await expect(
+    page.getByText('AI-виховник старається бути щоразу кращим, проте може помилятися. Перевіряй його відповідь.'),
+  ).toBeVisible();
+});
+
 test('lets a junak pick a proby point, send a message, and see the mocked AI reply', async ({ page }) => {
   const { program } = await seedProbyProgram(['Орієнтування на місцевості']);
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);

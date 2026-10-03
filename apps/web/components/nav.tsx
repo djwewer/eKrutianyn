@@ -15,8 +15,8 @@ import { getInitials, cn } from '@/lib/utils';
 
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
-    { href: '/proby', label: 'Моя проба' },
     { href: '/ai-vykhovnyk', label: 'AI-виховник' },
+    { href: '/proby', label: 'Моя проба' },
     { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],
@@ -25,8 +25,8 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/settings', label: 'Налаштування' },
   ],
   ZVYAZKOVYI: [
-    { href: '/approval-requests', label: 'Запити' },
     { href: '/ai-vykhovnyk', label: 'AI-виховник' },
+    { href: '/approval-requests', label: 'Запити' },
     { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],
@@ -48,13 +48,21 @@ function NavLink({
   active: boolean;
   onClick?: () => void;
 }) {
+  // AI-виховник gets a continuously shimmering gradient instead of the
+  // standard blue active/hover fill, to stand out as a highlighted feature
+  // regardless of whether its page is currently open.
+  const gradient = href === '/ai-vykhovnyk';
+
   return (
     <Link
       href={href}
       onClick={onClick}
+      data-nav-gradient={gradient || undefined}
       className={cn(
-        'rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent-soft hover:text-accent-text',
-        active && 'bg-accent-soft font-semibold text-accent-text'
+        'rounded-md px-3 py-2 text-sm font-medium transition-[filter,color,background-color]',
+        gradient
+          ? 'animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#7C3AED)] text-white hover:brightness-110'
+          : cn('hover:bg-accent-soft hover:text-accent-text', active && 'bg-accent-soft font-semibold text-accent-text')
       )}
     >
       {label}

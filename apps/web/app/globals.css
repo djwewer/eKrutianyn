@@ -152,6 +152,27 @@
   }
 }
 
+/* Shimmering gradient for the AI-виховник nav link — background-position is
+   compositor-cheap (no layout/paint of other elements), so this runs
+   continuously without noticeably costing page performance. */
+@keyframes kmGradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-nav-gradient] {
+    animation: none !important;
+  }
+}
+
 [data-slot="accordion"] > [data-slot="accordion-item"]:nth-child(1) { animation-delay: 20ms; }
 [data-slot="accordion"] > [data-slot="accordion-item"]:nth-child(2) { animation-delay: 70ms; }
 [data-slot="accordion"] > [data-slot="accordion-item"]:nth-child(3) { animation-delay: 120ms; }

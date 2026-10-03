@@ -182,7 +182,12 @@ export default function AiVykhovnykPage() {
       </Card>
 
       <div className="min-w-0 flex-1 space-y-4">
-        <h1 className="text-2xl font-bold">AI-виховник</h1>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">AI-виховник</h1>
+          <p className="text-xs text-muted-foreground">
+            AI-виховник старається бути щоразу кращим, проте може помилятися. Перевіряй його відповідь.
+          </p>
+        </div>
         <ConversationPanel
           key={panelKey}
           initialConversationId={activeConversationId}
