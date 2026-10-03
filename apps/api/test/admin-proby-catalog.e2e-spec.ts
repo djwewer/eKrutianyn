@@ -70,4 +70,116 @@ describe('Admin proby catalog (e2e)', () => {
       .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
       .expect(401);
   });
+
+  it('lists every program with its full nested tree, including referenceText', async () => {
+    const programRes = await request(app.getHttpServer())
+      .post('/admin/proby-programs')
+      .set('x-admin-key', adminKey)
+      .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
+      .expect(201);
+    const stageRes = await request(app.getHttpServer())
+      .post(`/admin/proby-programs/${programRes.body.id}/stages`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, name: 'Перший ступінь' })
+      .expect(201);
+    const categoryRes = await request(app.getHttpServer())
+      .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
+      .set('x-admin-key', adminKey)
+      .send({ name: 'Історія' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, description: 'Описати заснування Пласту' })
+      .expect(201);
+
+    const listRes = await request(app.getHttpServer())
+      .get('/admin/proby-programs')
+      .set('x-admin-key', adminKey)
+      .expect(200);
+
+    const program = listRes.body.find((p: { id: string }) => p.id === programRes.body.id);
+    expect(program.stages[0].categories[0].points[0]).toMatchObject({
+      description: 'Описати заснування Пласту',
+      referenceText: null,
+    });
+  });
+
+  it('returns 401 listing programs without the admin key', async () => {
+    await request(app.getHttpServer()).get('/admin/proby-programs').expect(401);
+  });
+
+  it("lets an admin set and clear a point's referenceText", async () => {
+    const programRes = await request(app.getHttpServer())
+      .post('/admin/proby-programs')
+      .set('x-admin-key', adminKey)
+      .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
+      .expect(201);
+    const stageRes = await request(app.getHttpServer())
+      .post(`/admin/proby-programs/${programRes.body.id}/stages`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, name: 'Перший ступінь' })
+      .expect(201);
+    const categoryRes = await request(app.getHttpServer())
+      .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
+      .set('x-admin-key', adminKey)
+      .send({ name: 'Історія' })
+      .expect(201);
+    const pointRes = await request(app.getHttpServer())
+      .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, description: 'Описати заснування Пласту' })
+      .expect(201);
+
+    const updateRes = await request(app.getHttpServer())
+      .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
+      .set('x-admin-key', adminKey)
+      .send({ referenceText: 'Пласт засновано 12 квітня 1912 року у Львові.' })
+      .expect(200);
+    expect(updateRes.body.referenceText).toBe('Пласт засновано 12 квітня 1912 року у Львові.');
+
+    const clearRes = await request(app.getHttpServer())
+      .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
+      .set('x-admin-key', adminKey)
+      .send({ referenceText: null })
+      .expect(200);
+    expect(clearRes.body.referenceText).toBeNull();
+  });
+
+  it('returns 404 updating referenceText for a nonexistent point', async () => {
+    await request(app.getHttpServer())
+      .patch('/admin/proby-points/00000000-0000-0000-0000-000000000000/reference')
+      .set('x-admin-key', adminKey)
+      .send({ referenceText: 'щось' })
+      .expect(404);
+  });
+
+  it('rejects referenceText over the 4000-character cap (400)', async () => {
+    const programRes = await request(app.getHttpServer())
+      .post('/admin/proby-programs')
+      .set('x-admin-key', adminKey)
+      .send({ version: ProbyProgramVersion.OLD, name: 'Стара програма' })
+      .expect(201);
+    const stageRes = await request(app.getHttpServer())
+      .post(`/admin/proby-programs/${programRes.body.id}/stages`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, name: 'Перший ступінь' })
+      .expect(201);
+    const categoryRes = await request(app.getHttpServer())
+      .post(`/admin/proby-stages/${stageRes.body.id}/categories`)
+      .set('x-admin-key', adminKey)
+      .send({ name: 'Історія' })
+      .expect(201);
+    const pointRes = await request(app.getHttpServer())
+      .post(`/admin/proby-categories/${categoryRes.body.id}/points`)
+      .set('x-admin-key', adminKey)
+      .send({ order: 1, description: 'Описати заснування Пласту' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/admin/proby-points/${pointRes.body.id}/reference`)
+      .set('x-admin-key', adminKey)
+      .send({ referenceText: 'a'.repeat(4001) })
+      .expect(400);
+  });
 });

@@ -262,6 +262,11 @@ model ProbyPoint {
   category    ProbyCategory @relation(fields: [categoryId], references: [id])
   order       Int
   description String
+  // Curated factual material (dates, names, specifics) for the AI-виховник's
+  // system prompt — kept separate from `description` so a short official label
+  // can coexist with a longer reference text, and so a point without curated
+  // content just falls back to grounding on `description` alone.
+  referenceText String? @db.Text
 
   progressEntries    JunakProgress[] @relation("PointProgress")
   transferredEntries JunakProgress[] @relation("TransferredFromPoint")

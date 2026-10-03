@@ -13,6 +13,7 @@ const TITLE_MAX_LENGTH = 60;
 type EligiblePoint = {
   id: string;
   description: string;
+  referenceText: string | null;
   category: {
     id: string;
     name: string;
@@ -190,12 +191,19 @@ export class AiAssistantService {
   }
 
   private buildSystemPrompt(point: EligiblePoint): string {
+    // Additive only: a point with no curated referenceText yet gets the exact
+    // same prompt as before this field existed. Appended after the point's own
+    // description so the verbatim guardrail instructions below are untouched.
+    const referenceBlock = point.referenceText
+      ? `\n\nДовідковий матеріал для цієї точки (перевірені факти — дати, імена, цифри):\n${point.referenceText}\n\nКоли наводиш конкретні дати, імена чи цифри — бери їх лише з цього довідкового матеріалу. Якщо потрібного факту там немає, прямо скажи, що не маєш точних даних, а не вигадуй його.`
+      : '';
+
     return `Ти — AI-виховник, асистент для юнака пластового куреня, який готується до проби.
 
 Юнак зараз працює над точкою:
 Ступінь: ${point.category.stage.name}
 Категорія: ${point.category.name}
-Точка: ${point.description}
+Точка: ${point.description}${referenceBlock}
 
 Твоя задача:
 1. Якщо прохання юнака справді стосується підготовки до ЦІЄЇ точки — підготуй для нього стислий, інформативний документ, яким він може скористатися для підготовки. Без зайвої води, без філерних фраз — лише те, що реально потрібно знати чи вміти для цієї точки.

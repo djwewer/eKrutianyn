@@ -14,6 +14,7 @@ function makePoint(overrides: Partial<any> = {}) {
   return {
     id: 'point-1',
     description: 'Описати історію Пласту',
+    referenceText: null,
     categoryId: 'category-1',
     category: {
       id: 'category-1',
@@ -135,6 +136,25 @@ describe('AiAssistantService', () => {
     expect(systemMessage.content).toContain('Описати історію Пласту');
     expect(systemMessage.content).toContain('Без зайвої води');
     expect(systemMessage.content).toContain('AI-виховник');
+  });
+
+  it('includes the curated referenceText and the only-use-these-facts instruction when present', async () => {
+    prisma.probyPoint.findUnique.mockResolvedValue(
+      makePoint({ referenceText: 'Пласт засновано 12 квітня 1912 року у Львові.' }),
+    );
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'Коли засновано Пласт?' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Пласт засновано 12 квітня 1912 року у Львові.');
+    expect(systemMessage.content).toContain('бери їх лише з цього довідкового матеріалу');
+  });
+
+  it('omits the reference-material block entirely when a point has no referenceText', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).not.toContain('Довідковий матеріал');
   });
 
   it("rejects a probyPointId that doesn't belong to the actor's kurin's program", async () => {

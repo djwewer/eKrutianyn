@@ -14,6 +14,13 @@ async function proxy(request: NextRequest, path: string[]) {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  // Forwarded explicitly (not blanket-passthrough) for the admin-key-guarded
+  // endpoints (e.g. the proby-catalog admin area) — this is a shared secret,
+  // not a user session, so it travels on its own header rather than the cookie.
+  const adminKey = request.headers.get('x-admin-key');
+  if (adminKey) {
+    headers['x-admin-key'] = adminKey;
+  }
 
   const hasBody = !['GET', 'HEAD'].includes(request.method);
   const body = hasBody ? await request.arrayBuffer() : undefined;

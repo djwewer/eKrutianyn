@@ -155,6 +155,33 @@ export interface SendAiMessageResponse {
   messages: AiMessage[];
 }
 
+export interface AdminProbyPoint {
+  id: string;
+  order: number;
+  description: string;
+  referenceText: string | null;
+}
+
+export interface AdminProbyCategory {
+  id: string;
+  name: string;
+  points: AdminProbyPoint[];
+}
+
+export interface AdminProbyStage {
+  id: string;
+  order: number;
+  name: string;
+  categories: AdminProbyCategory[];
+}
+
+export interface AdminProbyProgram {
+  id: string;
+  version: 'OLD' | 'NEW';
+  name: string;
+  stages: AdminProbyStage[];
+}
+
 export interface HurtokMember extends UserSummary {
   positions: { positionType: PositionType; scope: PositionScope; hurtokId: string | null }[];
 }
