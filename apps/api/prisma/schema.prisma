@@ -160,7 +160,7 @@ model User {
   createdInventoryItems InventoryItem[]
   stageProgressEntries  JunakStageProgress[] @relation("JunakStageProgressEntries")
   stageClosedLogs       JunakStageProgress[] @relation("StageClosedByUser")
-  aiConversation        AiConversation?
+  aiConversations       AiConversation[]
 }
 
 model KurinPosition {
@@ -373,10 +373,14 @@ enum AiMessageRole {
 
 model AiConversation {
   id        String      @id @default(uuid())
-  userId    String      @unique
+  userId    String
   user      User        @relation(fields: [userId], references: [id])
+  title     String?
   createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   messages  AiMessage[]
+
+  @@index([userId, updatedAt])
 }
 
 model AiMessage {

@@ -62,18 +62,105 @@ describe('AI assistant (e2e)', () => {
     return { kurin, openPoint, donePoint, lockedPoint, stage1, stage2 };
   }
 
-  it('lets a JUNAK GET /ai-assistant/conversation and gets an empty conversation the first time', async () => {
+  async function createConversation(token: string): Promise<string> {
+    const response = await request(app.getHttpServer())
+      .post('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+    return response.body.id;
+  }
+
+  it('lets a JUNAK create a conversation and see it empty via GET', async () => {
     const { kurin } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
 
+    const conversationId = await createConversation(token);
+
     const response = await request(app.getHttpServer())
-      .get('/ai-assistant/conversation')
+      .get(`/ai-assistant/conversations/${conversationId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(response.body.messages).toEqual([]);
-    expect(response.body.id).toBeDefined();
+    expect(response.body.title).toBeNull();
+  });
+
+  it('lists only the JUNAK\'s own conversations, most recently active first', async () => {
+    const { kurin, openPoint } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
+    });
+    const token = issueTokenFor(jwtService, junak);
+
+    const firstId = await createConversation(token);
+    const secondId = await createConversation(token);
+    // Touch the first conversation again so it becomes the most recently active.
+    await request(app.getHttpServer())
+      .post(`/ai-assistant/conversations/${firstId}/messages`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: openPoint.id, content: 'hi' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const response = await request(app.getHttpServer())
+      .get('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.map((c: any) => c.id)).toEqual([firstId, secondId]);
+  });
+
+  it("auto-titles a conversation from its first message, and never overwrites that title", async () => {
+    const { kurin, openPoint } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.junakProgress.create({
+      data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
+    });
+    const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
+
+    await request(app.getHttpServer())
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: openPoint.id, content: 'Допоможи підготуватись до цієї точки' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    await request(app.getHttpServer())
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: openPoint.id, content: 'Ще одне питання' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const response = await request(app.getHttpServer())
+      .get('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].title).toBe('Допоможи підготуватись до цієї точки');
+  });
+
+  it("404s a JUNAK trying to read or message another user's conversation", async () => {
+    const { kurin, openPoint } = await setup();
+    const owner = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const intruder = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const ownerToken = issueTokenFor(jwtService, owner);
+    const intruderToken = issueTokenFor(jwtService, intruder);
+    const conversationId = await createConversation(ownerToken);
+
+    await request(app.getHttpServer())
+      .get(`/ai-assistant/conversations/${conversationId}`)
+      .set('Authorization', `Bearer ${intruderToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .set('Authorization', `Bearer ${intruderToken}`)
+      .send({ probyPointId: openPoint.id, content: 'hi' })
+      .expect(404);
+
+    expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
   });
 
   it('lets that JUNAK POST a message about one of their own open points and gets a stored user+assistant exchange', async () => {
@@ -83,9 +170,10 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
 
     const response = await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: openPoint.id, content: 'Допоможи підготуватись до цієї точки' })
       .expect((res) => expect([200, 201]).toContain(res.status));
@@ -101,26 +189,25 @@ describe('AI assistant (e2e)', () => {
     expect(sentMessages[0].content).toContain('Відкрита точка');
 
     const conversationResponse = await request(app.getHttpServer())
-      .get('/ai-assistant/conversation')
+      .get(`/ai-assistant/conversations/${conversationId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(conversationResponse.body.messages).toHaveLength(2);
   });
 
-  it('gives a VYKHOVNYK 403 on both endpoints', async () => {
+  it('gives a VYKHOVNYK 403 on every endpoint', async () => {
     const { kurin, openPoint } = await setup();
     const vykhovnyk = await createUser(prisma, { role: Role.VYKHOVNYK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, vykhovnyk);
 
     await request(app.getHttpServer())
-      .get('/ai-assistant/conversation')
+      .get('/ai-assistant/conversations')
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post('/ai-assistant/conversations')
       .set('Authorization', `Bearer ${token}`)
-      .send({ probyPointId: openPoint.id, content: 'hi' })
       .expect(403);
 
     expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
@@ -133,9 +220,10 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: donePoint.id, status: ProgressStatus.DONE },
     });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: donePoint.id, content: 'hi' })
       .expect(400);
@@ -147,9 +235,10 @@ describe('AI assistant (e2e)', () => {
     const { kurin, lockedPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: lockedPoint.id, content: 'hi' })
       .expect(400);
@@ -159,15 +248,16 @@ describe('AI assistant (e2e)', () => {
     const { kurin, donePoint, lockedPoint } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
+    const conversationId = await createConversation(token);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: donePoint.id, content: 'hi' })
       .expect((res) => expect([200, 201]).toContain(res.status));
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: lockedPoint.id, content: 'hi again' })
       .expect((res) => expect([200, 201]).toContain(res.status));
@@ -185,9 +275,10 @@ describe('AI assistant (e2e)', () => {
     });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: otherPoint.id, content: 'hi' })
       .expect(404);
@@ -200,9 +291,10 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: openPoint.id, content: 'a'.repeat(4001) })
       .expect(400);
@@ -214,16 +306,17 @@ describe('AI assistant (e2e)', () => {
     const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
+    const conversationId = await createConversation(token);
     fakeOpenAiService.createChatCompletion.mockRejectedValueOnce(new Error('upstream failure'));
 
     await request(app.getHttpServer())
-      .post('/ai-assistant/messages')
+      .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: openPoint.id, content: 'hi' })
       .expect(503);
 
     const conversationResponse = await request(app.getHttpServer())
-      .get('/ai-assistant/conversation')
+      .get(`/ai-assistant/conversations/${conversationId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(conversationResponse.body.messages).toHaveLength(1);

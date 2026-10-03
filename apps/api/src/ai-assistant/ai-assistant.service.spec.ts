@@ -25,6 +25,17 @@ function makePoint(overrides: Partial<any> = {}) {
   };
 }
 
+function makeConversation(overrides: Partial<any> = {}) {
+  return {
+    id: 'conversation-1',
+    userId: ACTOR_JUNAK.userId,
+    title: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
 describe('AiAssistantService', () => {
   let service: AiAssistantService;
   let prisma: any;
@@ -36,11 +47,10 @@ describe('AiAssistantService', () => {
       kurin: { findUnique: jest.fn().mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' }) },
       probyPoint: { findUnique: jest.fn().mockResolvedValue(makePoint()) },
       aiConversation: {
-        upsert: jest
-          .fn()
-          .mockImplementation(({ where }: any) =>
-            Promise.resolve({ id: 'conversation-1', userId: where.userId, createdAt: new Date() }),
-          ),
+        findUnique: jest.fn().mockResolvedValue(makeConversation()),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn().mockResolvedValue(makeConversation()),
+        update: jest.fn().mockResolvedValue(makeConversation()),
       },
       aiMessage: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -56,8 +66,42 @@ describe('AiAssistantService', () => {
     service = new AiAssistantService(prisma, openAi, probyProgress);
   });
 
+  describe('listConversations', () => {
+    it("returns only the actor's own conversations, most recently active first", async () => {
+      await service.listConversations(ACTOR_JUNAK);
+      expect(prisma.aiConversation.findMany).toHaveBeenCalledWith({
+        where: { userId: ACTOR_JUNAK.userId },
+        orderBy: { updatedAt: 'desc' },
+      });
+    });
+  });
+
+  describe('createConversation', () => {
+    it('creates an empty, untitled conversation for the actor', async () => {
+      const result = await service.createConversation(ACTOR_JUNAK);
+      expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
+      expect(result.messages).toEqual([]);
+    });
+  });
+
+  describe('getConversation / sendMessage ownership', () => {
+    it("404s on a conversation that doesn't exist", async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(null);
+      await expect(service.getConversation('missing', ACTOR_JUNAK)).rejects.toThrow(NotFoundException);
+    });
+
+    it("404s on another user's conversation, never leaking that it exists", async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ userId: 'someone-else' }));
+      await expect(service.getConversation('conversation-1', ACTOR_JUNAK)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      ).rejects.toThrow(NotFoundException);
+      expect(openAi.createChatCompletion).not.toHaveBeenCalled();
+    });
+  });
+
   it('builds a system prompt containing the real stage name, category name, and point description', async () => {
-    await service.sendMessage({ probyPointId: 'point-1', content: 'Допоможи підготуватись' }, ACTOR_JUNAK);
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'Допоможи підготуватись' }, ACTOR_JUNAK);
 
     const messagesArg = openAi.createChatCompletion.mock.calls[0][0];
     const systemMessage = messagesArg[0];
@@ -80,7 +124,7 @@ describe('AiAssistantService', () => {
     );
 
     await expect(
-      service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
     ).rejects.toThrow(NotFoundException);
     expect(openAi.createChatCompletion).not.toHaveBeenCalled();
   });
@@ -89,7 +133,7 @@ describe('AiAssistantService', () => {
     prisma.probyPoint.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.sendMessage({ probyPointId: 'missing-point', content: 'hi' }, ACTOR_JUNAK),
+      service.sendMessage('conversation-1', { probyPointId: 'missing-point', content: 'hi' }, ACTOR_JUNAK),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -100,7 +144,7 @@ describe('AiAssistantService', () => {
     });
 
     await expect(
-      service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
     ).rejects.toThrow(BadRequestException);
     expect(openAi.createChatCompletion).not.toHaveBeenCalled();
   });
@@ -112,28 +156,44 @@ describe('AiAssistantService', () => {
     });
 
     await expect(
-      service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
     ).rejects.toThrow(BadRequestException);
     expect(openAi.createChatCompletion).not.toHaveBeenCalled();
   });
 
   it('for a ZVYAZKOVYI actor, accepts a point regardless of DONE/LOCKED status and never calls getProgressFor', async () => {
-    const result = await service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_ZVYAZKOVYI);
+    prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ userId: ACTOR_ZVYAZKOVYI.userId }));
+    const result = await service.sendMessage(
+      'conversation-1',
+      { probyPointId: 'point-1', content: 'hi' },
+      ACTOR_ZVYAZKOVYI,
+    );
 
     expect(probyProgress.getProgressFor).not.toHaveBeenCalled();
     expect(result.reply).toBe('Ось твоя відповідь.');
   });
 
-  it('gets-or-creates the conversation via a single upsert keyed by userId (race-safe)', async () => {
-    await service.sendMessage({ probyPointId: 'point-1', content: 'перше' }, ACTOR_JUNAK);
-    expect(prisma.aiConversation.upsert).toHaveBeenCalledWith({
-      where: { userId: ACTOR_JUNAK.userId },
-      create: { userId: ACTOR_JUNAK.userId },
-      update: {},
-    });
+  it('sets the conversation title from the first message, but never overwrites an existing title', async () => {
+    prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ title: null }));
+    prisma.aiMessage.findMany.mockResolvedValue([]); // no history yet: this is the first message
 
-    await service.sendMessage({ probyPointId: 'point-1', content: 'друге' }, ACTOR_JUNAK);
-    expect(prisma.aiConversation.upsert).toHaveBeenCalledTimes(2);
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'Перше повідомлення' }, ACTOR_JUNAK);
+
+    expect(prisma.aiConversation.update).toHaveBeenCalledWith({
+      where: { id: 'conversation-1' },
+      data: { title: 'Перше повідомлення' },
+    });
+  });
+
+  it('does not touch the title on a later message in the same conversation', async () => {
+    prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ title: 'Перше повідомлення' }));
+    prisma.aiMessage.findMany.mockResolvedValue([
+      { id: 'm1', role: 'USER', content: 'Перше повідомлення', createdAt: new Date() },
+    ]);
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'Друге повідомлення' }, ACTOR_JUNAK);
+
+    expect(prisma.aiConversation.update).toHaveBeenCalledWith({ where: { id: 'conversation-1' }, data: {} });
   });
 
   it('caps history sent to OpenAI at the last 20 stored messages, most recent and in chronological order', async () => {
@@ -155,7 +215,7 @@ describe('AiAssistantService', () => {
       return Promise.resolve(take ? sorted.slice(0, take) : sorted);
     });
 
-    await service.sendMessage({ probyPointId: 'point-1', content: 'new message' }, ACTOR_JUNAK);
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'new message' }, ACTOR_JUNAK);
 
     const messagesArg = openAi.createChatCompletion.mock.calls[0][0];
     // 1 system + 20 history + 1 new user message
@@ -172,7 +232,7 @@ describe('AiAssistantService', () => {
     openAi.createChatCompletion.mockRejectedValue(new Error('network error, leaked header: Authorization sk-secret'));
 
     await expect(
-      service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
+      service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
     ).rejects.toThrow(ServiceUnavailableException);
 
     expect(prisma.aiMessage.create).toHaveBeenCalledTimes(1);
@@ -185,7 +245,7 @@ describe('AiAssistantService', () => {
     openAi.createChatCompletion.mockRejectedValue(new Error('Authorization: Bearer sk-super-secret-key'));
 
     try {
-      await service.sendMessage({ probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+      await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
       fail('expected sendMessage to throw');
     } catch (error: any) {
       expect(error).toBeInstanceOf(ServiceUnavailableException);

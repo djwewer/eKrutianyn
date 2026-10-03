@@ -8,6 +8,7 @@ import { OpenAiService, ChatMessage } from './openai.service';
 import { SendMessageDto } from './dto/send-message.dto';
 
 const HISTORY_LIMIT = 20;
+const TITLE_MAX_LENGTH = 60;
 
 type EligiblePoint = {
   id: string;
@@ -30,15 +31,33 @@ export class AiAssistantService {
     private readonly probyProgressService: ProbyProgressService,
   ) {}
 
-  async getConversation(actor: CurrentUserPayload) {
-    const conversation = await this.getOrCreateConversation(actor.userId);
-    const messages = await this.serializeMessages(conversation.id);
-    return { id: conversation.id, messages };
+  async listConversations(actor: CurrentUserPayload) {
+    const conversations = await this.prisma.aiConversation.findMany({
+      where: { userId: actor.userId },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return conversations.map((c) => ({
+      id: c.id,
+      title: c.title,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
   }
 
-  async sendMessage(dto: SendMessageDto, actor: CurrentUserPayload) {
+  async createConversation(actor: CurrentUserPayload) {
+    const conversation = await this.prisma.aiConversation.create({ data: { userId: actor.userId } });
+    return { id: conversation.id, title: conversation.title, messages: [] };
+  }
+
+  async getConversation(conversationId: string, actor: CurrentUserPayload) {
+    const conversation = await this.findOwnedConversation(conversationId, actor);
+    const messages = await this.serializeMessages(conversation.id);
+    return { id: conversation.id, title: conversation.title, messages };
+  }
+
+  async sendMessage(conversationId: string, dto: SendMessageDto, actor: CurrentUserPayload) {
+    const conversation = await this.findOwnedConversation(conversationId, actor);
     const point = await this.loadEligiblePoint(dto.probyPointId, actor);
-    const conversation = await this.getOrCreateConversation(actor.userId);
     const systemPrompt = this.buildSystemPrompt(point);
 
     const recentHistory = await this.prisma.aiMessage.findMany({
@@ -49,6 +68,7 @@ export class AiAssistantService {
     // The query above returns the most-recent-first; re-order chronologically before
     // handing the transcript to the model.
     const chronologicalHistory = [...recentHistory].reverse();
+    const isFirstMessage = recentHistory.length === 0;
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -60,7 +80,9 @@ export class AiAssistantService {
     ];
 
     // The junak did send this message regardless of what happens next, so it is
-    // persisted before we even attempt the OpenAI call.
+    // persisted before we even attempt the OpenAI call. Bumps updatedAt (used to
+    // order the conversation list) via the auto-title write below, or directly
+    // here when this isn't the first message.
     await this.prisma.aiMessage.create({
       data: {
         conversationId: conversation.id,
@@ -69,6 +91,16 @@ export class AiAssistantService {
         probyPointId: dto.probyPointId,
       },
     });
+
+    if (isFirstMessage && !conversation.title) {
+      await this.prisma.aiConversation.update({
+        where: { id: conversation.id },
+        data: { title: dto.content.slice(0, TITLE_MAX_LENGTH) },
+      });
+    } else {
+      // Touch updatedAt so the conversation list sorts by latest activity.
+      await this.prisma.aiConversation.update({ where: { id: conversation.id }, data: {} });
+    }
 
     let reply: string;
     try {
@@ -101,6 +133,16 @@ export class AiAssistantService {
 
     const updatedMessages = await this.serializeMessages(conversation.id);
     return { reply, messages: updatedMessages };
+  }
+
+  private async findOwnedConversation(conversationId: string, actor: CurrentUserPayload) {
+    const conversation = await this.prisma.aiConversation.findUnique({ where: { id: conversationId } });
+    // Same 404 whether the conversation doesn't exist at all or belongs to someone
+    // else — don't leak which, and never let a user address another user's chat.
+    if (!conversation || conversation.userId !== actor.userId) {
+      throw new NotFoundException('Conversation not found');
+    }
+    return conversation;
   }
 
   private async loadEligiblePoint(pointId: string, actor: CurrentUserPayload): Promise<EligiblePoint> {
@@ -150,17 +192,6 @@ export class AiAssistantService {
 3. Якщо прохання юнака взагалі не стосується підготовки до проби чи пластового життя (наприклад, прохання виконати шкільне домашнє завдання, написати код для стороннього проекту, чи будь-яке інше завдання, не пов'язане з точкою проби) — ввічливо відмов і поясни, що ти допомагаєш тільки з підготовкою до точок проби.
 
 Завжди лишайся доброзичливим, говори українською мовою.`;
-  }
-
-  private async getOrCreateConversation(userId: string) {
-    // A single upsert instead of findUnique-then-create: two concurrent first-ever
-    // requests from the same user would otherwise race and one would hit the
-    // unique constraint on userId.
-    return this.prisma.aiConversation.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
   }
 
   private async serializeMessages(conversationId: string) {

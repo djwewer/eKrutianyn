@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -13,13 +13,27 @@ import { SendMessageDto } from './dto/send-message.dto';
 export class AiAssistantController {
   constructor(private readonly service: AiAssistantService) {}
 
-  @Get('conversation')
-  getConversation(@CurrentUser() user: CurrentUserPayload) {
-    return this.service.getConversation(user);
+  @Get('conversations')
+  listConversations(@CurrentUser() user: CurrentUserPayload) {
+    return this.service.listConversations(user);
   }
 
-  @Post('messages')
-  sendMessage(@Body() dto: SendMessageDto, @CurrentUser() user: CurrentUserPayload) {
-    return this.service.sendMessage(dto, user);
+  @Post('conversations')
+  createConversation(@CurrentUser() user: CurrentUserPayload) {
+    return this.service.createConversation(user);
+  }
+
+  @Get('conversations/:id')
+  getConversation(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.getConversation(id, user);
+  }
+
+  @Post('conversations/:id/messages')
+  sendMessage(
+    @Param('id') id: string,
+    @Body() dto: SendMessageDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.sendMessage(id, dto, user);
   }
 }
