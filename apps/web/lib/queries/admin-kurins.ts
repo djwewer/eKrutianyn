@@ -19,7 +19,14 @@ export function useAdminKurins(credentials: AdminCredentials | null) {
 export function useCreateKurin(credentials: AdminCredentials | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: { name: string; kurinNumber?: string; gender: 'MALE' | 'FEMALE'; stanytsia: string; probyProgramId: string }) =>
+    mutationFn: (dto: {
+      name: string;
+      kurinNumber?: string;
+      gender: 'MALE' | 'FEMALE';
+      stanytsia: string;
+      probyProgramId: string;
+      zvyazkovyi: { firstName: string; lastName: string; email: string; password: string };
+    }) =>
       apiFetch<AdminKurin>('/admin/kurins', {
         method: 'POST',
         headers: adminHeaders(credentials!),

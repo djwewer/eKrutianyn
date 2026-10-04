@@ -15,7 +15,7 @@ export interface JwtPayload {
   kurinId: string;
   isKurinniy: boolean;
   positions: PositionType[];
-  kurinNumber: string;
+  kurinNumber: string | null;
 }
 
 @Injectable()
@@ -41,7 +41,7 @@ export class AuthService {
     kurinId: string,
     isKurinniy: boolean,
     positions: PositionType[],
-    kurinNumber: string,
+    kurinNumber: string | null,
   ): { accessToken: string } {
     const payload: JwtPayload = { sub: userId, role, kurinId, isKurinniy, positions, kurinNumber };
     return { accessToken: this.jwtService.sign(payload) };
@@ -107,7 +107,10 @@ export class AuthService {
     }
     const passwordHash = await this.hashPassword(newPassword);
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash, mustChangePassword: false },
+      }),
       this.prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
       this.prisma.passwordResetToken.updateMany({
         where: { userId: resetToken.userId, usedAt: null, id: { not: resetToken.id } },

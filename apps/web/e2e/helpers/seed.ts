@@ -50,24 +50,44 @@ export async function seedKurinWithZvyazkovyi(
 ) {
   const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const kurinNumber = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const email = `zvyazkovyi-${uniqueSuffix}@example.com`;
+  const password = 'password123';
   const kurin = await adminPost<{ id: string; name: string; kurinNumber: string }>('/admin/kurins', {
     name: `Курінь ${uniqueSuffix}`,
     kurinNumber,
     gender: 'MALE',
     stanytsia: 'Тестова станиця',
     probyProgramId,
+    zvyazkovyi: { firstName: 'Зв\'язковий', lastName: 'Тестовий', email, password },
     ...(options?.driveFolderId ? { driveFolderId: options.driveFolderId } : {}),
     ...(options?.driveRefreshToken ? { driveRefreshToken: options.driveRefreshToken } : {}),
     ...(options?.driveConnectedEmail ? { driveConnectedEmail: options.driveConnectedEmail } : {}),
   });
-  const email = `zvyazkovyi-${uniqueSuffix}@example.com`;
-  const password = 'password123';
-  const zvyazkovyi = await adminPost<{ id: string; email: string }>('/admin/kurins/zvyazkovyi', {
-    firstName: 'Зв\'язковий',
-    lastName: 'Тестовий',
-    email,
-    password,
-    kurinId: kurin.id,
+
+  // The admin-created zvyazkovyi carries mustChangePassword:true (same as a
+  // real onboarded account), which would make every other e2e spec using
+  // this fixture immediately get redirected to /settings on first navigation.
+  // Clear it here, the same way a real first login would, so downstream
+  // specs see a normal, already-onboarded account.
+  const loginRes = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   });
+  if (!loginRes.ok) {
+    throw new Error(`Seed login failed for ${email}: ${loginRes.status} ${await loginRes.text()}`);
+  }
+  const { accessToken } = (await loginRes.json()) as { accessToken: string };
+  const changePasswordRes = await fetch(`${API_URL}/users/me/password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ currentPassword: password, newPassword: password }),
+  });
+  if (!changePasswordRes.ok) {
+    throw new Error(`Seed password-clear failed for ${email}: ${changePasswordRes.status} ${await changePasswordRes.text()}`);
+  }
+  const zvyazkovyiId = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString('utf-8')).sub as string;
+
+  const zvyazkovyi = { id: zvyazkovyiId, email };
   return { kurin, zvyazkovyi, zvyazkovyiEmail: email, zvyazkovyiPassword: password };
 }

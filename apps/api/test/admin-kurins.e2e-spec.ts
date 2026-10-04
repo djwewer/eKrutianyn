@@ -33,9 +33,18 @@ describe('Admin kurins (e2e)', () => {
     await cleanDatabase(prisma);
   });
 
+  const zvyazkovyi = (overrides: Partial<Record<'firstName' | 'lastName' | 'email' | 'password', string>> = {}) => ({
+    firstName: 'Іван',
+    lastName: 'Франко',
+    email: `zvyazkovyi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`,
+    password: 'secret123',
+    ...overrides,
+  });
+
   describe('POST /admin/kurins', () => {
-    it('creates a kurin when the admin key is correct', async () => {
+    it('creates a kurin together with its first zvyazkovyi, who can then log in', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      const zv = zvyazkovyi({ email: 'zvyazkovyi-bootstrap@example.com' });
 
       const response = await request(app.getHttpServer())
         .post('/admin/kurins')
@@ -48,11 +57,23 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: program.id,
+          zvyazkovyi: zv,
         })
         .expect(201);
 
       expect(response.body.id).toEqual(expect.any(String));
       expect(response.body.name).toBe('Курінь Тестовий');
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: zv.email, password: zv.password })
+        .expect(201);
+      expect(loginResponse.body.accessToken).toEqual(expect.any(String));
+
+      const created = await prisma.user.findUniqueOrThrow({ where: { email: zv.email } });
+      expect(created.role).toBe('ZVYAZKOVYI');
+      expect(created.kurinId).toBe(response.body.id);
+      expect(created.mustChangePassword).toBe(true);
     });
 
     it('returns 401 with a missing or wrong admin key', async () => {
@@ -63,6 +84,7 @@ describe('Admin kurins (e2e)', () => {
         gender: KurinGender.MALE,
         stanytsia: 'Львів',
         probyProgramId: program.id,
+        zvyazkovyi: zvyazkovyi(),
       };
 
       await request(app.getHttpServer()).post('/admin/kurins').send(payload).expect(401);
@@ -83,6 +105,7 @@ describe('Admin kurins (e2e)', () => {
         gender: KurinGender.MALE,
         stanytsia: 'Львів',
         probyProgramId: program.id,
+        zvyazkovyi: zvyazkovyi(),
       };
 
       await request(app.getHttpServer())
@@ -111,11 +134,24 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: '00000000-0000-0000-0000-000000000000',
+          zvyazkovyi: zvyazkovyi(),
         })
         .expect(404);
     });
 
-    it('auto-assigns "П-1" when kurinNumber is omitted', async () => {
+    it('returns 400 when zvyazkovyi is missing', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
+        .send({ name: 'Курінь Підготовчий', gender: KurinGender.MALE, stanytsia: 'Львів', probyProgramId: program.id })
+        .expect(400);
+    });
+
+    it('leaves kurinNumber null when omitted (preparatory kurin, no synthetic placeholder)', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
 
       const response = await request(app.getHttpServer())
@@ -128,34 +164,14 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: program.id,
+          zvyazkovyi: zvyazkovyi(),
         })
         .expect(201);
 
-      expect(response.body.kurinNumber).toBe('П-1');
+      expect(response.body.kurinNumber).toBeNull();
     });
 
-    it('auto-assigns "П-2" when "П-1" already exists', async () => {
-      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
-      await request(app.getHttpServer())
-        .post('/admin/kurins')
-        .set('x-admin-key', adminKey)
-        .set('x-admin-username', adminUsername)
-        .set('x-admin-password', adminPassword)
-        .send({ name: 'Перший', gender: KurinGender.MALE, stanytsia: 'Львів', probyProgramId: program.id })
-        .expect(201);
-
-      const response = await request(app.getHttpServer())
-        .post('/admin/kurins')
-        .set('x-admin-key', adminKey)
-        .set('x-admin-username', adminUsername)
-        .set('x-admin-password', adminPassword)
-        .send({ name: 'Другий', gender: KurinGender.MALE, stanytsia: 'Львів', probyProgramId: program.id })
-        .expect(201);
-
-      expect(response.body.kurinNumber).toBe('П-2');
-    });
-
-    it('returns 409 when an explicitly provided kurinNumber is already taken', async () => {
+    it('returns 409 when an explicitly provided kurinNumber is already taken, and creates neither kurin nor zvyazkovyi', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
       await request(app.getHttpServer())
         .post('/admin/kurins')
@@ -168,9 +184,11 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: program.id,
+          zvyazkovyi: zvyazkovyi(),
         })
         .expect(201);
 
+      const secondZv = zvyazkovyi({ email: 'second-zvyazkovyi@example.com' });
       await request(app.getHttpServer())
         .post('/admin/kurins')
         .set('x-admin-key', adminKey)
@@ -182,8 +200,47 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: program.id,
+          zvyazkovyi: secondZv,
         })
         .expect(409);
+
+      expect(await prisma.user.findUnique({ where: { email: secondZv.email } })).toBeNull();
+    });
+
+    it('returns 409 when the zvyazkovyi email is already in use, and does not create the kurin (atomic)', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      const dupeEmail = 'dupe-zvyazkovyi@example.com';
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
+        .send({
+          name: 'Перший',
+          kurinNumber: '80',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+          zvyazkovyi: zvyazkovyi({ email: dupeEmail }),
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
+        .send({
+          name: 'Другий',
+          kurinNumber: '81',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+          zvyazkovyi: zvyazkovyi({ email: dupeEmail }),
+        })
+        .expect(409);
+
+      expect(await prisma.kurin.findUnique({ where: { kurinNumber: '81' } })).toBeNull();
     });
 
     it('returns 400 when an explicitly provided kurinNumber contains a slash', async () => {
@@ -200,13 +257,14 @@ describe('Admin kurins (e2e)', () => {
           gender: KurinGender.MALE,
           stanytsia: 'Львів',
           probyProgramId: program.id,
+          zvyazkovyi: zvyazkovyi(),
         })
         .expect(400);
     });
   });
 
   describe('POST /admin/kurins/zvyazkovyi', () => {
-    it('creates the first zvyazkovyi for a kurin, who can then log in', async () => {
+    it('creates a zvyazkovyi for a kurin that has none yet, who can then log in', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
       const kurin = await prisma.kurin.create({
         data: {
@@ -256,6 +314,39 @@ describe('Admin kurins (e2e)', () => {
           kurinId: '00000000-0000-0000-0000-000000000000',
         })
         .expect(404);
+    });
+
+    it('returns 409 when the kurin already has an active zvyazkovyi', async () => {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      const zv = zvyazkovyi();
+      const createResponse = await request(app.getHttpServer())
+        .post('/admin/kurins')
+        .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
+        .send({
+          name: 'Курінь',
+          kurinNumber: '90',
+          gender: KurinGender.MALE,
+          stanytsia: 'Львів',
+          probyProgramId: program.id,
+          zvyazkovyi: zv,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/admin/kurins/zvyazkovyi')
+        .set('x-admin-key', adminKey)
+        .set('x-admin-username', adminUsername)
+        .set('x-admin-password', adminPassword)
+        .send({
+          firstName: 'Другий',
+          lastName: 'Зв\'язковий',
+          email: 'second@example.com',
+          password: 'secret123',
+          kurinId: createResponse.body.id,
+        })
+        .expect(409);
     });
   });
 

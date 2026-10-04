@@ -1,5 +1,13 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { KurinGender } from '@prisma/client';
+
+class CreateKurinZvyazkovyiDto {
+  @IsString() @IsNotEmpty() firstName: string;
+  @IsString() @IsNotEmpty() lastName: string;
+  @IsEmail() email: string;
+  @IsString() @MinLength(8) password: string;
+}
 
 export class CreateKurinDto {
   @IsString() @IsNotEmpty() name: string;
@@ -10,4 +18,9 @@ export class CreateKurinDto {
   @IsOptional() @IsString() driveFolderId?: string;
   @IsOptional() @IsString() driveRefreshToken?: string;
   @IsOptional() @IsString() driveConnectedEmail?: string;
+  // Every kurin needs a Зв'язковий to be usable, so the first one is created
+  // atomically with the kurin itself rather than as a separate admin step
+  // that's easy to forget (see POST /admin/kurins/zvyazkovyi for replacing
+  // or adding one to a kurin that already exists).
+  @IsDefined() @ValidateNested() @Type(() => CreateKurinZvyazkovyiDto) zvyazkovyi: CreateKurinZvyazkovyiDto;
 }

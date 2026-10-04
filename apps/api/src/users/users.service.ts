@@ -45,6 +45,7 @@ export class UsersService {
           email: dto.email,
           role: dto.role,
           passwordHash,
+          mustChangePassword: !!dto.password,
           kurinId: actorKurinId,
           hurtokId: dto.hurtokId,
         },
@@ -297,7 +298,7 @@ export class UsersService {
     }
     const passwordHash = await this.authService.hashPassword(dto.newPassword);
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: false } }),
       this.prisma.passwordResetToken.updateMany({
         where: { userId, usedAt: null },
         data: { usedAt: new Date() },

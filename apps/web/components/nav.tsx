@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session-client';
@@ -55,7 +55,11 @@ function NavLink({
 }) {
   // AI-виховник gets a continuously shimmering gradient instead of the
   // standard blue active/hover fill, to stand out as a highlighted feature
-  // regardless of whether its page is currently open.
+  // regardless of whether its page is currently open. Once its page IS
+  // open, the fill gives way to a solid theme-colored interior (dark in
+  // dark mode, white in light mode) ringed by the same animated gradient,
+  // so the button still reads as "you are here" rather than looking
+  // identical in both states.
   const gradient = href === '/ai-vykhovnyk';
 
   return (
@@ -65,9 +69,11 @@ function NavLink({
       data-nav-gradient={gradient || undefined}
       className={cn(
         'rounded-md px-3 py-2 text-sm font-medium transition-[filter,color,background-color]',
-        gradient
-          ? 'animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#7C3AED)] text-white hover:brightness-110'
-          : cn('hover:bg-accent-soft hover:text-accent-text', active && 'bg-accent-soft font-semibold text-accent-text')
+        gradient &&
+          !active &&
+          'animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#EF4444,#7C3AED)] text-white hover:brightness-110',
+        gradient && active && 'ai-gradient-ring bg-background font-semibold text-accent-text',
+        !gradient && cn('hover:bg-accent-soft hover:text-accent-text', active && 'bg-accent-soft font-semibold text-accent-text'),
       )}
     >
       {label}
@@ -83,6 +89,16 @@ export function Nav() {
   const { data: session } = useSession();
   const { data: kurin } = useKurin({ enabled: !!session });
   const { data: profile } = useOwnProfile({ enabled: !!session });
+
+  // A password someone else assigned on this account's behalf (a fresh
+  // zvyazkovyi, a junak added directly with a temp password) must be
+  // replaced before anything else is usable — read live from the profile,
+  // not baked into the JWT, so it clears the moment the user changes it.
+  useEffect(() => {
+    if (profile?.mustChangePassword && pathname !== '/settings') {
+      router.replace('/settings');
+    }
+  }, [profile?.mustChangePassword, pathname, router]);
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -115,7 +131,8 @@ export function Nav() {
           <span className="text-xs font-semibold tracking-wide text-accent">єПластун</span>
           {kurin && (
             <h1 className="truncate text-[19px] font-bold tracking-tight">
-              Курінь ч.{kurin.kurinNumber} {kurin.name.replace(/^курінь\s+/i, '')}
+              {kurin.kurinNumber ? `Курінь ч.${kurin.kurinNumber}` : 'Підготовчий курінь'}{' '}
+              {kurin.name.replace(/^курінь\s+/i, '')}
             </h1>
           )}
         </div>

@@ -29,9 +29,15 @@ export function useUpdateOwnProfile() {
 }
 
 export function useChangePassword() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: { currentPassword?: string; newPassword: string }) =>
       apiFetch<{ ok: true }>('/users/me/password', { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      // Clears mustChangePassword in the cached profile immediately, so the
+      // forced-change gate in Nav releases without waiting for a refetch.
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
+    },
   });
 }
 

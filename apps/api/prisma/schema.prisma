@@ -68,7 +68,10 @@ enum ApprovalActionType {
 model Kurin {
   id                           String       @id @default(uuid())
   name                         String
-  kurinNumber                  String       @unique
+  // Null until the КПС assigns a permanent number after the preparatory
+  // period (Правильник УПЮ, 4.2.5) — a preparatory kurin genuinely has no
+  // number yet, so this is never backfilled with a synthetic placeholder.
+  kurinNumber                  String?      @unique
   gender                       KurinGender
   stanytsia                    String
   probyProgramId               String
@@ -130,6 +133,10 @@ model User {
   nickname           String?
   email              String    @unique
   passwordHash       String?
+  // True when someone else (admin/zvyazkovyi/kurinniy) assigned this
+  // account's current password on its behalf — forces a change on next
+  // login. Cleared whenever the user sets a password themselves.
+  mustChangePassword Boolean   @default(false)
   googleId           String?   @unique
   role               Role
   birthDate          DateTime?

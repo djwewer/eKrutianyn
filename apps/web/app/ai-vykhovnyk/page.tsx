@@ -344,7 +344,7 @@ function ConversationPanel({
               <div key={index} className={cn('flex', message.role === 'USER' ? 'justify-end' : 'justify-start')}>
                 <div
                   className={cn(
-                    'max-w-[85%] rounded-lg px-3 py-2 text-sm',
+                    'ai-gradient-ring max-w-[85%] rounded-lg px-3 py-2 text-sm',
                     message.role === 'USER'
                       ? 'whitespace-pre-wrap bg-accent-soft text-accent-text'
                       : cn('bg-muted text-foreground', MARKDOWN_CLASSES),
@@ -367,7 +367,7 @@ function ConversationPanel({
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Опишіть, що хочете підготувати..."
               rows={3}
-              className="w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              className="ai-gradient-ring ai-gradient-glow w-full min-w-0 rounded-md bg-background px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
             />
             <div className="flex items-center justify-between gap-2">
               <Button size="sm" disabled={!canSend} onClick={handleSend}>

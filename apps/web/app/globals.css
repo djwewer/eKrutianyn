@@ -167,8 +167,51 @@
   }
 }
 
+/* Animated gradient ring around AI-виховник chat UI (input, message bubbles,
+   the nav button's active state): a crisp colored border via a ::before
+   pseudo-element sized out past the host's edge, so the host itself keeps a
+   solid, theme-correct interior instead of the ring bleeding through it. The
+   host needs `position: relative`, an opaque background and a border-radius
+   (inherited by the pseudo) — applied inline alongside this class. */
+.ai-gradient-ring {
+  position: relative;
+  z-index: 0;
+}
+.ai-gradient-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  margin: -2px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
+  background-size: 300% 300%;
+  animation: kmGradientShift 6s ease-in-out infinite;
+}
+
+/* Adds a soft blurred halo behind the ring for the chat input specifically —
+   kept off message bubbles since repeating a blur filter per bubble in a
+   long scrolling list is needless paint cost for little visual gain. */
+.ai-gradient-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  margin: -6px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
+  background-size: 300% 300%;
+  filter: blur(10px);
+  opacity: 0.45;
+  animation: kmGradientShift 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-nav-gradient] {
+    animation: none !important;
+  }
+  .ai-gradient-ring::before,
+  .ai-gradient-glow::after {
     animation: none !important;
   }
 }

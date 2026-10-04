@@ -10,6 +10,7 @@ export const USER_SELECT = {
   hurtokId: true,
   archivedAt: true,
   photoUpdatedAt: true,
+  mustChangePassword: true,
 } as const;
 
 export const USER_SELECT_PUBLIC = {

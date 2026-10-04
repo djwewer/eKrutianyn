@@ -54,7 +54,7 @@ export function KurinInfoSection() {
         <h4 className="font-heading text-sm font-semibold">Дані куреня</h4>
         <div className="grid grid-cols-2 gap-x-6 gap-y-3">
           <InfoRow label="Назва">{kurin.name}</InfoRow>
-          <InfoRow label="Номер">{kurin.kurinNumber}</InfoRow>
+          <InfoRow label="Номер">{kurin.kurinNumber ?? 'Підготовчий (ще не присвоєно)'}</InfoRow>
           <InfoRow label="Станиця">{kurin.stanytsia}</InfoRow>
           <InfoRow label="Стать">{kurin.gender === 'MALE' ? 'Чоловіча' : 'Жіноча'}</InfoRow>
           <InfoRow label="Пробна програма">{kurin.probyProgram.version === 'OLD' ? 'Стара' : 'Нова'}</InfoRow>

@@ -6,7 +6,7 @@ export interface CurrentUserPayload {
   kurinId: string;
   isKurinniy: boolean;
   positions: PositionType[];
-  kurinNumber: string;
+  kurinNumber: string | null;
 }
 
 export interface UserSummary {
@@ -21,6 +21,7 @@ export interface UserSummary {
   hurtokId: string | null;
   archivedAt: string | null;
   photoUpdatedAt: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface UserDetail extends UserSummary {
@@ -218,7 +219,7 @@ export interface AdminProbyProgram {
 export interface AdminKurin {
   id: string;
   name: string;
-  kurinNumber: string;
+  kurinNumber: string | null;
   gender: 'MALE' | 'FEMALE';
   stanytsia: string;
   probyProgramId: string;
@@ -280,7 +281,7 @@ export interface ApprovalRequest {
 export interface Kurin {
   id: string;
   name: string;
-  kurinNumber: string;
+  kurinNumber: string | null;
   gender: 'MALE' | 'FEMALE';
   stanytsia: string;
   probyProgram: {

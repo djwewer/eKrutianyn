@@ -95,10 +95,20 @@ export default function SettingsPage() {
     }
   }
 
+  const forcedPasswordChange = profile.mustChangePassword;
+
   return (
     <div className="mx-auto max-w-md space-y-6">
       <h1 className="text-2xl font-bold">Налаштування</h1>
 
+      {forcedPasswordChange && (
+        <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          Вам призначили тимчасовий пароль. Перш ніж продовжити, встановіть власний пароль нижче.
+        </p>
+      )}
+
+      {!forcedPasswordChange && (
+      <>
       <Card>
         <CardHeader>
           <CardTitle>Фото профілю</CardTitle>
@@ -196,6 +206,8 @@ export default function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+      </>
+      )}
 
       <Card>
         <CardHeader>
@@ -235,6 +247,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {!forcedPasswordChange && (
       <Card>
         <CardHeader>
           <CardTitle>Email</CardTitle>
@@ -279,6 +292,7 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

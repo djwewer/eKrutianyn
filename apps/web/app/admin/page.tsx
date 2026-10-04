@@ -203,17 +203,40 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
   const [stanytsia, setStanytsia] = useState('');
   const [probyProgramId, setProbyProgramId] = useState('');
+  const [zvyazkovyiFirstName, setZvyazkovyiFirstName] = useState('');
+  const [zvyazkovyiLastName, setZvyazkovyiLastName] = useState('');
+  const [zvyazkovyiEmail, setZvyazkovyiEmail] = useState('');
+  const [zvyazkovyiPassword, setZvyazkovyiPassword] = useState('');
+
+  const zvyazkovyiReady =
+    zvyazkovyiFirstName.trim() && zvyazkovyiLastName.trim() && zvyazkovyiEmail.trim() && zvyazkovyiPassword.length >= 8;
 
   function handleCreate() {
-    if (!name.trim() || !stanytsia.trim() || !probyProgramId) return;
+    if (!name.trim() || !stanytsia.trim() || !probyProgramId || !zvyazkovyiReady) return;
     create.mutate(
-      { name: name.trim(), kurinNumber: kurinNumber.trim() || undefined, gender, stanytsia: stanytsia.trim(), probyProgramId },
+      {
+        name: name.trim(),
+        kurinNumber: kurinNumber.trim() || undefined,
+        gender,
+        stanytsia: stanytsia.trim(),
+        probyProgramId,
+        zvyazkovyi: {
+          firstName: zvyazkovyiFirstName.trim(),
+          lastName: zvyazkovyiLastName.trim(),
+          email: zvyazkovyiEmail.trim(),
+          password: zvyazkovyiPassword,
+        },
+      },
       {
         onSuccess: () => {
           setName('');
           setKurinNumber('');
           setStanytsia('');
           setProbyProgramId('');
+          setZvyazkovyiFirstName('');
+          setZvyazkovyiLastName('');
+          setZvyazkovyiEmail('');
+          setZvyazkovyiPassword('');
         },
       },
     );
@@ -241,7 +264,11 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
         <div className="space-y-2 rounded-md border border-dashed border-border p-3">
           <p className="text-sm font-medium">Додати курінь</p>
           <Input placeholder="Назва (напр. «курінь Лісові Мандрівники»)" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input placeholder="Число (необов'язково — згенерується автоматично)" value={kurinNumber} onChange={(e) => setKurinNumber(e.target.value)} />
+          <Input
+            placeholder="Число (необов'язково — підготовчий курінь поки без офіційного числа)"
+            value={kurinNumber}
+            onChange={(e) => setKurinNumber(e.target.value)}
+          />
           <Input placeholder="Станиця" value={stanytsia} onChange={(e) => setStanytsia(e.target.value)} />
           <select
             value={gender}
@@ -263,7 +290,43 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
               </option>
             ))}
           </select>
-          <Button size="sm" disabled={!name.trim() || !stanytsia.trim() || !probyProgramId || create.isPending} onClick={handleCreate}>
+
+          <div className="space-y-2 border-t border-dashed border-border pt-2">
+            <p className="text-sm font-medium">Перший зв'язковий куреня</p>
+            <p className="text-xs text-muted-foreground">
+              Задайте тимчасовий пароль і передайте його зв'язковому — при першому вході система попросить його змінити.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ім'я"
+                value={zvyazkovyiFirstName}
+                onChange={(e) => setZvyazkovyiFirstName(e.target.value)}
+              />
+              <Input
+                placeholder="Прізвище"
+                value={zvyazkovyiLastName}
+                onChange={(e) => setZvyazkovyiLastName(e.target.value)}
+              />
+            </div>
+            <Input
+              type="email"
+              placeholder="Пошта зв'язкового"
+              value={zvyazkovyiEmail}
+              onChange={(e) => setZvyazkovyiEmail(e.target.value)}
+            />
+            <Input
+              type="text"
+              placeholder="Тимчасовий пароль (мін. 8 символів)"
+              value={zvyazkovyiPassword}
+              onChange={(e) => setZvyazkovyiPassword(e.target.value)}
+            />
+          </div>
+
+          <Button
+            size="sm"
+            disabled={!name.trim() || !stanytsia.trim() || !probyProgramId || !zvyazkovyiReady || create.isPending}
+            onClick={handleCreate}
+          >
             Створити
           </Button>
           {create.isError && (
@@ -284,12 +347,12 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
   const onUpdate = useUpdateKurin(credentials);
   const onDelete = useDeleteKurin(credentials);
   const [name, setName] = useState(kurin.name);
-  const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber);
+  const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber ?? '');
   const dirty = name !== kurin.name || kurinNumber !== kurin.kurinNumber;
   const canDelete = kurin.userCount === 0 && kurin.hurtokCount === 0;
 
   function handleSave() {
-    onUpdate.mutate({ id: kurin.id, name: name.trim(), kurinNumber: kurinNumber.trim() });
+    onUpdate.mutate({ id: kurin.id, name: name.trim(), kurinNumber: kurinNumber.trim() || undefined });
   }
 
   function handleDelete() {
@@ -300,7 +363,12 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
   return (
     <div className="space-y-1.5 rounded-md border border-border p-3" data-testid={`kurin-row-${kurin.id}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <Input value={kurinNumber} onChange={(e) => setKurinNumber(e.target.value)} className="w-24" />
+        <Input
+          value={kurinNumber}
+          onChange={(e) => setKurinNumber(e.target.value)}
+          placeholder="підготовчий"
+          className="w-24"
+        />
         <Input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1" />
       </div>
       <p className="text-xs text-muted-foreground">

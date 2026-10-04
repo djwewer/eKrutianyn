@@ -80,26 +80,44 @@ export class KurinsAdminService {
         throw new ConflictException('This kurin number is already in use');
       }
     }
-    const kurinNumber = dto.kurinNumber ?? (await this.nextPreparatoryNumber());
-    return this.prisma.kurin.create({ data: { ...dto, kurinNumber } });
-  }
-
-  private async nextPreparatoryNumber(): Promise<string> {
-    const preparatoryKurins = await this.prisma.kurin.findMany({
-      where: { kurinNumber: { startsWith: 'П-' } },
-      select: { kurinNumber: true },
-    });
-    const highestExisting = preparatoryKurins.reduce((max, k) => {
-      const n = parseInt(k.kurinNumber.slice(2), 10);
-      return Number.isFinite(n) && n > max ? n : max;
-    }, 0);
-    return `П-${highestExisting + 1}`;
+    const { zvyazkovyi, ...kurinFields } = dto;
+    const passwordHash = await this.authService.hashPassword(zvyazkovyi.password);
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const kurin = await tx.kurin.create({
+          data: { ...kurinFields, kurinNumber: kurinFields.kurinNumber ?? null },
+        });
+        await tx.user.create({
+          data: {
+            firstName: zvyazkovyi.firstName,
+            lastName: zvyazkovyi.lastName,
+            email: zvyazkovyi.email,
+            passwordHash,
+            role: Role.ZVYAZKOVYI,
+            kurinId: kurin.id,
+            mustChangePassword: true,
+          },
+        });
+        return kurin;
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new ConflictException('This email is already in use');
+      }
+      throw err;
+    }
   }
 
   async createFirstZvyazkovyi(dto: CreateAdminUserDto) {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: dto.kurinId } });
     if (!kurin) {
       throw new NotFoundException('Kurin not found');
+    }
+    const existingZvyazkovyi = await this.prisma.user.findFirst({
+      where: { kurinId: dto.kurinId, role: Role.ZVYAZKOVYI, archivedAt: null },
+    });
+    if (existingZvyazkovyi) {
+      throw new ConflictException('This kurin already has an active Зв\'язковий');
     }
     const passwordHash = await this.authService.hashPassword(dto.password);
     try {
@@ -111,6 +129,7 @@ export class KurinsAdminService {
           passwordHash,
           role: Role.ZVYAZKOVYI,
           kurinId: dto.kurinId,
+          mustChangePassword: true,
         },
         select: {
           id: true,
