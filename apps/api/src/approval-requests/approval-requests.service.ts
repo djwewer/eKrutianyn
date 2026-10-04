@@ -145,7 +145,14 @@ export class ApprovalRequestsService {
             await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
           }
         }
-        await tx.user.update({ where: { id: req.junakId! }, data: updateData });
+        try {
+          await tx.user.update({ where: { id: req.junakId! }, data: updateData });
+        } catch (err: any) {
+          if (err.code === 'P2002') {
+            throw new ConflictException('This email is already in use');
+          }
+          throw err;
+        }
       }
 
       return tx.approvalRequest.update({
