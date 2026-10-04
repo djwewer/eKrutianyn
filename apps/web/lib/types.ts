@@ -89,6 +89,15 @@ export interface TreasurySummary {
   transactions: TreasuryTransaction[];
 }
 
+export interface JunakActivityEntry {
+  id: string;
+  title: string;
+  occurredAt: string;
+  role: 'PARTICIPANT' | 'PROVID';
+  description: string | null;
+  createdAt: string;
+}
+
 export interface GuardianContact {
   id: string;
   name: string;

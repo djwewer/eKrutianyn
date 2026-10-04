@@ -17,6 +17,7 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
     { href: '/ai-vykhovnyk', label: 'AI-виховник' },
     { href: '/proby', label: 'Моя проба' },
+    { href: '/my-activity', label: 'Моя активність' },
     { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],

@@ -20,6 +20,7 @@ import { JunakImportModule } from './junak-import/junak-import.module';
 import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 import { ReferenceSourcesModule } from './reference-sources/reference-sources.module';
 import { TreasuryModule } from './treasury/treasury.module';
+import { JunakActivityModule } from './junak-activity/junak-activity.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { TreasuryModule } from './treasury/treasury.module';
     AiAssistantModule,
     ReferenceSourcesModule,
     TreasuryModule,
+    JunakActivityModule,
   ],
   controllers: [HealthController],
 })
