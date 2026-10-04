@@ -21,6 +21,7 @@ import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 import { ReferenceSourcesModule } from './reference-sources/reference-sources.module';
 import { TreasuryModule } from './treasury/treasury.module';
 import { JunakActivityModule } from './junak-activity/junak-activity.module';
+import { KurinCalendarModule } from './kurin-calendar/kurin-calendar.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { JunakActivityModule } from './junak-activity/junak-activity.module';
     ReferenceSourcesModule,
     TreasuryModule,
     JunakActivityModule,
+    KurinCalendarModule,
   ],
   controllers: [HealthController],
 })

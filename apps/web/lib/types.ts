@@ -98,6 +98,14 @@ export interface JunakActivityEntry {
   createdAt: string;
 }
 
+export interface KurinCalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  startDate: string;
+  endDate: string | null;
+}
+
 export interface GuardianContact {
   id: string;
   name: string;
