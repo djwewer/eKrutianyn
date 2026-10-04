@@ -14,19 +14,19 @@ describe('REAL_PROBY_CONTENT_OLD', () => {
     ]);
   });
 
-  it('Stage 1 has exactly 1 category with 13 points', () => {
+  it('Stage 1 has exactly 1 category with 11 points', () => {
     const stage = REAL_PROBY_CONTENT_OLD[0];
     expect(stage.categories).toHaveLength(1);
     expect(stage.categories[0].name).toBe('Точки');
-    expect(stage.categories[0].points).toHaveLength(13);
+    expect(stage.categories[0].points).toHaveLength(11);
   });
 
-  it('Stage 2 has exactly 8 categories totalling 53 points', () => {
+  it('Stage 2 has exactly 8 categories totalling 55 points', () => {
     const stage = REAL_PROBY_CONTENT_OLD[1];
     expect(stage.categories).toHaveLength(8);
-    expect(stage.categories.map((c) => c.points.length)).toEqual([11, 7, 4, 6, 10, 9, 3, 3]);
+    expect(stage.categories.map((c) => c.points.length)).toEqual([11, 7, 4, 6, 10, 11, 3, 3]);
     const total = stage.categories.reduce((sum, c) => sum + c.points.length, 0);
-    expect(total).toBe(53);
+    expect(total).toBe(55);
   });
 
   it('Stage 3 has exactly 7 categories totalling 38 points, with the corrected Ґ letter', () => {
@@ -41,7 +41,7 @@ describe('REAL_PROBY_CONTENT_OLD', () => {
       'Д Тіловиховання',
       'Е Юнацькі вмілості',
     ]);
-    expect(stage.categories.map((c) => c.points.length)).toEqual([10, 10, 3, 7, 5, 2, 1]);
+    expect(stage.categories.map((c) => c.points.length)).toEqual([10, 4, 7, 9, 5, 2, 1]);
     const total = stage.categories.reduce((sum, c) => sum + c.points.length, 0);
     expect(total).toBe(38);
   });
