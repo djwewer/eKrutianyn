@@ -102,25 +102,32 @@ export class KurinsAdminService {
       throw new NotFoundException('Kurin not found');
     }
     const passwordHash = await this.authService.hashPassword(dto.password);
-    return this.prisma.user.create({
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        passwordHash,
-        role: Role.ZVYAZKOVYI,
-        kurinId: dto.kurinId,
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        kurinId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    try {
+      return await this.prisma.user.create({
+        data: {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: dto.email,
+          passwordHash,
+          role: Role.ZVYAZKOVYI,
+          kurinId: dto.kurinId,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          kurinId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new ConflictException('This email is already in use');
+      }
+      throw err;
+    }
   }
 }

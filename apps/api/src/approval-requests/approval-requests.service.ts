@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ApprovalActionType, ApprovalStatus, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -113,17 +113,25 @@ export class ApprovalRequestsService {
           birthDate?: string;
         };
         await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId);
-        const created = await tx.user.create({
-          data: {
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            role: Role.JUNAK,
-            kurinId: actor.kurinId,
-            hurtokId: data.hurtokId,
-            birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-          },
-        });
+        let created;
+        try {
+          created = await tx.user.create({
+            data: {
+              firstName: data.firstName,
+              lastName: data.lastName,
+              email: data.email,
+              role: Role.JUNAK,
+              kurinId: actor.kurinId,
+              hurtokId: data.hurtokId,
+              birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+            },
+          });
+        } catch (err: any) {
+          if (err.code === 'P2002') {
+            throw new ConflictException('This email is already in use');
+          }
+          throw err;
+        }
         const hurtok = await tx.hurtok.findUnique({ where: { id: data.hurtokId }, select: { name: true } });
         createdJunak = { ...created, hurtokName: hurtok?.name };
       } else {

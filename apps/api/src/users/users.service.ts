@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
@@ -37,28 +37,35 @@ export class UsersService {
       }
     }
     const passwordHash = dto.password ? await this.authService.hashPassword(dto.password) : undefined;
-    return this.prisma.user.create({
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        role: dto.role,
-        passwordHash,
-        kurinId: actorKurinId,
-        hurtokId: dto.hurtokId,
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        nickname: true,
-        email: true,
-        role: true,
-        birthDate: true,
-        kurinId: true,
-        hurtokId: true,
-      },
-    });
+    try {
+      return await this.prisma.user.create({
+        data: {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: dto.email,
+          role: dto.role,
+          passwordHash,
+          kurinId: actorKurinId,
+          hurtokId: dto.hurtokId,
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          nickname: true,
+          email: true,
+          role: true,
+          birthDate: true,
+          kurinId: true,
+          hurtokId: true,
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new ConflictException('This email is already in use');
+      }
+      throw err;
+    }
   }
 
   async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actor: CurrentUserPayload) {
