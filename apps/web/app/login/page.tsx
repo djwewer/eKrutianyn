@@ -52,7 +52,7 @@ export default function LoginPage() {
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <Image src="/logo.webp" alt="" width={64} height={64} className="size-16 rounded-xl shadow-sm" priority />
           <span className="animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#EF4444,#7C3AED)] bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
-            єКрутянин
+            єПластун
           </span>
         </div>
 
