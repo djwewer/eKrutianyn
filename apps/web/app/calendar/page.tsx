@@ -6,6 +6,7 @@ import { useKurinCalendar, useCreateCalendarEvent, useDeleteCalendarEvent } from
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
 import type { KurinCalendarEvent } from '@/lib/types';
@@ -31,7 +32,15 @@ function eventsOnDay(events: KurinCalendarEvent[], dayKey: string): KurinCalenda
   });
 }
 
-function AddEventForm({ kurinId }: { kurinId: string }) {
+function AddEventDialog({
+  kurinId,
+  open,
+  onOpenChange,
+}: {
+  kurinId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState('');
@@ -39,38 +48,52 @@ function AddEventForm({ kurinId }: { kurinId: string }) {
   const create = useCreateCalendarEvent(kurinId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Додати подію</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <Input placeholder="Назва (напр. «Зимовий табір»)" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <div className="flex gap-2">
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <Input type="date" placeholder="Кінець (якщо декілька днів)" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </div>
-        <Input placeholder="Опис (необов'язково)" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <Button
-          size="sm"
-          disabled={!title.trim() || create.isPending}
-          onClick={() =>
-            create.mutate(
-              { title: title.trim(), startDate, endDate: endDate || undefined, description: description.trim() || undefined },
-              {
-                onSuccess: () => {
-                  setTitle('');
-                  setEndDate('');
-                  setDescription('');
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogTitle>Додати подію</DialogTitle>
+        <div className="space-y-2">
+          <Input
+            placeholder="Назва (напр. «Зимовий табір»)"
+            autoComplete="off"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input type="date" placeholder="Кінець (якщо декілька днів)" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <Input
+            placeholder="Опис (необов'язково)"
+            autoComplete="off"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Button
+            size="sm"
+            disabled={!title.trim() || create.isPending}
+            onClick={() =>
+              create.mutate(
+                { title: title.trim(), startDate, endDate: endDate || undefined, description: description.trim() || undefined },
+                {
+                  onSuccess: () => {
+                    setTitle('');
+                    setEndDate('');
+                    setDescription('');
+                    onOpenChange(false);
+                  },
                 },
-              },
-            )
-          }
-        >
-          Додати
+              )
+            }
+          >
+            Додати
+          </Button>
+          {create.isError && <p className="text-sm text-destructive">{accessErrorMessage(create.error) ?? 'Не вдалося додати.'}</p>}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+          Закрити
         </Button>
-        {create.isError && <p className="text-sm text-destructive">{accessErrorMessage(create.error) ?? 'Не вдалося додати.'}</p>}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -188,7 +211,11 @@ function TimelineView({ events, kurinId, canEdit }: { events: KurinCalendarEvent
       </CardHeader>
       <CardContent>
         {sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ще немає жодної події.</p>
+          <p className="text-sm text-muted-foreground">
+            {canEdit
+              ? 'Наразі немає подій. Ви можете додати нову, натиснувши кнопку «Додати подію».'
+              : 'Наразі немає подій.'}
+          </p>
         ) : (
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2">
             {sorted.map((event) => (
@@ -219,6 +246,7 @@ export default function CalendarPage() {
   const { data: events, isLoading, isError, error } = useKurinCalendar(kurinId);
   const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.isKurinniy;
   const [view, setView] = useState<'timeline' | 'month'>('timeline');
+  const [addEventOpen, setAddEventOpen] = useState(false);
 
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
@@ -228,17 +256,24 @@ export default function CalendarPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Календарний план</h1>
-        <div className="flex gap-1 rounded-md border border-border p-1">
-          <Button size="sm" variant={view === 'timeline' ? 'default' : 'ghost'} onClick={() => setView('timeline')}>
-            Таймлайн
-          </Button>
-          <Button size="sm" variant={view === 'month' ? 'default' : 'ghost'} onClick={() => setView('month')}>
-            Місяць
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 rounded-md border border-border p-1">
+            <Button size="sm" variant={view === 'timeline' ? 'default' : 'ghost'} onClick={() => setView('timeline')}>
+              Таймлайн
+            </Button>
+            <Button size="sm" variant={view === 'month' ? 'default' : 'ghost'} onClick={() => setView('month')}>
+              Місяць
+            </Button>
+          </div>
+          {canEdit && (
+            <Button size="sm" variant="outline" onClick={() => setAddEventOpen(true)}>
+              + Додати подію
+            </Button>
+          )}
         </div>
       </div>
 
-      {canEdit && <AddEventForm kurinId={kurinId} />}
+      {canEdit && <AddEventDialog kurinId={kurinId} open={addEventOpen} onOpenChange={setAddEventOpen} />}
 
       {view === 'timeline' ? (
         <TimelineView events={events ?? []} kurinId={kurinId} canEdit={canEdit} />
