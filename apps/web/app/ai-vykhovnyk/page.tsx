@@ -346,9 +346,14 @@ function ConversationPanel({
                   className={cn(
                     'ai-gradient-ring max-w-[85%] rounded-lg px-3 py-2 text-sm',
                     message.role === 'USER'
-                      ? 'whitespace-pre-wrap bg-accent-soft text-accent-text'
-                      : cn('bg-muted text-foreground', MARKDOWN_CLASSES),
+                      ? 'whitespace-pre-wrap text-accent-text'
+                      : cn('text-foreground', MARKDOWN_CLASSES),
                   )}
+                  style={
+                    {
+                      '--ai-ring-fill': message.role === 'USER' ? 'var(--accent-soft-solid)' : 'var(--muted)',
+                    } as React.CSSProperties
+                  }
                 >
                   {message.role === 'USER' ? (
                     message.content

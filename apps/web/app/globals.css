@@ -69,6 +69,10 @@
   --accent-foreground: #FFFFFF;
   --accent-text: #2F5FD9;
   --accent-soft: #E8EEFC;
+  /* Same hue as --accent-soft but always opaque, for surfaces (like the
+     AI-виховник gradient-ring fill) that can't tolerate --accent-soft's
+     dark-mode transparency letting whatever's behind them show through. */
+  --accent-soft-solid: #E8EEFC;
   --warning-soft: #FBF0DC;
   --warning-foreground: #8A5A12;
   --destructive: oklch(0.577 0.245 27.325);
@@ -108,6 +112,7 @@
   --accent-foreground: #FFFFFF;
   --accent-text: #7FA2FF;
   --accent-soft: rgba(94, 140, 255, 0.16);
+  --accent-soft-solid: #2D3444;
   --warning-soft: rgba(217, 164, 65, 0.14);
   --warning-foreground: #E6B766;
   --destructive: oklch(0.704 0.191 22.216);
@@ -168,50 +173,52 @@
 }
 
 /* Animated gradient ring around AI-виховник chat UI (input, message bubbles,
-   the nav button's active state): a crisp colored border via a ::before
-   pseudo-element sized out past the host's edge, so the host itself keeps a
-   solid, theme-correct interior instead of the ring bleeding through it. The
-   host needs `position: relative`, an opaque background and a border-radius
-   (inherited by the pseudo) — applied inline alongside this class. */
+   the nav button's active state): the standard two-layer background-clip
+   trick, not a z-index pseudo-element — a negative z-index child still
+   paints ABOVE its own parent's background within the same stacking
+   context (CSS2.1 Appendix E), so a "behind the host" pseudo-element
+   approach shows the gradient over the whole face, not as a thin rim.
+   Needs a real `border` width, which this class supplies; pair it with an
+   existing `rounded-*` class for the corners (no radius set here, so it
+   follows whatever the host already has). The interior fill defaults to
+   the page background — override per use with the `--ai-ring-fill`
+   custom property (e.g. `style={{ '--ai-ring-fill': 'var(--card)' }}`) so
+   it matches the surface the element actually sits on. */
 .ai-gradient-ring {
-  position: relative;
-  z-index: 0;
-}
-.ai-gradient-ring::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  margin: -2px;
-  border-radius: inherit;
-  background: linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
-  background-size: 300% 300%;
+  --ai-ring-fill: var(--background);
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(var(--ai-ring-fill), var(--ai-ring-fill)),
+    linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 100% 100%, 300% 300%;
   animation: kmGradientShift 6s ease-in-out infinite;
 }
 
-/* Adds a soft blurred halo behind the ring for the chat input specifically —
-   kept off message bubbles since repeating a blur filter per bubble in a
-   long scrolling list is needless paint cost for little visual gain. */
-.ai-gradient-glow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  margin: -6px;
-  border-radius: inherit;
-  background: linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
-  background-size: 300% 300%;
-  filter: blur(10px);
-  opacity: 0.45;
-  animation: kmGradientShift 6s ease-in-out infinite;
+/* A soft pulsing glow via box-shadow (never overlaps the host's own face,
+   unlike a pseudo-element) — used on the chat input only; repeating this
+   per message bubble in a long scrolling list would be needless paint
+   cost for little visual gain. */
+.ai-gradient-glow {
+  animation: kmGlowPulse 6s ease-in-out infinite;
+}
+@keyframes kmGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 18px 2px rgba(124, 58, 237, 0.3), 0 0 32px 8px rgba(47, 95, 217, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 18px 2px rgba(6, 182, 212, 0.3), 0 0 32px 8px rgba(239, 68, 68, 0.15);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-nav-gradient] {
     animation: none !important;
   }
-  .ai-gradient-ring::before,
-  .ai-gradient-glow::after {
+  .ai-gradient-ring,
+  .ai-gradient-glow {
     animation: none !important;
   }
 }
