@@ -326,10 +326,18 @@ function ConversationPanel({
       if (!targetId) {
         const created = await createConversation.mutateAsync(selectedPointId);
         targetId = created.id;
+      }
+      await sendMessage.mutateAsync({ conversationId: targetId, probyPointId: selectedPointId, content });
+      // Only point the panel at the real conversation (enabling its GET query)
+      // once the send has fully landed. Doing this right after creation instead
+      // would let that GET race the in-flight POST and briefly return a
+      // snapshot with the user's message already saved but the assistant's
+      // reply not yet — which, stacked on top of the still-pending optimistic
+      // bubble, rendered the user's own message twice until the reply arrived.
+      if (targetId !== conversationId) {
         setConversationId(targetId);
         onConversationCreated(targetId);
       }
-      await sendMessage.mutateAsync({ conversationId: targetId, probyPointId: selectedPointId, content });
     } catch (error) {
       setSendError(error);
     } finally {

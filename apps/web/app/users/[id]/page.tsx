@@ -208,7 +208,10 @@ function ArchiveUserCard({
   if (user.archivedAt) {
     return (
       <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
+        <CardHeader>
+          <CardTitle>Архівація</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
           Архівовано {new Date(user.archivedAt).toLocaleDateString('uk-UA')}
         </CardContent>
       </Card>
@@ -225,8 +228,11 @@ function ArchiveUserCard({
   if (user.role === 'JUNAK' && user.hurtokId !== null) {
     return (
       <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
-          Спершу зніміть юнака з гуртка та посад
+        <CardHeader>
+          <CardTitle>Архівація</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Щоб архівувати юнака, спершу зніміть його з гуртка та посад.
         </CardContent>
       </Card>
     );
@@ -235,7 +241,10 @@ function ArchiveUserCard({
   if (requestSent) {
     return (
       <Card>
-        <CardContent className="pt-6 text-sm text-muted-foreground">
+        <CardHeader>
+          <CardTitle>Архівація</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
           Запит на архівацію надіслано, очікує затвердження зв&apos;язковим.
         </CardContent>
       </Card>
@@ -244,7 +253,10 @@ function ArchiveUserCard({
 
   return (
     <Card>
-      <CardContent className="space-y-2 pt-6">
+      <CardHeader>
+        <CardTitle>Архівація</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
         <Button
           variant="outline"
           disabled={archiveUser.isPending || createRequest.isPending}

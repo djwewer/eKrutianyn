@@ -171,6 +171,7 @@ function AddEventDialog({
           <Input
             placeholder="Назва (напр. «Зимовий табір»)"
             autoComplete="off"
+            maxLength={50}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -185,6 +186,7 @@ function AddEventDialog({
           <Input
             placeholder="Опис (необов'язково)"
             autoComplete="off"
+            maxLength={200}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />

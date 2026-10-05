@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useHurtokBySlug } from '@/lib/queries/hurtky';
+import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
+import { useUser } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { ROLE_LABELS, POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +16,8 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
   const { data, isLoading, isError, error } = useHurtokBySlug(slug);
   const { data: session } = useSession();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { data: assignments } = useVykhovnykAssignments(data?.hurtok.id, { enabled: !!data?.hurtok.id });
+  const { data: vykhovnyk } = useUser(assignments?.[0]?.vykhovnykId);
 
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Гурток не знайдено.'}</p>;
@@ -38,10 +42,17 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">
-        {data.hurtok.name}
-        {data.hurtok.number ? ` №${data.hurtok.number}` : ''}
-      </h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-2xl font-bold">
+          {data.hurtok.name}
+          {data.hurtok.number ? ` №${data.hurtok.number}` : ''}
+        </h1>
+        {vykhovnyk && (
+          <p className="text-sm text-muted-foreground">
+            Виховник: {vykhovnyk.lastName} {vykhovnyk.firstName}
+          </p>
+        )}
+      </div>
       {data.hurtok.foundedAt && (
         <p className="text-sm text-muted-foreground">
           Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA', { timeZone: 'UTC' })}

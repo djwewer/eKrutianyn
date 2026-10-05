@@ -49,7 +49,7 @@ test('archive button is hidden while the junak still has a hurtok', async ({ pag
   await page.goto(`/users/${junak.id}`);
 
   await expect(page.getByRole('button', { name: 'Архівувати' })).not.toBeVisible();
-  await expect(page.getByText('Спершу зніміть юнака з гуртка та посад')).toBeVisible();
+  await expect(page.getByText('Щоб архівувати юнака, спершу зніміть його з гуртка та посад.')).toBeVisible();
 });
 
 test('kurinniy sends an archive request for a junak instead of archiving directly', async ({ page }) => {
