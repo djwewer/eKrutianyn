@@ -305,14 +305,30 @@ describe('AiAssistantService', () => {
     expect(systemMessage.content).toContain('Сподіваюсь, це допоможе');
   });
 
-  it('tells the model it can search the web when Gemini grounding is enabled, framed as a last resort', async () => {
+  it('tells the model to search the web proactively (not as a last resort) when Gemini grounding is enabled', async () => {
     openAi.isSearchGroundingEnabled.mockReturnValue(true);
 
     await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
 
     const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
     expect(systemMessage.content).toContain('У тебе є доступ до пошуку в інтернеті');
-    expect(systemMessage.content).toContain('крайній засіб');
+    expect(systemMessage.content).toContain('проактивно, а не як крайнім засобом');
+    expect(systemMessage.content).toContain('одразу шукай її сам');
+  });
+
+  it('instructs the model never to recite the stage/category/point structure back to the junak', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Ніколи не озвучуй юнаку службову інформацію');
+  });
+
+  it('restricts suggesting the vykhovnyk to sensitive topics, hallucination risk, or contradictory sources', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Коли радити звернутися до виховника — лише в крайніх випадках');
+    expect(systemMessage.content).toContain('Ніколи не відправляй юнака до виховника лише тому, що потрібної інформації немає');
   });
 
   it('says nothing about web search when Gemini grounding is not enabled', async () => {
