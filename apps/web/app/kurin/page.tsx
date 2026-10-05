@@ -25,7 +25,7 @@ function KurinPageContent() {
   const sections: { key: string; title: string; icon: React.ReactNode; render: () => React.ReactNode }[] = [
     {
       key: 'info',
-      title: 'Інформація по куреню',
+      title: 'Інформація про курінь',
       icon: (
         <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
           <circle cx="8" cy="8" r="6" strokeWidth="1.3" />

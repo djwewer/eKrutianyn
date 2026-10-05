@@ -31,6 +31,7 @@ function makeConversation(overrides: Partial<any> = {}) {
   return {
     id: 'conversation-1',
     userId: ACTOR_JUNAK.userId,
+    probyPointId: null,
     title: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -49,7 +50,13 @@ describe('AiAssistantService', () => {
       kurin: { findUnique: jest.fn().mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1', gender: 'MALE' }) },
       probyPoint: { findUnique: jest.fn().mockResolvedValue(makePoint()) },
       aiConversation: {
-        findUnique: jest.fn().mockResolvedValue(makeConversation()),
+        // Two different lookups share this mock: ownership checks (by id) and
+        // createConversation's find-or-create (by the userId+probyPointId
+        // compound key). Branch on shape so each gets a sensible default —
+        // an existing conversation by id, no existing one for that point yet.
+        findUnique: jest.fn((args: any) =>
+          args?.where?.userId_probyPointId ? Promise.resolve(null) : Promise.resolve(makeConversation()),
+        ),
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue(makeConversation()),
         update: jest.fn().mockResolvedValue(makeConversation()),
@@ -87,10 +94,76 @@ describe('AiAssistantService', () => {
   });
 
   describe('createConversation', () => {
-    it('creates an empty, untitled conversation for the actor', async () => {
-      const result = await service.createConversation(ACTOR_JUNAK);
-      expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
+    it('creates an empty, untitled conversation pinned to the given proby point', async () => {
+      const result = await service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' });
+      expect(prisma.aiConversation.create).toHaveBeenCalledWith({
+        data: { userId: ACTOR_JUNAK.userId, probyPointId: 'point-1' },
+      });
       expect(result.messages).toEqual([]);
+    });
+
+    it("returns the actor's existing conversation for that point instead of creating a duplicate", async () => {
+      prisma.aiConversation.findUnique.mockImplementation((args: any) =>
+        args?.where?.userId_probyPointId
+          ? Promise.resolve(makeConversation({ probyPointId: 'point-1', title: 'Стара розмова' }))
+          : Promise.resolve(makeConversation()),
+      );
+
+      const result = await service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' });
+
+      expect(prisma.aiConversation.create).not.toHaveBeenCalled();
+      expect(result.title).toBe('Стара розмова');
+    });
+
+    it("404s creating a conversation for a point outside the actor's kurin's program", async () => {
+      prisma.probyPoint.findUnique.mockResolvedValue(
+        makePoint({
+          category: {
+            ...makePoint().category,
+            stage: { ...makePoint().category.stage, programId: 'other-program' },
+          },
+        }),
+      );
+
+      await expect(service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.aiConversation.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('per-point conversation pinning', () => {
+    it('rejects sending a message whose probyPointId differs from the one the conversation is pinned to', async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ probyPointId: 'point-1' }));
+
+      await expect(
+        service.sendMessage('conversation-1', { probyPointId: 'point-2', content: 'hi' }, ACTOR_JUNAK),
+      ).rejects.toThrow(BadRequestException);
+      expect(openAi.createChatCompletion).not.toHaveBeenCalled();
+    });
+
+    it('allows sending a message whose probyPointId matches the conversation’s pinned point', async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ probyPointId: 'point-1' }));
+
+      const result = await service.sendMessage(
+        'conversation-1',
+        { probyPointId: 'point-1', content: 'hi' },
+        ACTOR_JUNAK,
+      );
+
+      expect(result.reply).toBe('Ось твоя відповідь.');
+    });
+
+    it('allows any probyPointId on a legacy conversation that has no pinned point', async () => {
+      prisma.aiConversation.findUnique.mockResolvedValue(makeConversation({ probyPointId: null }));
+
+      const result = await service.sendMessage(
+        'conversation-1',
+        { probyPointId: 'point-1', content: 'hi' },
+        ACTOR_JUNAK,
+      );
+
+      expect(result.reply).toBe('Ось твоя відповідь.');
     });
   });
 
@@ -395,7 +468,9 @@ describe('AiAssistantService', () => {
     it('rejects a JUNAK who has hit the daily new-chat limit with a 429, without creating a conversation', async () => {
       prisma.aiConversation.count.mockResolvedValue(5);
 
-      await expect(service.createConversation(ACTOR_JUNAK)).rejects.toMatchObject({ status: 429 });
+      await expect(service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' })).rejects.toMatchObject({
+        status: 429,
+      });
       expect(prisma.aiConversation.create).not.toHaveBeenCalled();
     });
 
@@ -403,7 +478,7 @@ describe('AiAssistantService', () => {
       prisma.aiConversation.count.mockResolvedValue(5);
 
       try {
-        await service.createConversation(ACTOR_JUNAK);
+        await service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' });
         fail('expected createConversation to throw');
       } catch (error: any) {
         expect(error.getResponse()).toContain('5');
@@ -413,14 +488,16 @@ describe('AiAssistantService', () => {
     it('lets a JUNAK under the daily limit create a new conversation normally', async () => {
       prisma.aiConversation.count.mockResolvedValue(4);
 
-      const result = await service.createConversation(ACTOR_JUNAK);
+      const result = await service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' });
 
-      expect(prisma.aiConversation.create).toHaveBeenCalledWith({ data: { userId: ACTOR_JUNAK.userId } });
+      expect(prisma.aiConversation.create).toHaveBeenCalledWith({
+        data: { userId: ACTOR_JUNAK.userId, probyPointId: 'point-1' },
+      });
       expect(result.messages).toEqual([]);
     });
 
     it('counts only conversations created within the last rolling 24h window', async () => {
-      await service.createConversation(ACTOR_JUNAK);
+      await service.createConversation(ACTOR_JUNAK, { probyPointId: 'point-1' });
 
       expect(prisma.aiConversation.count).toHaveBeenCalledWith({
         where: { userId: ACTOR_JUNAK.userId, createdAt: { gte: expect.any(Date) } },
@@ -430,7 +507,7 @@ describe('AiAssistantService', () => {
     it('never rate-limits a ZVYAZKOVYI actor creating a conversation, regardless of count', async () => {
       prisma.aiConversation.count.mockResolvedValue(999);
 
-      const result = await service.createConversation(ACTOR_ZVYAZKOVYI);
+      const result = await service.createConversation(ACTOR_ZVYAZKOVYI, { probyPointId: 'point-1' });
 
       expect(prisma.aiConversation.count).not.toHaveBeenCalled();
       expect(result.messages).toEqual([]);
@@ -439,7 +516,7 @@ describe('AiAssistantService', () => {
 
   describe('messages-per-chat limit (JUNAK only)', () => {
     it('rejects a JUNAK who has hit the per-chat message limit with a 429, before calling the AI', async () => {
-      prisma.aiMessage.count.mockResolvedValue(5);
+      prisma.aiMessage.count.mockResolvedValue(25);
 
       await expect(
         service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK),
@@ -449,18 +526,18 @@ describe('AiAssistantService', () => {
     });
 
     it('includes the configured limit in the 429 message', async () => {
-      prisma.aiMessage.count.mockResolvedValue(5);
+      prisma.aiMessage.count.mockResolvedValue(25);
 
       try {
         await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
         fail('expected sendMessage to throw');
       } catch (error: any) {
-        expect(error.getResponse()).toContain('5');
+        expect(error.getResponse()).toContain('25');
       }
     });
 
     it('lets a JUNAK under the per-chat limit send a message normally', async () => {
-      prisma.aiMessage.count.mockResolvedValue(4);
+      prisma.aiMessage.count.mockResolvedValue(24);
 
       const result = await service.sendMessage(
         'conversation-1',

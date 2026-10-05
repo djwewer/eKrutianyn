@@ -58,7 +58,7 @@ test('a plain member does not see Кадра виховників or Списо�
 
   await loginAs(page, plainJunakEmail, 'password123');
   await page.goto('/kurin');
-  for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки']) {
+  for (const title of ['Інформація про курінь', 'Провід куреня', 'Гуртки']) {
     await expect(page.getByText(title)).toBeVisible();
   }
   await expect(page.getByText('Кадра виховників')).toHaveCount(0);
@@ -81,7 +81,7 @@ test('a plain vykhovnyk sees exactly the three read-only sections', async ({ pag
 
   await loginAs(page, plainVykhovnykEmail, 'password123');
   await page.goto('/kurin');
-  for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки']) {
+  for (const title of ['Інформація про курінь', 'Провід куреня', 'Гуртки']) {
     await expect(page.getByText(title)).toBeVisible();
   }
   await expect(page.getByText('Кадра виховників')).toHaveCount(0);

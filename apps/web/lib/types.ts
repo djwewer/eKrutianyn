@@ -174,12 +174,14 @@ export interface AiMessage {
 export interface AiConversation {
   id: string;
   title: string | null;
+  probyPointId: string | null;
   messages: AiMessage[];
 }
 
 export interface AiConversationSummary {
   id: string;
   title: string | null;
+  probyPointId: string | null;
   createdAt: string;
   updatedAt: string;
 }

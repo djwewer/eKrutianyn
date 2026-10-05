@@ -190,7 +190,7 @@
   border: 2px solid transparent;
   background-image:
     linear-gradient(var(--ai-ring-fill), var(--ai-ring-fill)),
-    linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #ef4444, #7c3aed);
+    linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #7c3aed);
   background-origin: border-box;
   background-clip: padding-box, border-box;
   background-size: 100% 100%, 300% 300%;

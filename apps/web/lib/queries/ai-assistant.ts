@@ -22,7 +22,11 @@ export function useAiConversation(conversationId: string | null) {
 export function useCreateAiConversation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch<AiConversation>('/ai-assistant/conversations', { method: 'POST' }),
+    mutationFn: (probyPointId: string) =>
+      apiFetch<AiConversation>('/ai-assistant/conversations', {
+        method: 'POST',
+        body: JSON.stringify({ probyPointId }),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'conversations'], exact: true });
     },

@@ -48,8 +48,11 @@ describe('AI assistant (e2e)', () => {
     const openPoint = await prisma.probyPoint.create({
       data: { categoryId: category1.id, order: 1, description: 'Відкрита точка' },
     });
+    const openPoint2 = await prisma.probyPoint.create({
+      data: { categoryId: category1.id, order: 2, description: 'Друга відкрита точка' },
+    });
     const donePoint = await prisma.probyPoint.create({
-      data: { categoryId: category1.id, order: 2, description: 'Завершена точка' },
+      data: { categoryId: category1.id, order: 3, description: 'Завершена точка' },
     });
     const stage2 = await prisma.probyStage.create({ data: { programId: program.id, order: 2, name: 'Ступінь 2' } });
     const category2 = await prisma.probyCategory.create({ data: { stageId: stage2.id, name: 'Категорія 2' } });
@@ -59,23 +62,33 @@ describe('AI assistant (e2e)', () => {
 
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
 
-    return { kurin, openPoint, donePoint, lockedPoint, stage1, stage2 };
+    return { kurin, category1, openPoint, openPoint2, donePoint, lockedPoint, stage1, stage2 };
   }
 
-  async function createConversation(token: string): Promise<string> {
+  async function createConversation(token: string, probyPointId: string): Promise<string> {
     const response = await request(app.getHttpServer())
       .post('/ai-assistant/conversations')
       .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId })
       .expect((res) => expect([200, 201]).toContain(res.status));
     return response.body.id;
   }
 
+  /** A conversation created directly in the DB, bypassing the per-point creation
+   * endpoint — mirrors a row that existed before conversations were pinned to a
+   * point, used to test sendMessage's own point-eligibility checks in isolation
+   * from the (separate) pinned-conversation checks. */
+  async function createLegacyConversation(userId: string): Promise<string> {
+    const conversation = await prisma.aiConversation.create({ data: { userId } });
+    return conversation.id;
+  }
+
   it('lets a JUNAK create a conversation and see it empty via GET', async () => {
-    const { kurin } = await setup();
+    const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
 
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
 
     const response = await request(app.getHttpServer())
       .get(`/ai-assistant/conversations/${conversationId}`)
@@ -87,15 +100,15 @@ describe('AI assistant (e2e)', () => {
   });
 
   it('lists only the JUNAK\'s own conversations, most recently active first', async () => {
-    const { kurin, openPoint } = await setup();
+    const { kurin, openPoint, openPoint2 } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     await prisma.junakProgress.create({
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
 
-    const firstId = await createConversation(token);
-    const secondId = await createConversation(token);
+    const firstId = await createConversation(token, openPoint.id);
+    const secondId = await createConversation(token, openPoint2.id);
     // Touch the first conversation again so it becomes the most recently active.
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${firstId}/messages`)
@@ -118,7 +131,7 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
 
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -147,7 +160,7 @@ describe('AI assistant (e2e)', () => {
     const intruder = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const ownerToken = issueTokenFor(jwtService, owner);
     const intruderToken = issueTokenFor(jwtService, intruder);
-    const conversationId = await createConversation(ownerToken);
+    const conversationId = await createConversation(ownerToken, openPoint.id);
 
     await request(app.getHttpServer())
       .get(`/ai-assistant/conversations/${conversationId}`)
@@ -164,10 +177,10 @@ describe('AI assistant (e2e)', () => {
   });
 
   it('lets a JUNAK delete their own conversation, which then disappears from the list and 404s on GET', async () => {
-    const { kurin } = await setup();
+    const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
 
     await request(app.getHttpServer())
       .delete(`/ai-assistant/conversations/${conversationId}`)
@@ -193,7 +206,7 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
@@ -210,12 +223,12 @@ describe('AI assistant (e2e)', () => {
   });
 
   it("404s a JUNAK trying to delete another user's conversation, and doesn't delete it", async () => {
-    const { kurin } = await setup();
+    const { kurin, openPoint } = await setup();
     const owner = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const intruder = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const ownerToken = issueTokenFor(jwtService, owner);
     const intruderToken = issueTokenFor(jwtService, intruder);
-    const conversationId = await createConversation(ownerToken);
+    const conversationId = await createConversation(ownerToken, openPoint.id);
 
     await request(app.getHttpServer())
       .delete(`/ai-assistant/conversations/${conversationId}`)
@@ -235,7 +248,7 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
 
     const response = await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -285,7 +298,10 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: donePoint.id, status: ProgressStatus.DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    // A legacy (point-less) conversation: a conversation pinned to a point
+    // can't even be created for an ineligible point in the first place, so
+    // this exercises sendMessage's own eligibility check directly.
+    const conversationId = await createLegacyConversation(junak.id);
 
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -300,7 +316,7 @@ describe('AI assistant (e2e)', () => {
     const { kurin, lockedPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createLegacyConversation(junak.id);
 
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -313,16 +329,19 @@ describe('AI assistant (e2e)', () => {
     const { kurin, donePoint, lockedPoint } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
-    const conversationId = await createConversation(token);
+    // Two conversations, one per point — each conversation is pinned to a
+    // single point, so messaging about two different points needs two chats.
+    const doneConversationId = await createConversation(token, donePoint.id);
+    const lockedConversationId = await createConversation(token, lockedPoint.id);
 
     await request(app.getHttpServer())
-      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .post(`/ai-assistant/conversations/${doneConversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: donePoint.id, content: 'hi' })
       .expect((res) => expect([200, 201]).toContain(res.status));
 
     await request(app.getHttpServer())
-      .post(`/ai-assistant/conversations/${conversationId}/messages`)
+      .post(`/ai-assistant/conversations/${lockedConversationId}/messages`)
       .set('Authorization', `Bearer ${token}`)
       .send({ probyPointId: lockedPoint.id, content: 'hi again' })
       .expect((res) => expect([200, 201]).toContain(res.status));
@@ -340,7 +359,7 @@ describe('AI assistant (e2e)', () => {
     });
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createLegacyConversation(junak.id);
 
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -356,7 +375,7 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
 
     await request(app.getHttpServer())
       .post(`/ai-assistant/conversations/${conversationId}/messages`)
@@ -374,10 +393,10 @@ describe('AI assistant (e2e)', () => {
       data: { junakId: junak.id, pointId: openPoint.id, status: ProgressStatus.NOT_DONE },
     });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
-    // Default per-chat limit is 5 — seed it directly instead of sending 5 real requests.
+    const conversationId = await createConversation(token, openPoint.id);
+    // Default per-chat limit is 25 — seed it directly instead of sending 25 real requests.
     await prisma.aiMessage.createMany({
-      data: Array.from({ length: 5 }, () => ({
+      data: Array.from({ length: 25 }, () => ({
         conversationId,
         role: 'USER' as const,
         content: 'попереднє повідомлення',
@@ -391,22 +410,32 @@ describe('AI assistant (e2e)', () => {
       .send({ probyPointId: openPoint.id, content: 'ще одне питання' })
       .expect(429);
 
-    expect(response.body.message).toContain('5');
+    expect(response.body.message).toContain('25');
     expect(fakeOpenAiService.createChatCompletion).not.toHaveBeenCalled();
   });
 
   it('rejects a JUNAK who has already hit the daily new-chat limit with a 429, without creating a conversation', async () => {
-    const { kurin } = await setup();
+    const { kurin, category1 } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
-    // Default daily new-chat limit is 5 — create them for real so createdAt ordering is realistic.
+    // Default daily new-chat limit is 5 — create 5 real conversations, each for
+    // its own point (conversations are found-or-created per point, so reusing
+    // one point across calls would just resume the same conversation instead
+    // of actually hitting the limit).
     for (let i = 0; i < 5; i++) {
-      await createConversation(token);
+      const point = await prisma.probyPoint.create({
+        data: { categoryId: category1.id, order: 10 + i, description: `Точка лімту ${i}` },
+      });
+      await createConversation(token, point.id);
     }
 
+    const extraPoint = await prisma.probyPoint.create({
+      data: { categoryId: category1.id, order: 99, description: 'Точка понад ліміт' },
+    });
     await request(app.getHttpServer())
       .post('/ai-assistant/conversations')
       .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: extraPoint.id })
       .expect(429);
   });
 
@@ -414,9 +443,9 @@ describe('AI assistant (e2e)', () => {
     const { kurin, openPoint } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
     await prisma.aiMessage.createMany({
-      data: Array.from({ length: 10 }, () => ({
+      data: Array.from({ length: 30 }, () => ({
         conversationId,
         role: 'USER' as const,
         content: 'попереднє повідомлення',
@@ -434,6 +463,7 @@ describe('AI assistant (e2e)', () => {
       await request(app.getHttpServer())
         .post('/ai-assistant/conversations')
         .set('Authorization', `Bearer ${token}`)
+        .send({ probyPointId: openPoint.id })
         .expect((res) => expect([200, 201]).toContain(res.status));
     }
   });
@@ -442,7 +472,7 @@ describe('AI assistant (e2e)', () => {
     const { kurin, openPoint } = await setup();
     const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, junak);
-    const conversationId = await createConversation(token);
+    const conversationId = await createConversation(token, openPoint.id);
     fakeOpenAiService.createChatCompletion.mockRejectedValueOnce(new Error('upstream failure'));
 
     await request(app.getHttpServer())

@@ -6,6 +6,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { AiAssistantService } from './ai-assistant.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { CreateConversationDto } from './dto/create-conversation.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.JUNAK, Role.ZVYAZKOVYI)
@@ -19,8 +20,8 @@ export class AiAssistantController {
   }
 
   @Post('conversations')
-  createConversation(@CurrentUser() user: CurrentUserPayload) {
-    return this.service.createConversation(user);
+  createConversation(@Body() dto: CreateConversationDto, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.createConversation(user, dto);
   }
 
   @Get('conversations/:id')

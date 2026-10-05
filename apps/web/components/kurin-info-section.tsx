@@ -57,7 +57,7 @@ export function KurinInfoSection() {
           <InfoRow label="Номер">{kurin.kurinNumber ?? 'Підготовчий (ще не присвоєно)'}</InfoRow>
           <InfoRow label="Станиця">{kurin.stanytsia}</InfoRow>
           <InfoRow label="Стать">{kurin.gender === 'MALE' ? 'Чоловіча' : 'Жіноча'}</InfoRow>
-          <InfoRow label="Пробна програма">{kurin.probyProgram.version === 'OLD' ? 'Стара' : 'Нова'}</InfoRow>
+          <InfoRow label="Програма проби">{kurin.probyProgram.version === 'OLD' ? 'Стара' : 'Нова'}</InfoRow>
           {canSeeDriveStatus && (
             <InfoRow label="Google Drive">
               <Badge variant={driveStatus.data?.connected ? 'accent' : 'neutral'}>
@@ -100,7 +100,7 @@ export function KurinInfoSection() {
             )}
           </div>
           <div className="space-y-2">
-            <Label>Пробна програма</Label>
+            <Label>Програма проби</Label>
             <div className="flex items-center gap-2">
               <input
                 type="radio"

@@ -23,6 +23,19 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
   const canConfigure =
     (session?.role === 'ZVYAZKOVYI' || (session?.positions ?? []).includes('SUDDIA')) && !data.hurtok.archivedAt;
 
+  // Hurtkovyi (and anyone else holding a position) rise to the top of the
+  // roster instead of sitting wherever the backend happened to return them.
+  const sortedMembers = [...data.members].sort((a, b) => {
+    const rank = (m: typeof a) => {
+      if (m.positions.some((p) => p.positionType === 'HURTKOVYI')) return 0;
+      if (m.positions.length > 0) return 1;
+      return 2;
+    };
+    const rankDiff = rank(a) - rank(b);
+    if (rankDiff !== 0) return rankDiff;
+    return a.lastName.localeCompare(b.lastName, 'uk');
+  });
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">
@@ -62,7 +75,7 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
         />
       )}
       <div className="space-y-2">
-        {data.members.map((member) => (
+        {sortedMembers.map((member) => (
           <Link key={member.id} href={`/users/${member.id}`}>
             <Card>
               <CardHeader>

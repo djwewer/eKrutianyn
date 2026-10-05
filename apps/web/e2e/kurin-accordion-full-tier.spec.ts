@@ -27,11 +27,11 @@ test('zvyazkovyi sees and can use all 5 sections of the Курінь accordion',
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
 
-  for (const title of ['Інформація по куреню', 'Провід куреня', 'Гуртки', 'Кадра виховників', 'Список юнацтва']) {
+  for (const title of ['Інформація про курінь', 'Провід куреня', 'Гуртки', 'Кадра виховників', 'Список юнацтва']) {
     await expect(page.getByText(title)).toBeVisible();
   }
 
-  await page.getByText('Інформація по куреню').click();
+  await page.getByText('Інформація про курінь').click();
   await expect(page.getByText('Номер', { exact: true })).toBeVisible();
 
   await page.getByText('Гуртки').click();

@@ -35,8 +35,8 @@ test('multiple top-level sections and multiple hurtok rows can stay open at the 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
 
-  // Top-level: open "Інформація по куреню" and "Провід куреня" together.
-  await page.getByText('Інформація по куреню').click();
+  // Top-level: open "Інформація про курінь" and "Провід куреня" together.
+  await page.getByText('Інформація про курінь').click();
   await expect(page.getByText('Номер', { exact: true })).toBeVisible();
 
   await page.getByText('Провід куреня').click();

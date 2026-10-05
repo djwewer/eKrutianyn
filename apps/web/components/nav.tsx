@@ -71,7 +71,7 @@ function NavLink({
         'rounded-md px-3 py-2 text-sm font-medium transition-[filter,color,background-color]',
         gradient &&
           !active &&
-          'animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#EF4444,#7C3AED)] text-white hover:brightness-110',
+          'animate-[kmGradientShift_8s_ease-in-out_infinite] bg-[length:300%_300%] bg-[linear-gradient(120deg,#7C3AED,#2F5FD9,#06B6D4,#7C3AED)] text-white hover:brightness-110',
         gradient && active && 'ai-gradient-ring bg-background font-semibold text-accent-text',
         !gradient && cn('hover:bg-accent-soft hover:text-accent-text', active && 'bg-accent-soft font-semibold text-accent-text'),
       )}

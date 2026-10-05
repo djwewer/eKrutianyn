@@ -3,7 +3,7 @@ import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
 
-test('lets zvyazkovyi add an event, see it in the timeline, and view it in the month grid', async ({ page }) => {
+test('lets zvyazkovyi add an event and see it in the timeline', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
@@ -12,18 +12,15 @@ test('lets zvyazkovyi add an event, see it in the timeline, and view it in the m
 
   await expect(page.getByRole('heading', { name: 'Календарний план' })).toBeVisible();
 
-  const today = new Date().toISOString().slice(0, 10);
   await page.getByRole('button', { name: '+ Додати подію' }).click();
   await page.getByPlaceholder('Назва (напр. «Зимовий табір»)').fill('Весняний похід');
-  await page.locator('input[type="date"]').first().fill(today);
-  await page.getByRole('button', { name: 'Додати' }).click();
-
-  await expect(page.getByText('Весняний похід')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Місяць' }).click();
-  // Today's cell should show the event dot and, once clicked, list the event.
+  // The date range picker defaults to today as a single day; opening and
+  // clicking today's cell confirms that default without changing it.
+  await page.getByRole('button', { name: 'Дата події' }).click();
   const todayDay = String(new Date().getDate());
   await page.getByRole('button', { name: todayDay, exact: true }).click();
+  await page.getByRole('button', { name: 'Додати' }).click();
+
   await expect(page.getByText('Весняний похід')).toBeVisible();
 });
 

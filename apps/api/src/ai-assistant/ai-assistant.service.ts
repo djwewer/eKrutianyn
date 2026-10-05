@@ -14,6 +14,7 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { ProbyProgressService } from '../proby-progress/proby-progress.service';
 import { OpenAiService, ChatMessage } from './openai.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { CreateConversationDto } from './dto/create-conversation.dto';
 
 const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
@@ -28,7 +29,7 @@ const TITLE_MAX_LENGTH = 60;
 // Both configurable (not code) since the right numbers depend on the kurin's
 // actual usage and budget — not something to hardcode confidently.
 const JUNAK_DAILY_NEW_CHAT_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_DAILY_NEW_CHAT_LIMIT ?? '5');
-const JUNAK_MESSAGES_PER_CHAT_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_MESSAGES_PER_CHAT_LIMIT ?? '5');
+const JUNAK_MESSAGES_PER_CHAT_LIMIT = Number(process.env.AI_ASSISTANT_JUNAK_MESSAGES_PER_CHAT_LIMIT ?? '25');
 const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
 // Each linked ReferenceSource's cached text is already capped at 8000 chars
 // in the DB; truncated further here so one page (or several linked to the
@@ -66,27 +67,49 @@ export class AiAssistantService {
     return conversations.map((c) => ({
       id: c.id,
       title: c.title,
+      probyPointId: c.probyPointId,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
     }));
   }
 
-  async createConversation(actor: CurrentUserPayload) {
+  // Each proby point has exactly one conversation per user: switching points
+  // in the UI resumes that point's existing chat instead of starting a new
+  // one, so this finds-or-creates rather than always creating.
+  async createConversation(actor: CurrentUserPayload, dto: CreateConversationDto) {
+    await this.loadEligiblePoint(dto.probyPointId, actor);
+
+    const existing = await this.prisma.aiConversation.findUnique({
+      where: { userId_probyPointId: { userId: actor.userId, probyPointId: dto.probyPointId } },
+    });
+    if (existing) {
+      const messages = await this.serializeMessages(existing.id);
+      return { id: existing.id, title: existing.title, probyPointId: existing.probyPointId, messages };
+    }
+
     if (actor.role === Role.JUNAK) {
       await this.enforceJunakDailyNewChatLimit(actor.userId);
     }
-    const conversation = await this.prisma.aiConversation.create({ data: { userId: actor.userId } });
-    return { id: conversation.id, title: conversation.title, messages: [] };
+    const conversation = await this.prisma.aiConversation.create({
+      data: { userId: actor.userId, probyPointId: dto.probyPointId },
+    });
+    return { id: conversation.id, title: conversation.title, probyPointId: conversation.probyPointId, messages: [] };
   }
 
   async getConversation(conversationId: string, actor: CurrentUserPayload) {
     const conversation = await this.findOwnedConversation(conversationId, actor);
     const messages = await this.serializeMessages(conversation.id);
-    return { id: conversation.id, title: conversation.title, messages };
+    return { id: conversation.id, title: conversation.title, probyPointId: conversation.probyPointId, messages };
   }
 
   async sendMessage(conversationId: string, dto: SendMessageDto, actor: CurrentUserPayload) {
     const conversation = await this.findOwnedConversation(conversationId, actor);
+    // A conversation created under the new per-point model is pinned to one
+    // point; a legacy conversation (from before that model) has none and
+    // keeps accepting whatever point its messages name, as it always did.
+    if (conversation.probyPointId && conversation.probyPointId !== dto.probyPointId) {
+      throw new BadRequestException('This conversation belongs to a different proby point');
+    }
     // Checked before any paid work (prompt build, AI call) so a junak over
     // their limit never costs a single token or search query.
     if (actor.role === Role.JUNAK) {

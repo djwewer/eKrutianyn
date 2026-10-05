@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
-import type { AiMessage, ProbyStage } from '@/lib/types';
+import type { AiMessage } from '@/lib/types';
 
 const MARKDOWN_CLASSES = cn(
   '[&_h1]:mt-3 [&_h1]:mb-1.5 [&_h1]:text-base [&_h1]:font-bold [&_h1]:first:mt-0',
@@ -68,15 +68,35 @@ export default function AiVykhovnykPage() {
   // rather than resuming whatever was last active.
   const [panelKey, setPanelKey] = useState(newDraftKey);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  // Each proby point has exactly one conversation: this drives both the "Точка
+  // проби" selector and which chat is shown. Picking a point looks up its
+  // existing conversation (if any) and switches to it instead of mixing
+  // multiple points' messages into one thread.
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
   function handleSelectConversation(id: string) {
     setActiveConversationId(id);
     setPanelKey(id);
+    setSelectedPointId((conversations ?? []).find((c) => c.id === id)?.probyPointId ?? null);
   }
 
   function handleNewConversation() {
     setActiveConversationId(null);
     setPanelKey(newDraftKey());
+    setSelectedPointId(null);
+  }
+
+  function handlePointChange(pointId: string | null) {
+    if (!pointId) return;
+    setSelectedPointId(pointId);
+    const existing = (conversations ?? []).find((c) => c.probyPointId === pointId);
+    if (existing) {
+      setActiveConversationId(existing.id);
+      setPanelKey(existing.id);
+    } else {
+      setActiveConversationId(null);
+      setPanelKey(newDraftKey());
+    }
   }
 
   function handleDeleteConversation(id: string) {
@@ -152,7 +172,7 @@ export default function AiVykhovnykPage() {
               <div
                 key={c.id}
                 className={cn(
-                  'group flex items-center gap-1 rounded-md',
+                  'flex items-center gap-1 rounded-md',
                   c.id === activeConversationId ? 'bg-accent-soft' : 'hover:bg-accent-soft/50',
                 )}
               >
@@ -164,14 +184,14 @@ export default function AiVykhovnykPage() {
                     c.id === activeConversationId ? 'font-medium text-accent-text' : '',
                   )}
                 >
-                  {c.title ?? 'Нова розмова'}
+                  {(c.probyPointId && pointLabelById[c.probyPointId]) ?? c.title ?? 'Нова розмова'}
                 </button>
                 <button
                   type="button"
                   aria-label="Видалити розмову"
                   title="Видалити розмову"
                   onClick={() => handleDeleteConversation(c.id)}
-                  className="shrink-0 rounded px-1.5 py-1 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
+                  className="shrink-0 rounded px-2 py-1 text-lg leading-none text-muted-foreground hover:text-destructive"
                 >
                   ×
                 </button>
@@ -188,12 +208,50 @@ export default function AiVykhovnykPage() {
             AI-виховник старається бути щоразу кращим, проте може помилятися. Перевіряй його відповідь.
           </p>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Точка проби</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedPointId} onValueChange={handlePointChange} items={pointLabelById}>
+              <SelectTrigger>
+                <SelectValue placeholder="Оберіть точку проби" />
+              </SelectTrigger>
+              <SelectContent>
+                {stages.length === 0 && (
+                  <div className="px-2.5 py-1.5 text-sm text-muted-foreground">Немає доступних точок</div>
+                )}
+                {stages.map((stage) => (
+                  <div key={stage.id}>
+                    <div className="px-2.5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                      {stage.name}
+                    </div>
+                    {stage.categories.map((category) => (
+                      <SelectGroup key={category.id}>
+                        <SelectGroupLabel>{category.name}</SelectGroupLabel>
+                        {category.points
+                          .slice()
+                          .sort((a, b) => a.order - b.order)
+                          .map((point) => (
+                            <SelectItem key={point.id} value={point.id}>
+                              {point.description}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         <ConversationPanel
           key={panelKey}
           initialConversationId={activeConversationId}
           onConversationCreated={setActiveConversationId}
-          stages={stages}
-          pointLabelById={pointLabelById}
+          selectedPointId={selectedPointId}
         />
       </div>
     </div>
@@ -220,13 +278,11 @@ function TypingIndicator() {
 function ConversationPanel({
   initialConversationId,
   onConversationCreated,
-  stages,
-  pointLabelById,
+  selectedPointId,
 }: {
   initialConversationId: string | null;
   onConversationCreated: (id: string) => void;
-  stages: ProbyStage[];
-  pointLabelById: Record<string, string>;
+  selectedPointId: string | null;
 }) {
   const [conversationId, setConversationId] = useState(initialConversationId);
   const {
@@ -238,7 +294,6 @@ function ConversationPanel({
   const createConversation = useCreateAiConversation();
   const sendMessage = useSendAiMessage();
 
-  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [pendingUserMessage, setPendingUserMessage] = useState<AiMessage | null>(null);
   const [isAwaitingReply, setIsAwaitingReply] = useState(false);
@@ -269,7 +324,7 @@ function ConversationPanel({
     try {
       let targetId = conversationId;
       if (!targetId) {
-        const created = await createConversation.mutateAsync();
+        const created = await createConversation.mutateAsync(selectedPointId);
         targetId = created.id;
         setConversationId(targetId);
         onConversationCreated(targetId);
@@ -283,46 +338,20 @@ function ConversationPanel({
     }
   }
 
+  // Enter sends on desktop; on a touch device (coarse pointer, e.g. a phone's
+  // on-screen keyboard) plain Enter just inserts a newline instead, since
+  // there's no reliable way to tell a phone apart from a desktop otherwise.
+  // Ctrl/Cmd+Enter always sends, Shift+Enter always inserts a newline.
+  function handleComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+    if (!e.metaKey && !e.ctrlKey && isTouchDevice) return;
+    e.preventDefault();
+    if (canSend) handleSend();
+  }
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Точка проби</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedPointId} onValueChange={(value) => setSelectedPointId(value)} items={pointLabelById}>
-            <SelectTrigger>
-              <SelectValue placeholder="Оберіть точку проби" />
-            </SelectTrigger>
-            <SelectContent>
-              {stages.length === 0 && (
-                <div className="px-2.5 py-1.5 text-sm text-muted-foreground">Немає доступних точок</div>
-              )}
-              {stages.map((stage) => (
-                <div key={stage.id}>
-                  <div className="px-2.5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">
-                    {stage.name}
-                  </div>
-                  {stage.categories.map((category) => (
-                    <SelectGroup key={category.id}>
-                      <SelectGroupLabel>{category.name}</SelectGroupLabel>
-                      {category.points
-                        .slice()
-                        .sort((a, b) => a.order - b.order)
-                        .map((point) => (
-                          <SelectItem key={point.id} value={point.id}>
-                            {point.description}
-                          </SelectItem>
-                        ))}
-                    </SelectGroup>
-                  ))}
-                </div>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>Розмова</CardTitle>
@@ -346,7 +375,7 @@ function ConversationPanel({
                   className={cn(
                     'ai-gradient-ring max-w-[85%] rounded-lg px-3 py-2 text-sm',
                     message.role === 'USER'
-                      ? 'whitespace-pre-wrap text-accent-text'
+                      ? 'whitespace-pre-wrap text-foreground'
                       : cn('text-foreground', MARKDOWN_CLASSES),
                   )}
                   style={
@@ -370,6 +399,7 @@ function ConversationPanel({
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleComposerKeyDown}
               placeholder="Опишіть, що хочете підготувати..."
               rows={3}
               className="ai-gradient-ring ai-gradient-glow w-full min-w-0 rounded-md bg-background px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground"

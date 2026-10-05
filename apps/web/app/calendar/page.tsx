@@ -17,19 +17,135 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-function toDateKey(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-// Events spanning multiple days (startDate..endDate) count on every day in
-// that range, not just the start — a day in the middle of a camp should
-// still show a dot.
-function eventsOnDay(events: KurinCalendarEvent[], dayKey: string): KurinCalendarEvent[] {
-  return events.filter((e) => {
-    const start = toDateKey(e.startDate);
-    const end = e.endDate ? toDateKey(e.endDate) : start;
-    return dayKey >= start && dayKey <= end;
+// A single inline calendar for picking a date range: click one day to start,
+// click a second day to set the range end (earlier of the two becomes the
+// start), or click the same day again for a one-day event.
+function DateRangeField({
+  startDate,
+  endDate,
+  onChange,
+}: {
+  startDate: string;
+  endDate: string;
+  onChange: (startDate: string, endDate: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [cursor, setCursor] = useState(() => {
+    const base = startDate ? new Date(startDate) : new Date();
+    return { year: base.getFullYear(), month: base.getMonth() };
   });
+  const [pendingStart, setPendingStart] = useState<string | null>(startDate || null);
+  const [pendingEnd, setPendingEnd] = useState<string | null>(endDate || null);
+
+  const cells = useMemo(() => {
+    const firstOfMonth = new Date(cursor.year, cursor.month, 1);
+    const leadingBlanks = (firstOfMonth.getDay() + 6) % 7;
+    const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
+    const result: { key: string; day: number }[] = [];
+    for (let i = 0; i < leadingBlanks; i++) result.push({ key: `blank-${i}`, day: 0 });
+    for (let day = 1; day <= daysInMonth; day++) {
+      const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      result.push({ key, day });
+    }
+    return result;
+  }, [cursor]);
+
+  function handleDayClick(dayKey: string) {
+    if (!pendingStart || pendingEnd) {
+      setPendingStart(dayKey);
+      setPendingEnd(null);
+      return;
+    }
+    if (dayKey === pendingStart) {
+      setPendingEnd(dayKey);
+      onChange(dayKey, dayKey);
+      setOpen(false);
+      return;
+    }
+    const [newStart, newEnd] = dayKey < pendingStart ? [dayKey, pendingStart] : [pendingStart, dayKey];
+    setPendingStart(newStart);
+    setPendingEnd(newEnd);
+    onChange(newStart, newEnd);
+    setOpen(false);
+  }
+
+  const label = !startDate
+    ? 'Оберіть дату'
+    : !endDate || endDate === startDate
+      ? new Date(startDate).toLocaleDateString('uk-UA')
+      : `${new Date(startDate).toLocaleDateString('uk-UA')} – ${new Date(endDate).toLocaleDateString('uk-UA')}`;
+
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-label="Дата події"
+        className="w-full justify-start"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {label}
+      </Button>
+      {open && (
+        <div className="space-y-2 rounded-md border border-border p-2">
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))}
+            >
+              ◂
+            </Button>
+            <span className="text-sm font-medium">
+              {MONTH_NAMES[cursor.month]} {cursor.year}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))}
+            >
+              ▸
+            </Button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+            {WEEKDAY_NAMES.map((d) => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((cell) => {
+              if (cell.day === 0) return <div key={cell.key} />;
+              const isEndpoint = cell.key === pendingStart || cell.key === pendingEnd;
+              const inRange = !!pendingStart && !!pendingEnd && cell.key > pendingStart && cell.key < pendingEnd;
+              return (
+                <button
+                  key={cell.key}
+                  type="button"
+                  onClick={() => handleDayClick(cell.key)}
+                  className={cn(
+                    'flex aspect-square items-center justify-center rounded-md text-sm transition-colors hover:bg-accent-soft',
+                    inRange && 'bg-accent-soft',
+                    isEndpoint && 'bg-primary font-semibold text-primary-foreground',
+                  )}
+                >
+                  {cell.day}
+                </button>
+              );
+            })}
+          </div>
+          {pendingStart && !pendingEnd && (
+            <p className="text-xs text-muted-foreground">
+              Обрано {new Date(pendingStart).toLocaleDateString('uk-UA')}. Клікніть ще раз цю саму дату для одноденної
+              події, або іншу дату — для діапазону.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function AddEventDialog({
@@ -58,10 +174,14 @@ function AddEventDialog({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <div className="flex gap-2">
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Input type="date" placeholder="Кінець (якщо декілька днів)" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
+          <DateRangeField
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(newStart, newEnd) => {
+              setStartDate(newStart);
+              setEndDate(newEnd === newStart ? '' : newEnd);
+            }}
+          />
           <Input
             placeholder="Опис (необов'язково)"
             autoComplete="off"
@@ -97,96 +217,6 @@ function AddEventDialog({
   );
 }
 
-function MonthView({ events, kurinId, canEdit }: { events: KurinCalendarEvent[]; kurinId: string; canEdit: boolean }) {
-  const [cursor, setCursor] = useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  });
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const remove = useDeleteCalendarEvent(kurinId);
-
-  const cells = useMemo(() => {
-    const firstOfMonth = new Date(cursor.year, cursor.month, 1);
-    // Monday-first grid: JS getDay() is 0=Sunday, shift so Monday=0.
-    const leadingBlanks = (firstOfMonth.getDay() + 6) % 7;
-    const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-    const result: { key: string; day: number }[] = [];
-    for (let i = 0; i < leadingBlanks; i++) result.push({ key: `blank-${i}`, day: 0 });
-    for (let day = 1; day <= daysInMonth; day++) {
-      const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      result.push({ key, day });
-    }
-    return result;
-  }, [cursor]);
-
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const selectedEvents = selectedDay ? eventsOnDay(events, selectedDay) : [];
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <Button size="sm" variant="outline" onClick={() => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))}>
-          ◂
-        </Button>
-        <CardTitle>
-          {MONTH_NAMES[cursor.month]} {cursor.year}
-        </CardTitle>
-        <Button size="sm" variant="outline" onClick={() => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))}>
-          ▸
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-          {WEEKDAY_NAMES.map((d) => (
-            <div key={d}>{d}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((cell) => {
-            if (cell.day === 0) return <div key={cell.key} />;
-            const dayEvents = eventsOnDay(events, cell.key);
-            return (
-              <button
-                key={cell.key}
-                type="button"
-                onClick={() => setSelectedDay(cell.key)}
-                className={cn(
-                  'flex aspect-square flex-col items-center justify-center rounded-md border border-border text-sm transition-colors hover:bg-accent-soft',
-                  cell.key === todayKey && 'border-accent font-semibold text-accent-text',
-                  cell.key === selectedDay && 'bg-accent-soft',
-                )}
-              >
-                <span>{cell.day}</span>
-                {dayEvents.length > 0 && <span className="mt-0.5 size-1.5 rounded-full bg-accent" />}
-              </button>
-            );
-          })}
-        </div>
-
-        {selectedDay && (
-          <div className="space-y-2 rounded-md border border-dashed border-border p-3">
-            <p className="text-sm font-medium">{selectedDay}</p>
-            {selectedEvents.length === 0 && <p className="text-sm text-muted-foreground">Немає подій цього дня.</p>}
-            {selectedEvents.map((event) => (
-              <div key={event.id} className="flex items-start justify-between gap-2 rounded-md border border-border p-2">
-                <div>
-                  <p className="text-sm font-medium">{event.title}</p>
-                  {event.description && <p className="text-xs text-muted-foreground">{event.description}</p>}
-                </div>
-                {canEdit && (
-                  <Button size="sm" variant="outline" disabled={remove.isPending} onClick={() => remove.mutate(event.id)}>
-                    Видалити
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function TimelineView({ events, kurinId, canEdit }: { events: KurinCalendarEvent[]; kurinId: string; canEdit: boolean }) {
   const remove = useDeleteCalendarEvent(kurinId);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -219,13 +249,13 @@ function TimelineView({ events, kurinId, canEdit }: { events: KurinCalendarEvent
         ) : (
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2">
             {sorted.map((event) => (
-              <div key={event.id} className="w-64 shrink-0 space-y-1 rounded-md border border-border p-3">
+              <div key={event.id} className="w-64 shrink-0 space-y-1 overflow-hidden rounded-md border border-border p-3">
                 <p className="text-xs font-semibold text-accent-text">
                   {new Date(event.startDate).toLocaleDateString('uk-UA')}
                   {event.endDate && ` – ${new Date(event.endDate).toLocaleDateString('uk-UA')}`}
                 </p>
-                <p className="text-sm font-medium">{event.title}</p>
-                {event.description && <p className="text-xs text-muted-foreground">{event.description}</p>}
+                <p className="text-sm font-medium break-words">{event.title}</p>
+                {event.description && <p className="text-xs break-words text-muted-foreground">{event.description}</p>}
                 {canEdit && (
                   <Button size="sm" variant="outline" disabled={remove.isPending} onClick={() => remove.mutate(event.id)}>
                     Видалити
@@ -245,7 +275,6 @@ export default function CalendarPage() {
   const kurinId = session?.kurinId;
   const { data: events, isLoading, isError, error } = useKurinCalendar(kurinId);
   const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.isKurinniy;
-  const [view, setView] = useState<'timeline' | 'month'>('timeline');
   const [addEventOpen, setAddEventOpen] = useState(false);
 
   if (isLoading) return <p>Завантаження...</p>;
@@ -256,30 +285,16 @@ export default function CalendarPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Календарний план</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-md border border-border p-1">
-            <Button size="sm" variant={view === 'timeline' ? 'default' : 'ghost'} onClick={() => setView('timeline')}>
-              Таймлайн
-            </Button>
-            <Button size="sm" variant={view === 'month' ? 'default' : 'ghost'} onClick={() => setView('month')}>
-              Місяць
-            </Button>
-          </div>
-          {canEdit && (
-            <Button size="sm" variant="outline" onClick={() => setAddEventOpen(true)}>
-              + Додати подію
-            </Button>
-          )}
-        </div>
+        {canEdit && (
+          <Button size="sm" variant="outline" onClick={() => setAddEventOpen(true)}>
+            + Додати подію
+          </Button>
+        )}
       </div>
 
       {canEdit && <AddEventDialog kurinId={kurinId} open={addEventOpen} onOpenChange={setAddEventOpen} />}
 
-      {view === 'timeline' ? (
-        <TimelineView events={events ?? []} kurinId={kurinId} canEdit={canEdit} />
-      ) : (
-        <MonthView events={events ?? []} kurinId={kurinId} canEdit={canEdit} />
-      )}
+      <TimelineView events={events ?? []} kurinId={kurinId} canEdit={canEdit} />
     </div>
   );
 }

@@ -36,9 +36,9 @@ test('lets zvyazkovyi view kurin settings and change the proby program', async (
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
-  await page.getByText('Інформація по куреню').click();
+  await page.getByText('Інформація про курінь').click();
 
-  const programRow = page.getByText('Пробна програма', { exact: true }).locator('..');
+  const programRow = page.getByText('Програма проби', { exact: true }).locator('..');
   await expect(programRow.getByText('Стара', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Редагувати' }).click();

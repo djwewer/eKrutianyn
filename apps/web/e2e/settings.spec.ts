@@ -9,7 +9,7 @@ test('lets zvyazkovyi change their own nickname and password from settings', asy
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/settings');
 
-  await page.getByLabel('Нікнейм').fill('Сокіл');
+  await page.getByLabel('Псевдо').fill('Сокіл');
   await page.getByRole('button', { name: 'Зберегти' }).click();
   await expect(page.getByText('Збережено.')).toBeVisible();
 

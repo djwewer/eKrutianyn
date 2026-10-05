@@ -33,7 +33,7 @@ test('lets zvyazkovyi reconnect/disconnect a connected Google Drive from the kur
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/kurin');
-  await page.getByText('Інформація по куреню').click();
+  await page.getByText('Інформація про курінь').click();
   await page.getByRole('button', { name: 'Редагувати' }).click();
 
   await expect(page.getByText('Підключено як: kurin-drive@example.com')).toBeVisible();

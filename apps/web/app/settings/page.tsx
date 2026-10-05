@@ -180,7 +180,7 @@ export default function SettingsPage() {
               <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nickname">Нікнейм</Label>
+              <Label htmlFor="nickname">Псевдо</Label>
               <Input id="nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} />
             </div>
             <div className="space-y-2">

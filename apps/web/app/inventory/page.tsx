@@ -148,8 +148,18 @@ function AddItemForm({ kurinId }: { kurinId: string }) {
 
   return (
     <div className="space-y-2">
-      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Назва (наприклад, Пилка)" />
-      <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Опис" />
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Назва (наприклад, Пилка)"
+        maxLength={50}
+      />
+      <Input
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Опис"
+        maxLength={200}
+      />
       <Input
         type="number"
         min={0}
@@ -208,14 +218,14 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{item.name}</CardTitle>
+        <CardTitle className="text-sm">{item.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <PhotoCarousel item={item} canEdit={canEdit} kurinId={kurinId} />
         {isEditing ? (
           <div className="space-y-2">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} />
             <Input type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             <div className="flex gap-2">
               <Button
@@ -237,7 +247,7 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
           </div>
         ) : (
           <>
-            {item.description && <p className="text-sm">{item.description}</p>}
+            {item.description && <p className="text-xs break-words text-muted-foreground">{item.description}</p>}
             <p className="text-sm text-muted-foreground">Кількість: {item.quantity}</p>
           </>
         )}

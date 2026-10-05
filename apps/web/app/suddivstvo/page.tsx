@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useSession } from '@/lib/session-client';
 import { useKurin } from '@/lib/queries/kurin';
 import { accessErrorMessage } from '@/lib/error-message';
@@ -53,11 +54,6 @@ export default function SuddivstvoPage() {
                   Змінити таблицю
                 </Button>
               )}
-              <div>
-                <a href="/suddivstvo/junak-import" className="underline">
-                  Імпортувати юнаків з цієї таблиці
-                </a>
-              </div>
             </>
           ) : (
             <>
@@ -72,6 +68,13 @@ export default function SuddivstvoPage() {
           {bookConnectError && <p className="text-sm text-destructive">{bookConnectError}</p>}
         </CardContent>
       </Card>
+      {junakImportStatus.data?.connectedSpreadsheetId && (
+        <Link href="/suddivstvo/junak-import" className="block">
+          <Button className="w-full" size="lg">
+            Імпортувати юнаків з таблиці Книги судді
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }

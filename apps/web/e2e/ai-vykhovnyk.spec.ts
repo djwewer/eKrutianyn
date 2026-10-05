@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
 
 type StoredMessage = { role: 'USER' | 'ASSISTANT'; content: string; probyPointId: string | null; createdAt: string };
-type StoredConversation = { id: string; title: string | null; createdAt: string; updatedAt: string };
+type StoredConversation = { id: string; title: string | null; probyPointId: string | null; createdAt: string; updatedAt: string };
 
 /** Registers in-memory-backed mocks for every /ai-assistant/* route the page talks
  * to, so no test here ever reaches the real OpenAiService/OpenAI API. Returns the
@@ -62,6 +62,7 @@ async function mockAiAssistantApi(page: import('@playwright/test').Page, mockedR
       body: JSON.stringify({
         id: conversationId,
         title: conversation?.title ?? null,
+        probyPointId: conversation?.probyPointId ?? null,
         messages: messagesByConversation.get(conversationId) ?? [],
       }),
     });
@@ -71,14 +72,29 @@ async function mockAiAssistantApi(page: import('@playwright/test').Page, mockedR
     if (route.request().method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(conversations) });
     }
+    // Mirrors the real backend's find-or-create: one conversation per proby point.
+    const { probyPointId } = JSON.parse(route.request().postData() ?? '{}') as { probyPointId: string };
+    const existing = conversations.find((c) => c.probyPointId === probyPointId);
+    if (existing) {
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: existing.id,
+          title: existing.title,
+          probyPointId: existing.probyPointId,
+          messages: messagesByConversation.get(existing.id) ?? [],
+        }),
+      });
+    }
     const id = `conv-${nextId++}`;
     const now = new Date().toISOString();
-    conversations = [{ id, title: null, createdAt: now, updatedAt: now }, ...conversations];
+    conversations = [{ id, title: null, probyPointId, createdAt: now, updatedAt: now }, ...conversations];
     messagesByConversation.set(id, []);
     return route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ id, title: null, messages: [] }),
+      body: JSON.stringify({ id, title: null, probyPointId, messages: [] }),
     });
   });
 
@@ -215,6 +231,41 @@ test('lets a junak delete a chat from the sidebar', async ({ page }) => {
   await expect(page.getByText('Ще немає розмов.')).toBeVisible();
   // Deleting the active chat drops back to a fresh, empty draft.
   await expect(page.getByText('Перше повідомлення')).toHaveCount(0);
+});
+
+test('switching the proby point resumes that point\'s own chat instead of mixing messages together', async ({
+  page,
+}) => {
+  const { program } = await seedProbyProgram(['Орієнтування на місцевості', 'Історія Пласту']);
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+  const { email, password } = await seedJunak(zvyazkovyiToken, 'junak-ai-switch');
+  await mockAiAssistantApi(page, 'Ось відповідь.');
+
+  await loginAs(page, email, password);
+  await page.goto('/ai-vykhovnyk');
+
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Орієнтування на місцевості' }).click();
+  await page.getByPlaceholder('Опишіть, що хочете підготувати...').fill('Питання про орієнтування');
+  await page.getByRole('button', { name: 'Надіслати' }).click();
+  await expect(page.getByText('Питання про орієнтування')).toBeVisible();
+
+  // Switch to a different point: a brand new, empty chat — the first point's
+  // message must not bleed into it.
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Історія Пласту' }).click();
+  await expect(page.getByText('Питання про орієнтування')).toHaveCount(0);
+  await page.getByPlaceholder('Опишіть, що хочете підготувати...').fill('Питання про історію');
+  await page.getByRole('button', { name: 'Надіслати' }).click();
+  await expect(page.getByText('Питання про історію')).toBeVisible();
+
+  // Switching back to the first point resumes its own chat with its own
+  // history, rather than opening a fresh draft or showing the second chat's.
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Орієнтування на місцевості' }).click();
+  await expect(page.getByText('Питання про орієнтування')).toBeVisible();
+  await expect(page.getByText('Питання про історію')).toHaveCount(0);
 });
 
 test('renders markdown (bold, headings) in the assistant reply instead of raw syntax', async ({ page }) => {

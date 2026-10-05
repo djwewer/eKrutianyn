@@ -249,7 +249,11 @@ function ArchiveUserCard({
           variant="outline"
           disabled={archiveUser.isPending || createRequest.isPending}
           onClick={() => {
-            if (!window.confirm(`Архівувати ${user.firstName} ${user.lastName}? Втратить доступ до входу.`)) {
+            if (
+              !window.confirm(
+                `Архівувати юнака ${user.firstName} ${user.lastName}? Він втратить доступ до входу. Перш ніж архівувати, спершу зніміть юнака з гуртка та всіх посад.`,
+              )
+            ) {
               return;
             }
             if (isZvyazkovyi) {

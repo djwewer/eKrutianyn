@@ -345,6 +345,7 @@ model ProbyPoint {
   mappingsAsOld      PointMapping[]    @relation("OldPoint")
   mappingsAsNew      PointMapping[]    @relation("NewPoint")
   aiMessages         AiMessage[]
+  aiConversations    AiConversation[]
   referenceSources   ReferenceSource[]
 }
 
@@ -471,14 +472,22 @@ enum AiMessageRole {
 }
 
 model AiConversation {
-  id        String      @id @default(uuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id])
-  title     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  messages  AiMessage[]
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  // Each conversation is pinned to one proby point: picking a different point
+  // in the AI-виховник UI switches to that point's own conversation instead of
+  // mixing topics into one chat. Nullable only because conversations created
+  // before this field existed have no point to backfill; a brand new
+  // conversation always sets it.
+  probyPointId String?
+  probyPoint   ProbyPoint? @relation(fields: [probyPointId], references: [id])
+  title        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  messages     AiMessage[]
 
+  @@unique([userId, probyPointId])
   @@index([userId, updatedAt])
 }
 
