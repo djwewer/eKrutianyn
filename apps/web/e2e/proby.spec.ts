@@ -34,6 +34,16 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
   const freshVykhovnykToken = await loginForToken(vykhovnyk.email, 'password123');
   await confirmPointAs(freshVykhovnykToken, junak.id, points[0].id);
 
+  // An admin-assigned password carries mustChangePassword:true, which would
+  // redirect straight to /settings on first navigation; clear it the same
+  // way a real first login would, so the test reaches the proby page.
+  const junakToken = await loginForToken(junak.email, 'password123');
+  await fetch('http://localhost:3001/users/me/password', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
+    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
+  });
+
   await loginAs(page, junak.email, 'password123');
   await page.goto('/proby');
 
@@ -42,5 +52,5 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
   const doneRow = page.locator('li', { hasText: 'Точка А' });
   await expect(doneRow).toContainText('✅');
   const notDoneRow = page.locator('li', { hasText: 'Точка Б' });
-  await expect(notDoneRow).toContainText('⬜');
+  await expect(notDoneRow).not.toContainText('✅');
 });

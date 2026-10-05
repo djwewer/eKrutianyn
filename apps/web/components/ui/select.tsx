@@ -26,7 +26,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon className="text-muted-foreground">
+      <SelectPrimitive.Icon className="shrink-0 text-muted-foreground">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
           <path
             d="M4 6l4 4 4-4"
@@ -41,8 +41,13 @@ function SelectTrigger({
   )
 }
 
-function SelectValue(props: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value {...props} />
+function SelectValue({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Value>) {
+  return (
+    <SelectPrimitive.Value
+      className={cn("min-w-0 flex-1 truncate text-left", className)}
+      {...props}
+    />
+  )
 }
 
 function SelectContent({
@@ -77,12 +82,12 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "flex cursor-pointer items-center justify-between rounded-sm px-2.5 py-1.5 text-sm outline-none data-[highlighted]:bg-accent-soft data-[highlighted]:text-accent-text",
+        "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-1.5 text-sm outline-none data-[highlighted]:bg-accent-soft data-[highlighted]:text-accent-text",
         className
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemText className="min-w-0 break-words">{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   )
 }
