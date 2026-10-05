@@ -47,10 +47,54 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
   await loginAs(page, junak.email, 'password123');
   await page.goto('/proby');
 
+  // Stages start collapsed — expand the only stage to see its points.
+  await page.getByText('Ступінь 1').click();
+
   await expect(page.getByText('Точка А')).toBeVisible();
   await expect(page.getByText('Точка Б')).toBeVisible();
   const doneRow = page.locator('li', { hasText: 'Точка А' });
   await expect(doneRow).toContainText('✅');
   const notDoneRow = page.locator('li', { hasText: 'Точка Б' });
   await expect(notDoneRow).not.toContainText('✅');
+});
+
+test('marks a closed stage with a checkmark on its accordion header, not an open one', async ({ page }) => {
+  const { program, stage, points } = await seedProbyProgram(['Точка А']);
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+
+  const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
+  const junak = await createUserAs(zvyazkovyiToken, {
+    firstName: 'Юн',
+    lastName: 'Ак',
+    email: `junak-stage-closed-${Date.now()}@example.com`,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+
+  const junakToken = await loginForToken(junak.email, 'password123');
+  await fetch('http://localhost:3001/users/me/password', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
+    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
+  });
+
+  await loginAs(page, junak.email, 'password123');
+  await page.goto('/proby');
+
+  const stageHeader = page.getByRole('button', { name: 'Ступінь 1' });
+  await expect(stageHeader).not.toContainText('✅');
+
+  // A stage only reports as CLOSED once every point in it is confirmed AND
+  // it's been closed — closing with a point still unconfirmed just tracks
+  // "debt" and leaves the status at OPEN. Confirm first, then close.
+  await confirmPointAs(zvyazkovyiToken, junak.id, points[0].id);
+  await fetch(`http://localhost:3001/junaky/${junak.id}/progress/stages/${stage.id}/close`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${zvyazkovyiToken}` },
+  });
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Ступінь 1' })).toContainText('✅');
 });

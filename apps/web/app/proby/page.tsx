@@ -21,21 +21,18 @@ export default function ProbyPage() {
     (progressData?.points ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
   );
   const statusByStageId = new Map((progressData?.stages ?? []).map((s) => [s.stageId, s.status]));
-  // Open stages start expanded — this page is where a junak checks their
-  // current progress, so the points shouldn't be hidden behind an extra click.
-  const defaultOpenStageIds = program.stages
-    .filter((stage) => statusByStageId.get(stage.id) !== 'LOCKED')
-    .map((stage) => stage.id);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{program.name}</h1>
-      <AccordionRoot multiple defaultValue={defaultOpenStageIds}>
+      <AccordionRoot multiple>
         {program.stages
           .slice()
           .sort((a, b) => a.order - b.order)
           .map((stage) => {
-            const locked = statusByStageId.get(stage.id) === 'LOCKED';
+            const stageStatus = statusByStageId.get(stage.id);
+            const locked = stageStatus === 'LOCKED';
+            const closed = stageStatus === 'CLOSED';
             return (
               <AccordionItem key={stage.id} value={stage.id} disabled={locked}>
                 <AccordionTrigger>
@@ -43,6 +40,11 @@ export default function ProbyPage() {
                   {locked && (
                     <span aria-hidden="true" className="shrink-0">
                       🔒
+                    </span>
+                  )}
+                  {closed && (
+                    <span aria-hidden="true" className="shrink-0">
+                      ✅
                     </span>
                   )}
                 </AccordionTrigger>
