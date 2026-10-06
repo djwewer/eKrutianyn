@@ -323,6 +323,31 @@ describe('AiAssistantService', () => {
     expect(systemMessage.content).toContain('Ніколи не озвучуй юнаку службову інформацію');
   });
 
+  it('instructs the model never to invent Ukrainian Plast terminology or words', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('Ніколи не вигадуй українські пластові терміни чи слова');
+  });
+
+  it('instructs the model to address the junak consistently as "ти", never mixing with "ви"', async () => {
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('ніколи не змішуй "ти" і "ви"');
+  });
+
+  it('tells the model to quote reference-material wording verbatim and in full, not paraphrase or shorten it', async () => {
+    prisma.probyPoint.findUnique.mockResolvedValue(
+      makePoint({ referenceText: 'Три Головні Обов\'язки: 1) ... 2) ... 3) жити за Пластовим Законом і слухатись пластового проводу.' }),
+    );
+
+    await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
+
+    const systemMessage = openAi.createChatCompletion.mock.calls[0][0][0];
+    expect(systemMessage.content).toContain('дослівно і повністю, без скорочення чи перефразовування своїми словами');
+  });
+
   it('restricts suggesting the vykhovnyk to sensitive topics, hallucination risk, or contradictory sources', async () => {
     await service.sendMessage('conversation-1', { probyPointId: 'point-1', content: 'hi' }, ACTOR_JUNAK);
 
