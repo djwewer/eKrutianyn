@@ -22,6 +22,7 @@ import { ReferenceSourcesModule } from './reference-sources/reference-sources.mo
 import { TreasuryModule } from './treasury/treasury.module';
 import { JunakActivityModule } from './junak-activity/junak-activity.module';
 import { KurinCalendarModule } from './kurin-calendar/kurin-calendar.module';
+import { PushNotificationsModule } from './push-notifications/push-notifications.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { KurinCalendarModule } from './kurin-calendar/kurin-calendar.module';
     TreasuryModule,
     JunakActivityModule,
     KurinCalendarModule,
+    PushNotificationsModule,
   ],
   controllers: [HealthController],
 })

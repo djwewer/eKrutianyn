@@ -178,6 +178,7 @@ model User {
   treasuryTransactions  TreasuryTransaction[]
   calendarEvents        KurinCalendarEvent[]
   activityEntries       JunakActivityEntry[]  @relation("JunakActivityEntries")
+  pushSubscriptions     PushSubscription[]
 }
 
 model KurinPosition {
@@ -502,4 +503,18 @@ model AiMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// One row per subscribed browser/device (the Web Push PushSubscription
+// object), not per user — the same user can have several (phone + laptop).
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

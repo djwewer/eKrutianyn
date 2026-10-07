@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar } from '@/components/ui/avatar';
 import { PhotoCropDialog } from '@/components/photo-crop-dialog';
+import { PushNotificationToggle } from '@/components/push-notification-toggle';
 import { getInitials } from '@/lib/utils';
 import { ApiError } from '@/lib/api-client';
 
@@ -206,6 +207,8 @@ export default function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <PushNotificationToggle />
       </>
       )}
 

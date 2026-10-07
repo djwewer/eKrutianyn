@@ -22,5 +22,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|logo.webp).*)'],
+  // manifest.json and sw.js must be reachable unauthenticated too — a junak
+  // may try "Add to Home Screen" (required for Web Push on iOS) straight
+  // from the login page, before ever signing in.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|logo.webp|manifest.json|sw.js).*)'],
 };
