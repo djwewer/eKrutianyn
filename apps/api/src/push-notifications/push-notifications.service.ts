@@ -4,9 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreatePushSubscriptionDto } from './dto/create-push-subscription.dto';
 
-const TEST_NOTIFICATION_TITLE = 'єПластун (тест)';
-const TEST_NOTIFICATION_BODY = 'Тестове push-сповіщення — якщо ти це бачиш, все працює.';
-
 @Injectable()
 export class PushNotificationsService {
   private readonly logger = new Logger(PushNotificationsService.name);
@@ -47,14 +44,13 @@ export class PushNotificationsService {
     await this.prisma.pushSubscription.deleteMany({ where: { endpoint, userId: actor.userId } });
   }
 
-  // Test-only: fires on a 1-minute cron (see push-notifications.cron.ts) to
-  // verify the whole subscribe -> deliver -> show pipeline end-to-end before
-  // any real reminder content is wired up.
-  async sendTestPushToAll(): Promise<void> {
-    const subscriptions = await this.prisma.pushSubscription.findMany();
-    const payload = JSON.stringify({ title: TEST_NOTIFICATION_TITLE, body: TEST_NOTIFICATION_BODY });
+  async sendToKurin(kurinId: string, payload: { title: string; body: string; url: string }): Promise<void> {
+    const subscriptions = await this.prisma.pushSubscription.findMany({
+      where: { user: { kurinId } },
+    });
+    const serialized = JSON.stringify(payload);
 
-    await Promise.all(subscriptions.map((sub) => this.sendAndPruneIfGone(sub, payload)));
+    await Promise.all(subscriptions.map((sub) => this.sendAndPruneIfGone(sub, serialized)));
   }
 
   private async sendAndPruneIfGone(

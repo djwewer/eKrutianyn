@@ -65,30 +65,33 @@ describe('PushNotificationsService', () => {
     });
   });
 
-  describe('sendTestPushToAll', () => {
-    it('sends a push to every stored subscription', async () => {
+  describe('sendToKurin', () => {
+    const PAYLOAD = { title: 'Нове оголошення', body: 'Зимовий табір', url: '/news' };
+
+    it('sends only to subscriptions belonging to users in the given kurin', async () => {
       prisma.pushSubscription.findMany.mockResolvedValue([
         { id: 'sub-1', endpoint: 'https://push.example/1', p256dh: 'p1', auth: 'a1' },
-        { id: 'sub-2', endpoint: 'https://push.example/2', p256dh: 'p2', auth: 'a2' },
       ]);
       sendNotificationMock.mockResolvedValue(undefined);
 
-      await service.sendTestPushToAll();
+      await service.sendToKurin('kurin-1', PAYLOAD);
 
-      expect(sendNotificationMock).toHaveBeenCalledTimes(2);
+      expect(prisma.pushSubscription.findMany).toHaveBeenCalledWith({
+        where: { user: { kurinId: 'kurin-1' } },
+      });
       expect(sendNotificationMock).toHaveBeenCalledWith(
         { endpoint: 'https://push.example/1', keys: { p256dh: 'p1', auth: 'a1' } },
-        expect.any(String),
+        JSON.stringify(PAYLOAD),
       );
     });
 
-    it('deletes a subscription whose push fails with 410 Gone instead of leaving it to fail forever', async () => {
+    it('deletes a subscription whose push fails with 410 Gone, same as before', async () => {
       prisma.pushSubscription.findMany.mockResolvedValue([
         { id: 'sub-1', endpoint: 'https://push.example/1', p256dh: 'p1', auth: 'a1' },
       ]);
       sendNotificationMock.mockRejectedValue(Object.assign(new Error('Gone'), { statusCode: 410 }));
 
-      await service.sendTestPushToAll();
+      await service.sendToKurin('kurin-1', PAYLOAD);
 
       expect(prisma.pushSubscription.delete).toHaveBeenCalledWith({ where: { id: 'sub-1' } });
     });
@@ -99,7 +102,7 @@ describe('PushNotificationsService', () => {
       ]);
       sendNotificationMock.mockRejectedValue(Object.assign(new Error('Not Found'), { statusCode: 404 }));
 
-      await service.sendTestPushToAll();
+      await service.sendToKurin('kurin-1', PAYLOAD);
 
       expect(prisma.pushSubscription.delete).toHaveBeenCalledWith({ where: { id: 'sub-1' } });
     });
@@ -110,7 +113,7 @@ describe('PushNotificationsService', () => {
       ]);
       sendNotificationMock.mockRejectedValue(Object.assign(new Error('Server Error'), { statusCode: 500 }));
 
-      await service.sendTestPushToAll();
+      await service.sendToKurin('kurin-1', PAYLOAD);
 
       expect(prisma.pushSubscription.delete).not.toHaveBeenCalled();
     });

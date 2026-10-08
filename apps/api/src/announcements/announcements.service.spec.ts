@@ -3,6 +3,8 @@ import { AnnouncementsService } from './announcements.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 
+const sendToKurinMock = jest.fn();
+
 const ZVYAZKOVYI: CurrentUserPayload = {
   userId: 'zvyazkovyi-1',
   role: 'ZVYAZKOVYI' as any,
@@ -59,7 +61,11 @@ describe('AnnouncementsService', () => {
       announcementImage: { updateMany: jest.fn(), create: jest.fn(), findUnique: jest.fn() },
       announcementReaction: { upsert: jest.fn(), deleteMany: jest.fn() },
     };
-    service = new AnnouncementsService(prisma as unknown as PrismaService);
+    sendToKurinMock.mockReset();
+    service = new AnnouncementsService(
+      prisma as unknown as PrismaService,
+      { sendToKurin: sendToKurinMock } as unknown as import('../push-notifications/push-notifications.service').PushNotificationsService,
+    );
   });
 
   describe('list', () => {
@@ -96,6 +102,11 @@ describe('AnnouncementsService', () => {
       expect(prisma.announcementImage.updateMany).toHaveBeenCalledWith({
         where: { id: { in: ['img-1', 'img-2'] }, kurinId: 'kurin-1' },
         data: { announcementId: 'ann-1' },
+      });
+      expect(sendToKurinMock).toHaveBeenCalledWith('kurin-1', {
+        title: 'Нове оголошення',
+        body: 'Хі',
+        url: '/news',
       });
       expect(result).toEqual({ id: 'ann-1', kurinId: 'kurin-1', title: 'Хі' });
     });

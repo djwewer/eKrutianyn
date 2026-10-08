@@ -5,10 +5,14 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { detectSafeImageMimeType } from '../common/image-sniff.util';
+import { PushNotificationsService } from '../push-notifications/push-notifications.service';
 
 @Injectable()
 export class AnnouncementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushNotifications: PushNotificationsService,
+  ) {}
 
   private assertKurinMatches(kurinId: string, actor: CurrentUserPayload) {
     if (kurinId !== actor.kurinId) {
@@ -54,6 +58,11 @@ export class AnnouncementsService {
         data: { announcementId: announcement.id },
       });
     }
+    await this.pushNotifications.sendToKurin(kurinId, {
+      title: 'Нове оголошення',
+      body: announcement.title,
+      url: '/news',
+    });
     return announcement;
   }
 
