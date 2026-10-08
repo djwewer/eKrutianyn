@@ -98,6 +98,8 @@ model Kurin {
   junakImportMapping   JunakImportMapping?
   treasuryTransactions TreasuryTransaction[]
   calendarEvents       KurinCalendarEvent[]
+  announcements        Announcement[]
+  announcementImages   AnnouncementImage[]
 }
 
 model JunakImportMapping {
@@ -158,27 +160,30 @@ model User {
   archivedUsers      User[]    @relation("UserArchivedBy")
   hurtokArchivedByMe Hurtok[]  @relation("HurtokArchivedBy")
 
-  vykhovnykAssignments  VykhovnykHurtok[]     @relation("VykhovnykAssignments")
-  progressEntries       JunakProgress[]       @relation("JunakProgressEntries")
-  confirmedProgress     JunakProgress[]       @relation("ConfirmedByUser")
-  auditLogEntries       ProgressAuditLog[]    @relation("ActorAuditLogs")
-  initiatedRequests     ApprovalRequest[]     @relation("InitiatedRequests")
-  decidedRequests       ApprovalRequest[]     @relation("DecidedRequests")
-  passwordResetTokens   PasswordResetToken[]
-  emailChangeRequests   EmailChangeRequest[]
-  profileChangeLogs     ProfileChangeLog[]
-  positionsHeld         KurinPosition[]       @relation("PositionHolder")
-  positionsAssigned     KurinPosition[]       @relation("PositionAssignedBy")
-  positionsRemoved      KurinPosition[]       @relation("PositionRemovedBy")
-  guardianContacts      GuardianContact[]     @relation("JunakGuardians")
-  createdInventoryItems InventoryItem[]
-  stageProgressEntries  JunakStageProgress[]  @relation("JunakStageProgressEntries")
-  stageClosedLogs       JunakStageProgress[]  @relation("StageClosedByUser")
-  aiConversations       AiConversation[]
-  treasuryTransactions  TreasuryTransaction[]
-  calendarEvents        KurinCalendarEvent[]
-  activityEntries       JunakActivityEntry[]  @relation("JunakActivityEntries")
-  pushSubscriptions     PushSubscription[]
+  vykhovnykAssignments       VykhovnykHurtok[]      @relation("VykhovnykAssignments")
+  progressEntries            JunakProgress[]        @relation("JunakProgressEntries")
+  confirmedProgress          JunakProgress[]        @relation("ConfirmedByUser")
+  auditLogEntries            ProgressAuditLog[]     @relation("ActorAuditLogs")
+  initiatedRequests          ApprovalRequest[]      @relation("InitiatedRequests")
+  decidedRequests            ApprovalRequest[]      @relation("DecidedRequests")
+  passwordResetTokens        PasswordResetToken[]
+  emailChangeRequests        EmailChangeRequest[]
+  profileChangeLogs          ProfileChangeLog[]
+  positionsHeld              KurinPosition[]        @relation("PositionHolder")
+  positionsAssigned          KurinPosition[]        @relation("PositionAssignedBy")
+  positionsRemoved           KurinPosition[]        @relation("PositionRemovedBy")
+  guardianContacts           GuardianContact[]      @relation("JunakGuardians")
+  createdInventoryItems      InventoryItem[]
+  stageProgressEntries       JunakStageProgress[]   @relation("JunakStageProgressEntries")
+  stageClosedLogs            JunakStageProgress[]   @relation("StageClosedByUser")
+  aiConversations            AiConversation[]
+  treasuryTransactions       TreasuryTransaction[]
+  calendarEvents             KurinCalendarEvent[]
+  activityEntries            JunakActivityEntry[]   @relation("JunakActivityEntries")
+  authoredAnnouncements      Announcement[]
+  uploadedAnnouncementImages AnnouncementImage[]
+  announcementReactions      AnnouncementReaction[]
+  pushSubscriptions          PushSubscription[]
 }
 
 model KurinPosition {
@@ -503,6 +508,60 @@ model AiMessage {
   createdAt      DateTime       @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  kurinId   String
+  kurin     Kurin    @relation(fields: [kurinId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  title     String
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images    AnnouncementImage[]
+  reactions AnnouncementReaction[]
+
+  @@index([kurinId, createdAt])
+}
+
+// Nullable announcementId: an image is uploaded during composition, before
+// the announcement it belongs to exists — linked only once the writer
+// actually publishes (POST/PATCH .../announcements with imageIds).
+model AnnouncementImage {
+  id             String        @id @default(uuid())
+  announcementId String?
+  announcement   Announcement? @relation(fields: [announcementId], references: [id])
+  kurinId        String
+  kurin          Kurin         @relation(fields: [kurinId], references: [id])
+  uploaderId     String
+  uploader       User          @relation(fields: [uploaderId], references: [id])
+  data           Bytes
+  mimeType       String
+  createdAt      DateTime      @default(now())
+}
+
+enum ReactionEmoji {
+  THUMBS_UP
+  HEART
+  CLAP
+  WOW
+  LAUGH
+  SAD
+}
+
+model AnnouncementReaction {
+  id             String        @id @default(uuid())
+  announcementId String
+  announcement   Announcement  @relation(fields: [announcementId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  emoji          ReactionEmoji
+  createdAt      DateTime      @default(now())
+
+  @@unique([announcementId, userId])
 }
 
 // One row per subscribed browser/device (the Web Push PushSubscription
