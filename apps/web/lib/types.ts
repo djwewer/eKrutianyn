@@ -364,3 +364,17 @@ export interface JunakImportRowResult {
   succeededSteps: string[];
   error?: string;
 }
+
+export type ReactionEmoji = 'THUMBS_UP' | 'HEART' | 'CLAP' | 'WOW' | 'LAUGH' | 'SAD';
+
+export interface Announcement {
+  id: string;
+  kurinId: string;
+  title: string;
+  content: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  author: { firstName: string; lastName: string };
+  images: { id: string }[];
+  reactions: { userId: string; emoji: ReactionEmoji }[];
+}
