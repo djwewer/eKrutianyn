@@ -15,6 +15,7 @@ import { getInitials, cn } from '@/lib/utils';
 
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
+    { href: '/news', label: 'Оголошення' },
     { href: '/ai-vykhovnyk', label: 'AI-виховник' },
     { href: '/proby', label: 'Моя проба' },
     { href: '/my-activity', label: 'Моя активність' },
@@ -23,11 +24,13 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/settings', label: 'Налаштування' },
   ],
   VYKHOVNYK: [
+    { href: '/news', label: 'Оголошення' },
     { href: '/calendar', label: 'Календар' },
     { href: '/kurin', label: 'Курінь' },
     { href: '/settings', label: 'Налаштування' },
   ],
   ZVYAZKOVYI: [
+    { href: '/news', label: 'Оголошення' },
     { href: '/ai-vykhovnyk', label: 'AI-виховник' },
     { href: '/approval-requests', label: 'Запити' },
     { href: '/calendar', label: 'Календар' },
@@ -127,7 +130,7 @@ export function Nav() {
       <div className="flex min-w-0 items-center gap-3.5">
         <Image src="/logo.webp" alt="" width={36} height={36} className="size-9 shrink-0 rounded-md" />
 
-        <div className="flex min-w-0 flex-col">
+        <Link href="/news" className="flex min-w-0 flex-col">
           <span className="text-xs font-semibold tracking-wide text-accent">єПластун</span>
           {kurin && (
             <h1 className="truncate text-[19px] font-bold tracking-tight">
@@ -135,7 +138,7 @@ export function Nav() {
               {kurin.name.replace(/^курінь\s+/i, '')}
             </h1>
           )}
-        </div>
+        </Link>
       </div>
       <div className="hidden items-center gap-1 sm:flex sm:flex-wrap">
         {links.map((link) => (
