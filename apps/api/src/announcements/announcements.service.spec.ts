@@ -36,7 +36,7 @@ describe('AnnouncementsService', () => {
   let service: AnnouncementsService;
   let prisma: {
     announcement: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock; findUnique: jest.Mock };
-    announcementImage: { updateMany: jest.Mock };
+    announcementImage: { updateMany: jest.Mock; create: jest.Mock; findUnique: jest.Mock };
   };
 
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe('AnnouncementsService', () => {
         delete: jest.fn(),
         findUnique: jest.fn(),
       },
-      announcementImage: { updateMany: jest.fn() },
+      announcementImage: { updateMany: jest.fn(), create: jest.fn(), findUnique: jest.fn() },
     };
     service = new AnnouncementsService(prisma as unknown as PrismaService);
   });
@@ -169,6 +169,82 @@ describe('AnnouncementsService', () => {
     it('404s when the route kurinId does not match the actor kurinId, even for a zvyazkovyi', async () => {
       await expect(service.remove('kurin-1', 'ann-1', OTHER_KURIN_ZVYAZKOVYI)).rejects.toThrow(NotFoundException);
       expect(prisma.announcement.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('uploadImage', () => {
+    it('rejects a non-image buffer regardless of claimed mimetype', async () => {
+      const notAnImage = Buffer.from('not an image');
+
+      await expect(
+        service.uploadImage('kurin-1', { buffer: notAnImage, mimetype: 'image/png' } as Express.Multer.File, PYSAR),
+      ).rejects.toThrow('Файл не є дійсним зображенням');
+      expect(prisma.announcementImage.create).not.toHaveBeenCalled();
+    });
+
+    it('stores a real PNG under the kurin and uploader, ignoring the claimed mimetype', async () => {
+      const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+      prisma.announcementImage.create.mockResolvedValue({ id: 'img-1' });
+
+      const result = await service.uploadImage(
+        'kurin-1',
+        { buffer: pngSignature, mimetype: 'application/octet-stream' } as Express.Multer.File,
+        PYSAR,
+      );
+
+      expect(prisma.announcementImage.create).toHaveBeenCalledWith({
+        data: { kurinId: 'kurin-1', uploaderId: 'pysar-1', data: pngSignature, mimeType: 'image/png' },
+      });
+      expect(result).toEqual({ id: 'img-1' });
+    });
+
+    it('rejects a plain junak (not писар/звʼязковий)', async () => {
+      const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+      await expect(
+        service.uploadImage('kurin-1', { buffer: pngSignature, mimetype: 'image/png' } as Express.Multer.File, PLAIN_JUNAK),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId, even for a writer', async () => {
+      const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+      await expect(
+        service.uploadImage('kurin-1', { buffer: pngSignature, mimetype: 'image/png' } as Express.Multer.File, OTHER_KURIN_ZVYAZKOVYI),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.announcementImage.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getImage', () => {
+    it("returns the image's bytes and mimetype when it belongs to the actor's kurin", async () => {
+      prisma.announcementImage.findUnique.mockResolvedValue({
+        id: 'img-1',
+        kurinId: 'kurin-1',
+        data: Buffer.from('abc'),
+        mimeType: 'image/png',
+      });
+
+      const result = await service.getImage('kurin-1', 'img-1', PLAIN_JUNAK);
+
+      expect(result).toEqual({ data: Buffer.from('abc'), mimeType: 'image/png' });
+    });
+
+    it('returns null for an image belonging to a different kurin', async () => {
+      prisma.announcementImage.findUnique.mockResolvedValue({ id: 'img-1', kurinId: 'some-other-kurin' });
+
+      expect(await service.getImage('kurin-1', 'img-1', PLAIN_JUNAK)).toBeNull();
+    });
+
+    it('returns null for a non-existent image id', async () => {
+      prisma.announcementImage.findUnique.mockResolvedValue(null);
+
+      expect(await service.getImage('kurin-1', 'missing', PLAIN_JUNAK)).toBeNull();
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId, before any DB lookup', async () => {
+      await expect(service.getImage('kurin-1', 'img-1', OTHER_KURIN_ZVYAZKOVYI)).rejects.toThrow(NotFoundException);
+      expect(prisma.announcementImage.findUnique).not.toHaveBeenCalled();
     });
   });
 });

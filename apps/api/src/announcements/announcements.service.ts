@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { detectSafeImageMimeType } from '../common/image-sniff.util';
 
 @Injectable()
 export class AnnouncementsService {
@@ -79,6 +80,31 @@ export class AnnouncementsService {
     await this.findOrThrow(kurinId, id);
     await this.prisma.announcement.delete({ where: { id } });
     return { success: true };
+  }
+
+  async uploadImage(kurinId: string, file: Express.Multer.File, actor: CurrentUserPayload) {
+    this.assertKurinMatches(kurinId, actor);
+    this.assertCanWrite(actor);
+    const detectedMimeType = detectSafeImageMimeType(file.buffer);
+    if (!detectedMimeType) {
+      throw new BadRequestException('Файл не є дійсним зображенням (JPEG, PNG, WebP або GIF)');
+    }
+    return this.prisma.announcementImage.create({
+      data: { kurinId, uploaderId: actor.userId, data: file.buffer, mimeType: detectedMimeType },
+    });
+  }
+
+  async getImage(
+    kurinId: string,
+    imageId: string,
+    actor: CurrentUserPayload,
+  ): Promise<{ data: Buffer; mimeType: string } | null> {
+    this.assertKurinMatches(kurinId, actor);
+    const image = await this.prisma.announcementImage.findUnique({ where: { id: imageId } });
+    if (!image || image.kurinId !== kurinId) {
+      return null;
+    }
+    return { data: image.data as Buffer, mimeType: image.mimeType };
   }
 
   private async findOrThrow(kurinId: string, id: string) {
