@@ -24,6 +24,13 @@ const PLAIN_JUNAK: CurrentUserPayload = {
   isKurinniy: false,
   positions: [],
 };
+const OTHER_KURIN_ZVYAZKOVYI: CurrentUserPayload = {
+  userId: 'zvyazkovyi-2',
+  role: 'ZVYAZKOVYI' as any,
+  kurinId: 'kurin-2',
+  isKurinniy: false,
+  positions: [],
+};
 
 describe('AnnouncementsService', () => {
   let service: AnnouncementsService;
@@ -56,6 +63,11 @@ describe('AnnouncementsService', () => {
           orderBy: { createdAt: 'desc' },
         }),
       );
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId', async () => {
+      await expect(service.list('kurin-1', OTHER_KURIN_ZVYAZKOVYI)).rejects.toThrow(NotFoundException);
+      expect(prisma.announcement.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -93,6 +105,13 @@ describe('AnnouncementsService', () => {
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.announcement.create).not.toHaveBeenCalled();
     });
+
+    it('404s when the route kurinId does not match the actor kurinId, even for a zvyazkovyi', async () => {
+      await expect(
+        service.create('kurin-1', { title: 'Хі', content: {}, imageIds: [] }, OTHER_KURIN_ZVYAZKOVYI),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.announcement.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('update', () => {
@@ -115,6 +134,20 @@ describe('AnnouncementsService', () => {
         service.update('kurin-1', 'ann-1', { title: 'Нове', content: {}, imageIds: [] }, PYSAR),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('404s when the route kurinId does not match the actor kurinId, even for a zvyazkovyi', async () => {
+      await expect(
+        service.update('kurin-1', 'ann-1', { title: 'Нове', content: {}, imageIds: [] }, OTHER_KURIN_ZVYAZKOVYI),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.announcement.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a plain junak with no writer position', async () => {
+      await expect(
+        service.update('kurin-1', 'ann-1', { title: 'Нове', content: {}, imageIds: [] }, PLAIN_JUNAK),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.announcement.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('remove', () => {
@@ -130,6 +163,11 @@ describe('AnnouncementsService', () => {
       prisma.announcement.findUnique.mockResolvedValue({ id: 'ann-1', kurinId: 'kurin-1' });
 
       await expect(service.remove('kurin-1', 'ann-1', PLAIN_JUNAK)).rejects.toThrow(ForbiddenException);
+      expect(prisma.announcement.delete).not.toHaveBeenCalled();
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId, even for a zvyazkovyi', async () => {
+      await expect(service.remove('kurin-1', 'ann-1', OTHER_KURIN_ZVYAZKOVYI)).rejects.toThrow(NotFoundException);
       expect(prisma.announcement.delete).not.toHaveBeenCalled();
     });
   });
