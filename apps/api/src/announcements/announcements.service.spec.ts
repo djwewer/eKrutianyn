@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -100,7 +100,7 @@ describe('AnnouncementsService', () => {
         data: { kurinId: 'kurin-1', authorId: 'pysar-1', title: 'Хі', content: { type: 'doc' } },
       });
       expect(prisma.announcementImage.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: ['img-1', 'img-2'] }, kurinId: 'kurin-1' },
+        where: { id: { in: ['img-1', 'img-2'] }, kurinId: 'kurin-1', announcementId: null },
         data: { announcementId: 'ann-1' },
       });
       expect(sendToKurinMock).toHaveBeenCalledWith('kurin-1', {
@@ -115,7 +115,7 @@ describe('AnnouncementsService', () => {
       prisma.announcement.create.mockResolvedValue({ id: 'ann-1' });
 
       await expect(
-        service.create('kurin-1', { title: 'Хі', content: {}, imageIds: [] }, ZVYAZKOVYI),
+        service.create('kurin-1', { title: 'Хі', content: { type: 'doc' }, imageIds: [] }, ZVYAZKOVYI),
       ).resolves.toBeDefined();
     });
 
@@ -132,6 +132,20 @@ describe('AnnouncementsService', () => {
       ).rejects.toThrow(NotFoundException);
       expect(prisma.announcement.create).not.toHaveBeenCalled();
     });
+
+    it('rejects content that is not a ProseMirror doc (e.g. an empty object)', async () => {
+      await expect(
+        service.create('kurin-1', { title: 'Хі', content: {}, imageIds: [] }, PYSAR),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.announcement.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects content missing type: "doc"', async () => {
+      await expect(
+        service.create('kurin-1', { title: 'Хі', content: { type: 'paragraph' }, imageIds: [] }, PYSAR),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.announcement.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('update', () => {
@@ -139,12 +153,21 @@ describe('AnnouncementsService', () => {
       prisma.announcement.findUnique.mockResolvedValue({ id: 'ann-1', kurinId: 'kurin-1', authorId: 'some-other-writer' });
       prisma.announcement.update.mockResolvedValue({ id: 'ann-1' });
 
-      await service.update('kurin-1', 'ann-1', { title: 'Нове', content: {}, imageIds: [] }, PYSAR);
+      await service.update('kurin-1', 'ann-1', { title: 'Нове', content: { type: 'doc' }, imageIds: [] }, PYSAR);
 
       expect(prisma.announcement.update).toHaveBeenCalledWith({
         where: { id: 'ann-1' },
-        data: { title: 'Нове', content: {} },
+        data: { title: 'Нове', content: { type: 'doc' } },
       });
+    });
+
+    it('rejects content that is not a ProseMirror doc (e.g. an empty object)', async () => {
+      prisma.announcement.findUnique.mockResolvedValue({ id: 'ann-1', kurinId: 'kurin-1' });
+
+      await expect(
+        service.update('kurin-1', 'ann-1', { title: 'Нове', content: {}, imageIds: [] }, PYSAR),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.announcement.update).not.toHaveBeenCalled();
     });
 
     it('404s on an announcement from a different kurin', async () => {

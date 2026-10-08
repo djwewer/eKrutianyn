@@ -2,7 +2,6 @@
 
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { REACTION_EMOJI, REACTION_ORDER } from '@/lib/reaction-emoji';
 import { useSetReaction, useRemoveReaction } from '@/lib/queries/announcements';
 import type { Announcement, ReactionEmoji } from '@/lib/types';
 
-const TIPTAP_EXTENSIONS = [StarterKit, Link, Image];
+const TIPTAP_EXTENSIONS = [StarterKit, Image];
 
 export function AnnouncementCard({
   announcement,
@@ -29,8 +28,15 @@ export function AnnouncementCard({
 }) {
   const setReaction = useSetReaction(kurinId);
   const removeReaction = useRemoveReaction(kurinId);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generateHTML requires a loosely-typed Tiptap JSONContent document
-  const html = generateHTML(announcement.content as any, TIPTAP_EXTENSIONS);
+  let html: string | null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generateHTML requires a loosely-typed Tiptap JSONContent document
+    html = generateHTML(announcement.content as any, TIPTAP_EXTENSIONS);
+  } catch {
+    // A malformed/unsupported content document must not crash the whole feed
+    // page for every viewer — fall back to a per-card message instead.
+    html = null;
+  }
   const ownReaction = announcement.reactions.find((r) => r.userId === currentUserId)?.emoji;
 
   function handleReactionClick(emoji: ReactionEmoji) {
@@ -67,7 +73,11 @@ export function AnnouncementCard({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />
+        {html !== null ? (
+          <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Не вдалося відобразити вміст.</p>
+        )}
         <div className="flex flex-wrap gap-1">
           {REACTION_ORDER.map((emoji) => {
             const count = countFor(emoji);

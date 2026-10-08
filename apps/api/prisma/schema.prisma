@@ -533,7 +533,7 @@ model Announcement {
 model AnnouncementImage {
   id             String        @id @default(uuid())
   announcementId String?
-  announcement   Announcement? @relation(fields: [announcementId], references: [id])
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   kurinId        String
   kurin          Kurin         @relation(fields: [kurinId], references: [id])
   uploaderId     String
@@ -555,7 +555,7 @@ enum ReactionEmoji {
 model AnnouncementReaction {
   id             String        @id @default(uuid())
   announcementId String
-  announcement   Announcement  @relation(fields: [announcementId], references: [id])
+  announcement   Announcement  @relation(fields: [announcementId], references: [id], onDelete: Cascade)
   userId         String
   user           User          @relation(fields: [userId], references: [id])
   emoji          ReactionEmoji

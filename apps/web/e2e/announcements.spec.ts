@@ -5,7 +5,7 @@ import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed'
 
 const API_URL = 'http://localhost:3001';
 
-test('zvyazkovyi publishes an announcement, it appears in the feed, and a junak can react to it', async ({ page, context }) => {
+test('zvyazkovyi publishes an announcement, it appears in the feed, and they can react to it', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
@@ -25,6 +25,18 @@ test('zvyazkovyi publishes an announcement, it appears in the feed, and a junak 
   await expect(page.getByRole('button', { name: '❤️ 1' })).toBeVisible();
   await heartButton.click();
   await expect(page.getByRole('button', { name: '❤️ 1' })).not.toBeVisible();
+
+  // Regression test: deleting an announcement that has a reaction (and the
+  // FK cascade onto it) must not 500 — it used to fail with a DB-level FK
+  // violation because AnnouncementReaction.announcement had no onDelete
+  // behavior.
+  await heartButton.click();
+  await expect(page.getByRole('button', { name: '❤️ 1' })).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Видалити' }).click();
+
+  await expect(page.getByText('Зимовий табір')).not.toBeVisible();
 });
 
 test('a plain junak (no писар position) does not see edit/delete controls or the new-announcement button', async ({ page }) => {

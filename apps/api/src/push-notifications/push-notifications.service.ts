@@ -45,8 +45,11 @@ export class PushNotificationsService {
   }
 
   async sendToKurin(kurinId: string, payload: { title: string; body: string; url: string }): Promise<void> {
+    // Exclude archived (removed) kurin members — they're locked out of the
+    // app (jwt.strategy.ts rejects them) but their devices stay subscribed
+    // until deleted, so without this filter they'd keep getting pushed.
     const subscriptions = await this.prisma.pushSubscription.findMany({
-      where: { user: { kurinId } },
+      where: { user: { kurinId, archivedAt: null } },
     });
     const serialized = JSON.stringify(payload);
 
@@ -66,7 +69,8 @@ export class PushNotificationsService {
       const statusCode = (error as { statusCode?: number }).statusCode;
       // 404/410 mean the browser has unsubscribed or the endpoint expired —
       // the subscription is permanently dead, so delete it instead of
-      // retrying it forever on every future cron tick.
+      // retrying it forever on every future send (pushes are triggered by
+      // real events, such as publishing an announcement, not a cron).
       if (statusCode === 404 || statusCode === 410) {
         await this.prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => undefined);
       } else {

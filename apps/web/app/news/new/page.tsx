@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/session-client';
 import { useCreateAnnouncement } from '@/lib/queries/announcements';
 import { AnnouncementEditor } from '@/components/announcement-editor';
-import { ApiError } from '@/lib/api-client';
 
 export default function NewAnnouncementPage() {
   const router = useRouter();
@@ -25,7 +24,7 @@ export default function NewAnnouncementPage() {
         initialContent={null}
         submitLabel="Опублікувати"
         isSaving={create.isPending}
-        errorMessage={create.isError ? (create.error instanceof ApiError ? 'Не вдалося опублікувати.' : null) : null}
+        errorMessage={create.isError ? 'Не вдалося опублікувати.' : null}
         onSubmit={(data) => {
           create.mutate(data, { onSuccess: () => router.push('/news') });
         }}

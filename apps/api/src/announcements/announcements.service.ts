@@ -28,6 +28,16 @@ export class AnnouncementsService {
     }
   }
 
+  // Not a full ProseMirror schema validation — just enough to block the
+  // obviously-malformed cases (e.g. `{}`, or a document built against some
+  // other schema) that would otherwise crash generateHTML() client-side for
+  // every viewer of the feed.
+  private assertValidContent(content: Record<string, unknown>) {
+    if ((content as { type?: unknown }).type !== 'doc') {
+      throw new BadRequestException('Невалідний вміст оголошення');
+    }
+  }
+
   async list(kurinId: string, actor: CurrentUserPayload) {
     this.assertKurinMatches(kurinId, actor);
     return this.prisma.announcement.findMany({
@@ -44,6 +54,7 @@ export class AnnouncementsService {
   async create(kurinId: string, dto: CreateAnnouncementDto, actor: CurrentUserPayload) {
     this.assertKurinMatches(kurinId, actor);
     this.assertCanWrite(actor);
+    this.assertValidContent(dto.content);
     const announcement = await this.prisma.announcement.create({
       data: {
         kurinId,
@@ -54,7 +65,10 @@ export class AnnouncementsService {
     });
     if (dto.imageIds.length > 0) {
       await this.prisma.announcementImage.updateMany({
-        where: { id: { in: dto.imageIds }, kurinId },
+        // announcementId: null restricts this to images not yet linked to
+        // any announcement, so an image id from another (already-published)
+        // announcement can't be re-claimed by resending its id.
+        where: { id: { in: dto.imageIds }, kurinId, announcementId: null },
         data: { announcementId: announcement.id },
       });
     }
@@ -70,13 +84,14 @@ export class AnnouncementsService {
     this.assertKurinMatches(kurinId, actor);
     this.assertCanWrite(actor);
     await this.findOrThrow(kurinId, id);
+    this.assertValidContent(dto.content);
     const updated = await this.prisma.announcement.update({
       where: { id },
       data: { title: dto.title, content: dto.content as Prisma.InputJsonValue },
     });
     if (dto.imageIds.length > 0) {
       await this.prisma.announcementImage.updateMany({
-        where: { id: { in: dto.imageIds }, kurinId },
+        where: { id: { in: dto.imageIds }, kurinId, announcementId: null },
         data: { announcementId: id },
       });
     }

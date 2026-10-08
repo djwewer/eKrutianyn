@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
 import TiptapImage from '@tiptap/extension-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,10 +27,11 @@ export function AnnouncementEditor({
 }) {
   const [title, setTitle] = useState(initialTitle);
   const [imageIds, setImageIds] = useState<string[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
   const uploadImage = useUploadAnnouncementImage(kurinId);
 
   const editor = useEditor({
-    extensions: [StarterKit, Link, TiptapImage],
+    extensions: [StarterKit, TiptapImage],
     content: initialContent ?? '<p></p>',
     immediatelyRender: false,
   });
@@ -40,9 +40,14 @@ export function AnnouncementEditor({
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !editor) return;
-    const uploaded = await uploadImage.mutateAsync(file);
-    setImageIds((prev) => [...prev, uploaded.id]);
-    editor.chain().focus().setImage({ src: `/api/backend/kurins/${kurinId}/announcements/images/${uploaded.id}` }).run();
+    setImageError(null);
+    try {
+      const uploaded = await uploadImage.mutateAsync(file);
+      setImageIds((prev) => [...prev, uploaded.id]);
+      editor.chain().focus().setImage({ src: `/api/backend/kurins/${kurinId}/announcements/images/${uploaded.id}` }).run();
+    } catch {
+      setImageError('Не вдалося завантажити зображення.');
+    }
   }
 
   function handleSubmit() {
@@ -94,6 +99,7 @@ export function AnnouncementEditor({
       <div className="min-h-40 rounded-md border border-border p-3">
         <EditorContent editor={editor} />
       </div>
+      {imageError && <p className="text-sm text-destructive">{imageError}</p>}
       {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
       <Button disabled={!title.trim() || isSaving} onClick={handleSubmit}>
         {submitLabel}

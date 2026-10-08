@@ -77,12 +77,27 @@ describe('PushNotificationsService', () => {
       await service.sendToKurin('kurin-1', PAYLOAD);
 
       expect(prisma.pushSubscription.findMany).toHaveBeenCalledWith({
-        where: { user: { kurinId: 'kurin-1' } },
+        where: { user: { kurinId: 'kurin-1', archivedAt: null } },
       });
       expect(sendNotificationMock).toHaveBeenCalledWith(
         { endpoint: 'https://push.example/1', keys: { p256dh: 'p1', auth: 'a1' } },
         JSON.stringify(PAYLOAD),
       );
+    });
+
+    it("excludes an archived user's subscription via the findMany filter", async () => {
+      // The archived user's subscription is never returned in the first
+      // place, because the query itself filters on archivedAt: null — so
+      // asserting the filter is the meaningful check here (a mocked
+      // findMany can't actually apply a where clause).
+      prisma.pushSubscription.findMany.mockResolvedValue([]);
+
+      await service.sendToKurin('kurin-1', PAYLOAD);
+
+      expect(prisma.pushSubscription.findMany).toHaveBeenCalledWith({
+        where: { user: { kurinId: 'kurin-1', archivedAt: null } },
+      });
+      expect(sendNotificationMock).not.toHaveBeenCalled();
     });
 
     it('deletes a subscription whose push fails with 410 Gone, same as before', async () => {
