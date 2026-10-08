@@ -31,12 +31,20 @@ const OTHER_KURIN_ZVYAZKOVYI: CurrentUserPayload = {
   isKurinniy: false,
   positions: [],
 };
+const OTHER_KURIN_JUNAK: CurrentUserPayload = {
+  userId: 'junak-2',
+  role: 'JUNAK' as any,
+  kurinId: 'kurin-2',
+  isKurinniy: false,
+  positions: [],
+};
 
 describe('AnnouncementsService', () => {
   let service: AnnouncementsService;
   let prisma: {
     announcement: { findMany: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock; findUnique: jest.Mock };
     announcementImage: { updateMany: jest.Mock; create: jest.Mock; findUnique: jest.Mock };
+    announcementReaction: { upsert: jest.Mock; deleteMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -49,6 +57,7 @@ describe('AnnouncementsService', () => {
         findUnique: jest.fn(),
       },
       announcementImage: { updateMany: jest.fn(), create: jest.fn(), findUnique: jest.fn() },
+      announcementReaction: { upsert: jest.fn(), deleteMany: jest.fn() },
     };
     service = new AnnouncementsService(prisma as unknown as PrismaService);
   });
@@ -245,6 +254,48 @@ describe('AnnouncementsService', () => {
     it('404s when the route kurinId does not match the actor kurinId, before any DB lookup', async () => {
       await expect(service.getImage('kurin-1', 'img-1', OTHER_KURIN_ZVYAZKOVYI)).rejects.toThrow(NotFoundException);
       expect(prisma.announcementImage.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setReaction', () => {
+    it('upserts the reaction, one per (announcement, user)', async () => {
+      prisma.announcement.findUnique.mockResolvedValue({ id: 'ann-1', kurinId: 'kurin-1' });
+
+      await service.setReaction('kurin-1', 'ann-1', 'HEART' as any, PLAIN_JUNAK);
+
+      expect(prisma.announcementReaction.upsert).toHaveBeenCalledWith({
+        where: { announcementId_userId: { announcementId: 'ann-1', userId: 'junak-1' } },
+        create: { announcementId: 'ann-1', userId: 'junak-1', emoji: 'HEART' },
+        update: { emoji: 'HEART' },
+      });
+    });
+
+    it('404s reacting to an announcement from a different kurin', async () => {
+      prisma.announcement.findUnique.mockResolvedValue({ id: 'ann-1', kurinId: 'some-other-kurin' });
+
+      await expect(service.setReaction('kurin-1', 'ann-1', 'HEART' as any, PLAIN_JUNAK)).rejects.toThrow(NotFoundException);
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId', async () => {
+      await expect(service.setReaction('kurin-1', 'ann-1', 'HEART' as any, OTHER_KURIN_JUNAK)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.announcementReaction.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeReaction', () => {
+    it("removes only the actor's own reaction", async () => {
+      await service.removeReaction('kurin-1', 'ann-1', PLAIN_JUNAK);
+
+      expect(prisma.announcementReaction.deleteMany).toHaveBeenCalledWith({
+        where: { announcementId: 'ann-1', userId: 'junak-1' },
+      });
+    });
+
+    it('404s when the route kurinId does not match the actor kurinId', async () => {
+      await expect(service.removeReaction('kurin-1', 'ann-1', OTHER_KURIN_JUNAK)).rejects.toThrow(NotFoundException);
+      expect(prisma.announcementReaction.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

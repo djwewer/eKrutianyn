@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   Patch,
@@ -21,6 +22,7 @@ import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-us
 import { AnnouncementsService } from './announcements.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { SetReactionDto } from './dto/set-reaction.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('kurins/:kurinId/announcements')
@@ -92,5 +94,21 @@ export class AnnouncementsController {
     res.set('Content-Security-Policy', "default-src 'none'; sandbox");
     res.set('Cache-Control', 'private, max-age=31536000, immutable');
     res.send(image.data);
+  }
+
+  @Post(':id/reactions')
+  @HttpCode(200)
+  setReaction(
+    @Param('kurinId') kurinId: string,
+    @Param('id') id: string,
+    @Body() dto: SetReactionDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.service.setReaction(kurinId, id, dto.emoji, user);
+  }
+
+  @Delete(':id/reactions')
+  removeReaction(@Param('kurinId') kurinId: string, @Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.removeReaction(kurinId, id, user);
   }
 }

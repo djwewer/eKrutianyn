@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, PositionType, Role } from '@prisma/client';
+import { Prisma, PositionType, ReactionEmoji, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -105,6 +105,24 @@ export class AnnouncementsService {
       return null;
     }
     return { data: image.data as Buffer, mimeType: image.mimeType };
+  }
+
+  async setReaction(kurinId: string, announcementId: string, emoji: ReactionEmoji, actor: CurrentUserPayload) {
+    this.assertKurinMatches(kurinId, actor);
+    await this.findOrThrow(kurinId, announcementId);
+    return this.prisma.announcementReaction.upsert({
+      where: { announcementId_userId: { announcementId, userId: actor.userId } },
+      create: { announcementId, userId: actor.userId, emoji },
+      update: { emoji },
+    });
+  }
+
+  async removeReaction(kurinId: string, announcementId: string, actor: CurrentUserPayload) {
+    this.assertKurinMatches(kurinId, actor);
+    await this.prisma.announcementReaction.deleteMany({
+      where: { announcementId, userId: actor.userId },
+    });
+    return { success: true };
   }
 
   private async findOrThrow(kurinId: string, id: string) {
