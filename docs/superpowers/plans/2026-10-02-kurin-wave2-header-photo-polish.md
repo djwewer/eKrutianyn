@@ -40,7 +40,7 @@
 - Produces: `PATCH /users/me/photo` (multipart, field name `photo`, replaces any existing photo), `DELETE /users/me/photo` (removes it), `GET /users/:id/photo` (streams bytes; 404 if none). `UserSummary.photoUpdatedAt: string | null` added to the shared frontend type.
 - Consumes: nothing new beyond what Task 1 defines.
 
-- [ ] **Step 1: Add the Prisma fields**
+- [x] **Step 1: Add the Prisma fields**
 
 In `apps/api/prisma/schema.prisma`, inside `model User { ... }`, add (anywhere among the existing scalar fields, e.g. after `phone`):
 
@@ -52,11 +52,11 @@ In `apps/api/prisma/schema.prisma`, inside `model User { ... }`, add (anywhere a
 
 Run `npx prisma migrate dev --name add_user_photo` from `apps/api`.
 
-- [ ] **Step 2: Add `photoUpdatedAt` to `USER_SELECT` and `USER_SELECT_PUBLIC`**
+- [x] **Step 2: Add `photoUpdatedAt` to `USER_SELECT` and `USER_SELECT_PUBLIC`**
 
 In `apps/api/src/users/user-select.const.ts`, add `photoUpdatedAt: true` to both constants (never `photoData`/`photoMimeType` — see Global Constraints).
 
-- [ ] **Step 3: Add the controller endpoints**
+- [x] **Step 3: Add the controller endpoints**
 
 In `apps/api/src/users/users.controller.ts`, add (near the other `me`-scoped routes, after `updateOwnProfile`):
 
@@ -99,7 +99,7 @@ Add the required imports: `BadRequestException`, `Delete`, `NotFoundException`, 
 
 Note: `GET :id/photo` is intentionally **not** behind a `@Roles` restriction beyond the controller's base `JwtAuthGuard` — any authenticated user can view any other user's photo by id, matching how names/roles are already visible across kurin rosters today (no new information disclosure: if you can see someone's name in a roster, their photo is no more sensitive). It does not use `findScoped`'s cross-kurin restriction since a photo alone reveals nothing about kurin structure.
 
-- [ ] **Step 4: Add the service methods**
+- [x] **Step 4: Add the service methods**
 
 In `apps/api/src/users/users.service.ts`, add:
 
@@ -132,7 +132,7 @@ In `apps/api/src/users/users.service.ts`, add:
   }
 ```
 
-- [ ] **Step 5: Frontend type + mutation hooks**
+- [x] **Step 5: Frontend type + mutation hooks**
 
 In `apps/web/lib/types.ts`, add `photoUpdatedAt: string | null;` to `UserSummary`.
 
@@ -168,7 +168,7 @@ export function useRemoveOwnPhoto() {
 
 Add `apiUpload` to this file's existing `apiFetch` import from `@/lib/api-client` (merge into one import statement, don't duplicate it).
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 From `apps/api`: `npx prisma generate`, `npx tsc --noEmit` clean. Run a quick manual check (`curl` with `-F photo=@<path>` against a logged-in session, or a throwaway Jest e2e test you delete afterward) that upload → `GET /users/:id/photo` round-trips the correct bytes and `Content-Type`, and that `DELETE /users/me/photo` then makes `GET` 404.
 
@@ -184,7 +184,7 @@ From `apps/web`: `npx tsc --noEmit` clean.
 **Interfaces:**
 - `Avatar`'s props gain an optional `photoUrl?: string | null` — when present, renders an `<img>` instead of the initials text. `initials` stays required (used for the `alt` text and as the fallback if the image fails to load — browsers don't automatically fall back from a broken `<img src>` to sibling content, so this needs an `onError` handler that swaps to the initials).
 
-- [ ] **Step 1: Add photo support**
+- [x] **Step 1: Add photo support**
 
 Replace the component with:
 
@@ -228,7 +228,7 @@ export { Avatar }
 
 Note: `imageFailed` resets to `false` only on remount, not when `photoUrl` itself changes to a new value after a failed load — acceptable here since a photo URL change always comes with a fresh `photoUpdatedAt` cache-busting query param from a genuine re-upload, which is a rare, user-initiated action, not a prop that churns on every render.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 `npx tsc --noEmit` from `apps/web` clean. `Avatar`'s two current callers (`components/ui/row-list.tsx`'s `Row`, which passes `initials` only — no `photoUrl`) must keep rendering exactly as before (initials, no `<img>`) since `photoUrl` is optional and undefined there. Confirm by re-running `e2e/kurin-accordion-full-tier.spec.ts` (exercises the roster `Row`/`Avatar` usage).
 
@@ -242,7 +242,7 @@ Note: `imageFailed` resets to `false` only on remount, not when `photoUrl` itsel
 **Interfaces:**
 - Consumes: `useUpdateOwnPhoto`, `useRemoveOwnPhoto` (Task 1), `Avatar` with `photoUrl` (Task 2), `useOwnProfile` (already imported).
 
-- [ ] **Step 1: Add a photo card**
+- [x] **Step 1: Add a photo card**
 
 Add a new `<Card>` as the **first** card in the page (before "Особисті дані"):
 
@@ -285,7 +285,7 @@ Add a new `<Card>` as the **first** card in the page (before "Особисті �
 
 `/api/backend/...` is confirmed correct — `lib/api-client.ts`'s `apiFetch`/`apiUpload` both prefix every request with exactly this (`fetch(\`/api/backend${path}\`, ...)`), and it's the same proxy route (`apps/web/app/api/backend/[...path]/route.ts`) that forwards cookie-based auth to the real API for every other request in this app. Use it verbatim in the `<img src>`, no further investigation needed.
 
-- [ ] **Step 2: Wire up the hooks and imports**
+- [x] **Step 2: Wire up the hooks and imports**
 
 Add to the component body (with the other hook calls at the top):
 
@@ -297,7 +297,7 @@ Add to the component body (with the other hook calls at the top):
 
 Add imports: `useRef` from `'react'` (merge with existing `useEffect, useState` import), `useUpdateOwnPhoto, useRemoveOwnPhoto` from `'@/lib/queries/settings'` (merge with existing import), `Avatar` from `'@/components/ui/avatar'`, `getInitials` from `'@/lib/utils'`.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 `npx tsc --noEmit` clean. Manually (or via a throwaway Playwright test using `setInputFiles` on the hidden file input) verify: uploading a small test image shows it in the Avatar immediately after the mutation succeeds (React Query's `invalidateQueries` on `['users']` should trigger `useOwnProfile`'s refetch, which includes `['users', 'me']` — confirm this query key actually matches and invalidates; `useOwnProfile`'s key is `['users', 'me']`, and the mutation invalidates `['users']` as a prefix, which **should** match it under React Query's default partial-key matching, but verify this actually refetches rather than assuming). Verify "Видалити фото" removes it and falls back to initials.
 
@@ -312,7 +312,7 @@ Add imports: `useRef` from `'react'` (merge with existing `useEffect, useState` 
 - Consumes: `useKurin()` (already exists, `GET /kurins/me`, confirmed accessible to every role — no `@Roles` restriction on that endpoint), `useOwnProfile()` (Task 1's `photoUpdatedAt` field flows through it automatically since it returns `UserDetail extends UserSummary`), `usePathname` from `next/navigation`, `Avatar` (Task 2), `getInitials` (already in `lib/utils.ts` since Wave 1).
 - Preserves exactly: `LINKS_BY_ROLE`, the `INTENDANT`/`SUDDIA`/`isKurinniy` extra-link gating, the ZVYAZKOVYI-only `DILOVODY_PAGES` dropdown, `ThemeToggle`, `handleLogout`.
 
-- [ ] **Step 1: Read the mockup's header markup/CSS once more before writing this**
+- [x] **Step 1: Read the mockup's header markup/CSS once more before writing this**
 
 Relevant excerpt (already fully read for this plan; reproduced here so the implementer doesn't need to open the mockup file to get the exact values):
 
@@ -327,7 +327,7 @@ Relevant excerpt (already fully read for this plan; reproduced here so the imple
 .km-nav-link--active { color: var(--km-accent); background: var(--km-accent-soft); font-weight: 600; }
 ```
 
-- [ ] **Step 2: Rewrite `components/nav.tsx`**
+- [x] **Step 2: Rewrite `components/nav.tsx`**
 
 ```tsx
 'use client';
@@ -471,7 +471,7 @@ Notes:
 - `kurin` can be `undefined` momentarily on first render (React Query loading state) — the `{kurin && (...)}` guard prevents rendering a broken breadcrumb with `undefined` values; the org mark and nav links still render immediately since they don't depend on it.
 - `cn` needs adding to the `@/lib/utils` import — confirm it's already exported there (it is, Wave 1 uses it in `layout.tsx`) and that this file doesn't already import something else under the same name.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -487,7 +487,7 @@ Run the **full** Playwright suite's nav-dependent specs, not just `/kurin`'s —
 **Interfaces:**
 - No prop change to `AccordionTrigger` — icons are composed into its `children` alongside the existing title text, same technique already used for the vykhovnyk-name span in `kurin-hurtky-section.tsx`.
 
-- [ ] **Step 1: Read the mockup's 5 section icons**
+- [x] **Step 1: Read the mockup's 5 section icons**
 
 Already read in full for this plan. Exact SVGs per section (all `width="17" height="17" viewBox="0 0 16 16" fill="none"`, `stroke="currentColor"`):
 
@@ -497,7 +497,7 @@ Already read in full for this plan. Exact SVGs per section (all `width="17" heig
 - Кадра виховників: `<circle cx="8" cy="6" r="3.4" stroke-width="1.3"/><path d="M6 8.8L5 14l3-1.6L11 14l-1-5.2" stroke-width="1.3" stroke-linejoin="round"/>`
 - Список юнацтва: `<circle cx="2.5" cy="4" r="0.9" fill="currentColor"/><circle cx="2.5" cy="8" r="0.9" fill="currentColor"/><circle cx="2.5" cy="12" r="0.9" fill="currentColor"/><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke-width="1.3" stroke-linecap="round"/>`
 
-- [ ] **Step 2: Add an icon per section and render it in the trigger**
+- [x] **Step 2: Add an icon per section and render it in the trigger**
 
 Change the `sections` array's type and entries to carry an `icon` ReactNode, and update the `AccordionTrigger` to render it:
 
@@ -535,7 +535,7 @@ And in the `.map()` that renders `AccordionTrigger`:
 
 **This exact wrapping pattern (icon span + flex-1 title span as the only two direct children before the trigger's own chevron) is required** — Wave 1's final review found a real, visible bug (`kurin-hurtky-section.tsx`'s vykhovnyk span) from `AccordionTrigger`'s `justify-between` flex container treating multiple loose children as separate flex items instead of one. Do not pass the icon and title as separate top-level children without a wrapping flex-1 span on the title, or the icon and title will separate with unpredictable spacing instead of sitting together on the left.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 `npx tsc --noEmit` clean. Run `e2e/kurin-accordion-full-tier.spec.ts` — the icons are decorative `<svg>` with no text content, so this should pass unmodified (confirm, don't assume — an icon rendered as a sibling before the title text could theoretically shift what `getByText(title).click()` resolves to if the click target's bounding box changes in a way that matters, though it shouldn't for a text-based locator).
 
@@ -550,7 +550,7 @@ And in the `.map()` that renders `AccordionTrigger`:
 **Interfaces:**
 - No prop API change. Purely a `className`/CSS addition to the existing `AccordionItem`.
 
-- [ ] **Step 1: Add the keyframe to `globals.css`**
+- [x] **Step 1: Add the keyframe to `globals.css`**
 
 Add, anywhere outside the existing `@layer base` block (e.g. right after the `.dark { ... }` block):
 
@@ -567,7 +567,7 @@ Add, anywhere outside the existing `@layer base` block (e.g. right after the `.d
 }
 ```
 
-- [ ] **Step 2: Apply it to `AccordionItem` with a staggered delay**
+- [x] **Step 2: Apply it to `AccordionItem` with a staggered delay**
 
 In `components/ui/accordion.tsx`, add to `AccordionItem`'s className: `animate-[kmFadeUp_460ms_cubic-bezier(0.2,0.7,0.3,1)_both]`.
 
@@ -585,7 +585,7 @@ For the stagger, add this to `globals.css` (targeting the actual rendered DOM st
 
 This animation fires every time an `AccordionItem` mounts, not just on initial page load — since `AccordionContent` only mounts collapsed sections once interacted with in some cases but `AccordionItem` itself (the header row) is always mounted for every item from first render (confirmed in Wave 1: `keepMounted` defaults to `false` for the *panel*, but the item/trigger row itself renders immediately). This means the fade-up plays once per item on `/kurin`'s initial load and does **not** replay on expand/collapse — exactly matching the mockup's intent (entrance animation, not an expand animation). Verify this assumption holds by watching it in a real browser load, not just reading the code.
 
-- [ ] **Step 3: Verify, with explicit attention to animation-induced test flakiness**
+- [x] **Step 3: Verify, with explicit attention to animation-induced test flakiness**
 
 `npx tsc --noEmit` clean.
 
@@ -597,22 +597,22 @@ Run the full set of `/kurin`-touching specs (`kurin-accordion-full-tier.spec.ts`
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Full typecheck + lint**
+- [x] **Step 1: Full typecheck + lint**
 
 `npx tsc --noEmit` clean from both `apps/web` and `apps/api`. `npm run lint` from `apps/web` — confirm no new errors beyond the one pre-existing `kurin-info-section.tsx` issue already tracked from Wave 1.
 
-- [ ] **Step 2: Full Playwright regression**
+- [x] **Step 2: Full Playwright regression**
 
 Record the baseline count before this plan's changes (`grep -h "^test(" apps/web/e2e/*.spec.ts | wc -l` — 62 at the time this plan was written, confirm it's still 62 before starting). This plan adds zero new spec files unless a task above needed one for verification (delete any throwaway specs before this step). Run the entire suite and confirm it passes in full — pay particular attention to Task 4's header rewrite, which has the widest blast radius of anything in this plan (renders on every page).
 
-- [ ] **Step 3: Full API e2e regression**
+- [x] **Step 3: Full API e2e regression**
 
 `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e` from `apps/api`. This plan adds real backend surface (Task 1) for the first time in this Project-2 arc — unlike Wave 1, a regression here is possible and must be checked, not assumed away. Confirm the baseline count (289 at the time this plan was written) plus any new tests this plan's Task 1 added.
 
-- [ ] **Step 4: Manual verification**
+- [x] **Step 4: Manual verification**
 
 Upload a photo in Settings, confirm it appears in the header avatar immediately and after a hard reload. Remove it, confirm it falls back to initials everywhere (Settings and header both). Confirm the header's active-link highlighting updates correctly when navigating between every role's available pages (test as JUNAK, VYKHOVNYK, and ZVYAZKOVYI — the three role-specific link sets). Confirm the accordion's entrance animation and icons render as expected on `/kurin` in both light and dark mode.
 
-- [ ] **Step 5: Decide on merge**
+- [x] **Step 5: Decide on merge**
 
 If everything above is clean, follow this repository's established pattern of a final whole-branch review before considering this wave ready, consistent with Wave 1 and every prior plan on this branch.

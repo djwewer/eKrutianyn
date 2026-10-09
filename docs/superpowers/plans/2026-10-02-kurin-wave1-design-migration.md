@@ -46,7 +46,7 @@
 - Produces: a working dark-mode toggle visible in `Nav` on every authenticated page, backed by a `theme` cookie, with no visible flash and no hydration-mismatch warning.
 - Consumes: nothing new — `cookies()` from `next/headers` (already used in `apps/web/app/api/session/route.ts` and `apps/web/app/api/backend/[...path]/route.ts`), `cn()` from `@/lib/utils`.
 
-- [ ] **Step 1: Rewrite `apps/web/app/layout.tsx`**
+- [x] **Step 1: Rewrite `apps/web/app/layout.tsx`**
 
 Current file is a plain (non-async) function component. Replace its entire contents with:
 
@@ -104,7 +104,7 @@ Notes for the implementer:
 - The inline `<script>` only renders when the cookie is neither `'light'` nor `'dark'` (i.e. unset) — once a user has ever clicked the toggle, the server already knows the answer and renders the class directly, so the script disappears from the response entirely for them.
 - Do not add an `id` to the `<script>` tag — that's only required when using the `next/script` `<Script>` component (which defers/optimizes loading); a plain inline `<script>` in `<head>` runs synchronously in document order, which is what's needed here (must run before first paint).
 
-- [ ] **Step 2: Rewrite `apps/web/components/ui/theme-toggle.tsx`**
+- [x] **Step 2: Rewrite `apps/web/components/ui/theme-toggle.tsx`**
 
 Replace its entire contents with:
 
@@ -163,7 +163,7 @@ Notes:
 - `React.useLayoutEffect` (not `useEffect`) is required — it runs synchronously after the DOM is updated but before the browser paints, which is what makes the correction invisible to the user. Using `useEffect` here would be a visible one-frame flash on every page load.
 - Server-rendered and first-client-render `checked` are both `false` — this means hydration never mismatches (no warning), and the `useLayoutEffect` correction is what fixes it up a moment later, before paint.
 
-- [ ] **Step 3: Add `ThemeToggle` to `apps/web/components/nav.tsx`**
+- [x] **Step 3: Add `ThemeToggle` to `apps/web/components/nav.tsx`**
 
 Import it and render it next to the existing "Вийти" button:
 
@@ -190,7 +190,7 @@ becomes:
 
 (Wrap just those two elements in the new `div` — the rest of `Nav`'s JSX, including the outer `<nav className="flex items-center justify-between ...">`, is unchanged.)
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run `npx tsc --noEmit` from `apps/web` — must be clean.
 
@@ -209,7 +209,7 @@ Manually verify in a real browser session (or via a throwaway Playwright script)
 - Consumes: `AccordionRoot`, `AccordionItem`, `AccordionTrigger`, `AccordionContent` from `@/components/ui/accordion`.
 - No change to any of the four section components' own props — `KurinInfoSection`, `KurinProvidSection`, `KurinHurtkySection`, `KurinRosterSection` keep being rendered exactly as today; only what wraps them changes.
 
-- [ ] **Step 1: Replace the manual `Set`-based accordion with `AccordionRoot`**
+- [x] **Step 1: Replace the manual `Set`-based accordion with `AccordionRoot`**
 
 Replace `KurinPageContent`'s body (from `const hasFullAccess = ...` down) with:
 
@@ -252,7 +252,7 @@ function KurinPageContent() {
 - The `SectionKey` type alias and the `toggle`/`expanded`/`useState` plumbing are now entirely replaced by the Accordion's own internal state — delete the `SectionKey` type, the `expanded` state, and the `toggle` function.
 - `AccordionContent` always renders its children (it controls visibility via height/CSS, not conditional mounting) — unlike the old `isExpanded && <CardContent>...` pattern which only mounted content once expanded. This means all 5 (or 3) section components now mount immediately on page load instead of lazily on first expand. Confirm this is acceptable: each section component already guards its own loading/error/empty states internally (`if (isLoading) return ...`), and each fetches via React Query hooks that are cheap to have mounted-but-collapsed (the existing `/dev-ui-kit` nested-accordion demo and the already-shipped `/hurtky` accordion page — see `kurin-hurtky-section.tsx`'s own current `isExpanded && h.slug && <HurtokDetailPanel .../>` pattern used *inside* a Card, not `AccordionContent` — establish this is a fine, already-used-elsewhere data-fetching pattern in this codebase, not a new risk). No action needed beyond being aware of it.
 
-- [ ] **Step 2: Update imports**
+- [x] **Step 2: Update imports**
 
 Add the Accordion import, remove the now-unused `Card`/`CardAction`/`CardContent`/`CardHeader`/`CardTitle` import and the `useState` import (still need `Suspense` and `useSession`):
 
@@ -270,7 +270,7 @@ import { KurinRosterSection } from '@/components/kurin-roster-section';
 
 `KurinPage` (the outer `Suspense` wrapper) is unchanged.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -287,7 +287,7 @@ Run (against the real dev server + DB, `DATABASE_URL_TEST` prefixed) `e2e/kurin-
 - Consumes: `AccordionRoot`, `AccordionItem`, `AccordionTrigger`, `AccordionContent` from `@/components/ui/accordion` (nested inside the outer "Гуртки" `AccordionItem` from Task 2 — same nesting pattern already proven in `app/dev-ui-kit/page.tsx`'s "Accordion (with nesting)" demo and reviewed clean in Project 1 Task 5).
 - No change to `useHurtky`, `useVykhovnykAssignments`, `useUsers` hooks or `HurtokDetailPanel` (out of Wave 1 scope — see Global Constraints).
 
-- [ ] **Step 1: Replace the manual `Set`-based expand/collapse with `AccordionRoot`**
+- [x] **Step 1: Replace the manual `Set`-based expand/collapse with `AccordionRoot`**
 
 Replace the component body from `const [expandedSlugs, setExpandedSlugs] = useState...` down (keeping everything above `KurinHurtkySection`'s `return` unchanged, since `vykhovnykNameByHurtokId` is still needed):
 
@@ -355,7 +355,7 @@ Notes:
 - `disabled={!h.slug}` — preserves today's exact behavior for slug-less hurtky: the row's header currently does nothing on click (`h.slug && toggle(h.slug)`) and never shows a detail panel. `disabled` on `AccordionItem` makes the trigger inert (no open/close, no hover affordance) instead of expanding into an empty panel — confirmed as a real, supported prop in `AccordionItem.d.ts` (see Global Constraints). Omitting `<AccordionContent>` entirely when there's no slug (rather than rendering it empty) keeps this honest even if `disabled` behaves unexpectedly.
 - `AccordionTrigger`'s children here mix plain strings and a conditional `<span>`, exactly like the original `<CardTitle>` did — no change needed to that part beyond moving it from `CardTitle` into `AccordionTrigger`.
 
-- [ ] **Step 2: Update imports**
+- [x] **Step 2: Update imports**
 
 Remove `useState` (no longer used) and the `Card`/`CardAction`/`CardContent`/`CardHeader`/`CardTitle` import; add the Accordion import:
 
@@ -376,7 +376,7 @@ import type { Hurtok } from '@/lib/types';
 
 Also delete the now-unused `toggle` function entirely (it's removed as part of Step 1's rewrite above, called out separately here so it isn't missed).
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -394,7 +394,7 @@ Re-run `e2e/kurin-accordion-full-tier.spec.ts` (expands "Гуртки" then clic
 - Produces: `getInitials(firstName: string, lastName: string): string` in `@/lib/utils`, usable by any future row-list migration (Task 6 reuses nothing from here, but this is a generically useful helper, not page-specific, hence `lib/utils.ts` not a new file).
 - Consumes: `RowList`, `Row` from `@/components/ui/row-list`, `Badge` from `@/components/ui/badge`.
 
-- [ ] **Step 1: Add `getInitials` to `apps/web/lib/utils.ts`**
+- [x] **Step 1: Add `getInitials` to `apps/web/lib/utils.ts`**
 
 ```ts
 import { clsx, type ClassValue } from "clsx"
@@ -411,7 +411,7 @@ export function getInitials(firstName: string, lastName: string): string {
 
 (Order is last-initial-then-first, matching this app's existing `"${lastName} ${firstName}"` display convention used everywhere else in the codebase — e.g. `kurin-roster-section.tsx` itself, `kurin-provid-section.tsx`, `hurtok-detail-panel.tsx`.)
 
-- [ ] **Step 2: Replace the `Card`+`Link` rows in `kurin-roster-section.tsx`**
+- [x] **Step 2: Replace the `Card`+`Link` rows in `kurin-roster-section.tsx`**
 
 Replace the `return` statement with:
 
@@ -438,7 +438,7 @@ Replace the `return` statement with:
 
 Note: `Row` is a `data-slot="row"` `<div>`, not an anchor — keep the existing pattern of wrapping it in `<Link>` (exactly as the old code wrapped `<Card>` in `<Link>`); `Row`'s own markup/hover styles don't need to know about the link, same as before.
 
-- [ ] **Step 3: Update imports**
+- [x] **Step 3: Update imports**
 
 ```tsx
 'use client';
@@ -457,7 +457,7 @@ import type { Role } from '@/lib/types';
 
 (`Card`/`CardContent` import is removed; everything else in the file — the `canCreate` logic, the component signature — is unchanged.)
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -475,7 +475,7 @@ Run `e2e/kurin-accordion-full-tier.spec.ts` (asserts `getByText('Овник Ви
 - Consumes: `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem` from `@/components/ui/select`.
 - `ProvidSlot`'s own exported behavior (the `assign`/`remove` mutations, the reassignment-conflict `window.confirm`, the `canEdit` gating) is **unchanged** — per the agreed design, `ProvidSlot`'s overall layout (label + value-or-control + button) stays its own bespoke markup, not forced into `Row`. Only the native `<select>` inside the "can assign" branch is swapped.
 
-- [ ] **Step 1: Replace the native `<select>` block in `ProvidSlot`**
+- [x] **Step 1: Replace the native `<select>` block in `ProvidSlot`**
 
 Current code (inside the `canEdit` branch of `ProvidSlot`):
 
@@ -521,7 +521,7 @@ Notes:
 - `SelectTrigger`'s `flex-1` className replaces the native select's `flex-1 rounded-md border px-2 py-1 text-sm` — `SelectTrigger` already has its own `rounded-md border ... text-sm` baked in (see `select.tsx`), so only the layout-affecting `flex-1` needs to be passed through.
 - No `aria-label` is added to `SelectTrigger` — the native `<select>` it replaces had none either, and the e2e tests (Step 3 below) locate it by DOM proximity to the slot's label text, not by accessible name, so parity is exact either way.
 
-- [ ] **Step 2: Update imports**
+- [x] **Step 2: Update imports**
 
 ```tsx
 'use client';
@@ -539,7 +539,7 @@ import type { KurinPosition, PositionType } from '@/lib/types';
 
 (`Card`/`CardContent`/`CardHeader`/`CardTitle` stay — the outer `KurinProvidSection` still wraps everything in a single `<Card>` with a `<CardTitle>Провід куреня</CardTitle>`, per the agreed design: `ProvidSlot`'s own per-row markup is what's touched, not `KurinProvidSection`'s wrapper. Do not remove this `Card` import.)
 
-- [ ] **Step 3: Rewrite the 4 `selectOption` interactions in `e2e/positions.spec.ts`**
+- [x] **Step 3: Rewrite the 4 `selectOption` interactions in `e2e/positions.spec.ts`**
 
 `Select` is a headless popup component now, not a native `<select>` — Playwright's `.selectOption()` only works on real `<select>` elements, so these calls must become click-the-trigger-then-click-the-option, exactly the pattern already proven working against this same `Select` component in `e2e/dev-ui-kit-select.spec.ts` (`trigger.click()` then `page.getByRole('option', { name: ... }).click()` — the popup renders via `Select.Portal` to `document.body`, so the option is queried at the page level, not scoped under the slot's `.locator('..')`).
 
@@ -587,7 +587,7 @@ await page.getByRole('option', { name: 'Петренко Петро' }).click();
 
 Every other line in the file (the `.locator('..').getByRole('combobox')` visibility/count assertions at lines 32, 70, 76, 113; the `window.confirm` dialog handling; the `getByRole('button', { name: ... })` clicks) stays exactly as-is — `Select`'s trigger still has `role="combobox"` (confirmed: this is exactly the role `dev-ui-kit-select.spec.ts` already successfully queries on the same component), so those assertions continue to pass unmodified.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -604,7 +604,7 @@ Run `e2e/positions.spec.ts` on its own first (all 3 tests) — this is the test 
 **Interfaces:**
 - No hook or prop changes — `useKurin`, `useChangeProbyProgram`, `useChangeKurinNumber`, `useSession`, `useGoogleDriveStatus`, `useConnectGoogleDrive`, `useSetGoogleDriveFolder`, `fetchGoogleDrivePickerToken`, `openGoogleDriveFolderPicker` all stay exactly as called today. This task is pure markup restructuring: 3 `<Card>`s → 3 plain subsections inside one `<div>` (this component is rendered as the single child of Task 2's "Інформація по куреню" `AccordionContent` — it must not render its own nested `Card`/accordion chrome).
 
-- [ ] **Step 1: Replace the outer structure and the "Дані куреня" card**
+- [x] **Step 1: Replace the outer structure and the "Дані куреня" card**
 
 Current:
 ```tsx
@@ -679,7 +679,7 @@ Replace with:
 
 (The `canChangeProgram` block's own JSX content is byte-for-byte unchanged from the current file — only re-indented one level since it's no longer inside `<CardContent>`. The 3-field `grid-cols-2` label/value layout follows the binding mockup's `.km-info-grid`/`.km-info-row` pattern — label in `text-xs text-muted-foreground`, value in `font-medium` — adapted to this component's actual 3 fields (Номер/Станиця/Стать), not the mockup's fictional `Назва`/`Пробна програма`/`Google Drive`-as-pill set, which belong to the next two subsections below instead.)
 
-- [ ] **Step 2: Replace the "Програма проб" card**
+- [x] **Step 2: Replace the "Програма проб" card**
 
 Current:
 ```tsx
@@ -703,7 +703,7 @@ Replace with:
 
 i.e. only the wrapping tags change (`Card`+`CardHeader`+`CardTitle`+`CardContent` → a `div` + `h3`), the `<p className="text-sm text-muted-foreground">Поточна програма: ...` paragraph and the entire `canChangeProgram` radio-button block underneath it (including the `window.confirm` dialog on the "Змінити програму" button) are copied verbatim.
 
-- [ ] **Step 3: Replace the "Google Drive" card**
+- [x] **Step 3: Replace the "Google Drive" card**
 
 Current:
 ```tsx
@@ -737,7 +737,7 @@ Replace with:
 
 All of the Google Drive branch's content (the `driveConnected`/`driveError` query-param banners, the connected/not-connected conditional, the `handlePickFolder` button, `pickerError`) is copied verbatim — only the wrapping `Card`/`CardHeader`/`CardTitle`/`CardContent` is removed in favor of the `div`+`h3` pattern.
 
-- [ ] **Step 4: Update imports**
+- [x] **Step 4: Update imports**
 
 Remove the now-unused `Card`/`CardContent`/`CardHeader`/`CardTitle` import (no `Card` family component is used anywhere in this file anymore):
 
@@ -759,7 +759,7 @@ import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 
 Everything above `return (` in the component (all the hooks, `handlePickFolder`, the `useEffect`, the `isLoading`/`!kurin` early returns) is unchanged.
 
-- [ ] **Step 5: Fix the one e2e assertion Step 1 breaks**
+- [x] **Step 5: Fix the one e2e assertion Step 1 breaks**
 
 `e2e/kurin-accordion-full-tier.spec.ts` currently has (line 35):
 
@@ -775,7 +775,7 @@ This matches the old single text node `"Номер: {value}"` (one `<p>`, colon 
   await expect(page.getByText('Номер', { exact: true })).toBeVisible();
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 `npx tsc --noEmit` clean.
 
@@ -792,7 +792,7 @@ Run `e2e/kurin-accordion-full-tier.spec.ts` (with Step 5's fix applied). Also ru
 
 **Rationale:** Project 1's own plan explicitly deferred this cleanup to "Project 2['s plan]... once real pages use these components directly." After Tasks 1–6, every one of the 6 components (`Accordion` ×2 real usages, `Select`, `RowList`/`Row`/`Avatar`/`Badge`) has a production consumer on `/kurin`, so the scaffold and its specs are now pure dead weight, and the one-line `middleware.ts` exception Project 1 needed for it is no longer needed either.
 
-- [ ] **Step 1: Delete the scaffold route and its 6 specs**
+- [x] **Step 1: Delete the scaffold route and its 6 specs**
 
 ```
 rm apps/web/app/dev-ui-kit/page.tsx
@@ -800,7 +800,7 @@ rmdir apps/web/app/dev-ui-kit  # only if now empty
 rm apps/web/e2e/dev-ui-kit-accordion.spec.ts apps/web/e2e/dev-ui-kit-badge.spec.ts apps/web/e2e/dev-ui-kit-theme-toggle.spec.ts apps/web/e2e/dev-ui-kit-row-list.spec.ts apps/web/e2e/dev-ui-kit-select.spec.ts apps/web/e2e/dev-ui-kit-avatar.spec.ts
 ```
 
-- [ ] **Step 2: Remove the `/dev-ui-kit` entry from `middleware.ts`**
+- [x] **Step 2: Remove the `/dev-ui-kit` entry from `middleware.ts`**
 
 ```ts
 const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change', '/privacy', '/terms', '/dev-ui-kit'];
@@ -810,22 +810,22 @@ becomes:
 const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change', '/privacy', '/terms'];
 ```
 
-- [ ] **Step 3: `tsc` + full lint pass**
+- [x] **Step 3: `tsc` + full lint pass**
 
 `npx tsc --noEmit` from `apps/web` — clean (no leftover import of the deleted page anywhere; there shouldn't be any, since nothing ever linked to `/dev-ui-kit`).
 
 `npm run lint` — confirm no new errors introduced by this plan's 6 changed component files or the 2 new/changed e2e specs (`positions.spec.ts`, `kurin-accordion-full-tier.spec.ts`). Pre-existing lint errors in files this plan never touched are out of scope, same policy as Project 1 Task 9.
 
-- [ ] **Step 4: Full regression**
+- [x] **Step 4: Full regression**
 
 Before deleting anything in Step 1, record the current baseline test count: `grep -h "^test(" apps/web/e2e/*.spec.ts | wc -l` (68 at the time this plan was written — confirm it's still 68 before you start, in case something changed since). The 6 deleted files contain 8 `test(...)` cases between them, not 6 (`dev-ui-kit-accordion.spec.ts` alone has 3; the other 5 have 1 each) — verify this with the same `grep -c "^test(" apps/web/e2e/dev-ui-kit-*.spec.ts` command before deleting, don't assume file-count equals test-count. This plan adds no new spec *files* and no new `test(...)` cases to any file it edits (`positions.spec.ts` and `kurin-accordion-full-tier.spec.ts` keep the same number of tests, just different bodies), so after Step 1 the expected total is baseline **− 8**. Run the entire Playwright suite (`cd apps/web && npx playwright test`, with the sandbox `executablePath` tweak in place) and confirm the final count matches that arithmetic exactly, all passing. Pay special attention to the full set this plan touches: `kurin-accordion-full-tier.spec.ts`, `kurin-settings.spec.ts`, `kurinniy-junak.spec.ts`, `positions.spec.ts` — plus the full remaining suite, to catch anything this plan didn't anticipate touching `/kurin`'s DOM.
 
 Run the full API Jest e2e suite too (`DATABASE_URL_TEST=postgresql://plast:plast@localhost:5432/plast_test npm run test:e2e` from `apps/api`, **not concurrently with Playwright**) — this plan makes zero backend changes, so the count should be identical to the pre-plan baseline (289/289 per Project 1's last count, though re-confirm the actual current count since other plans may have shipped since).
 
-- [ ] **Step 5: Manual spot-check**
+- [x] **Step 5: Manual spot-check**
 
 Since this plan is pure frontend presentation and no automated test specifically asserts "two sections can be open simultaneously" end-to-end (see Tasks 2 and 3's verify notes), manually open `/kurin` as a `ZVYAZKOVYI` user and confirm: expand "Інформація по куреню" and "Гуртки" together, both stay open; inside "Гуртки", expand two different hurtok rows together, both stay open. Also manually confirm the dark-mode toggle: click it in `Nav`, confirm the whole app (not just `/kurin`) re-themes, reload the page, confirm it stays dark (cookie persisted), log out and back in, confirm it's still dark.
 
-- [ ] **Step 6: Decide on merge**
+- [x] **Step 6: Decide on merge**
 
 If everything above is clean, this wave is ready — follow this repository's established pattern from prior plans (see `.superpowers/sdd/progress.md`) of a final whole-branch review before considering the branch ready, consistent with how Project 1 and every prior plan on this branch closed out.

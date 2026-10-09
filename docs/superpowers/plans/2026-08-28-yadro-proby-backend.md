@@ -49,7 +49,7 @@
 **Interfaces:**
 - Produces: booted Nest app on `PORT` (default 3000); `GET /health` → `{ status: 'ok' }`. All later tasks add modules to `apps/api/src/app.module.ts` and controllers/services under `apps/api/src/`.
 
-- [ ] **Step 1: Root workspace files**
+- [x] **Step 1: Root workspace files**
 
 `package.json`:
 ```json
@@ -68,7 +68,7 @@ dist/
 *.log
 ```
 
-- [ ] **Step 2: Docker Compose for local Postgres (dev + test databases)**
+- [x] **Step 2: Docker Compose for local Postgres (dev + test databases)**
 
 `docker-compose.yml`:
 ```yaml
@@ -98,7 +98,7 @@ CREATE DATABASE plast_test;
 Run: `docker compose up -d`
 Expected: `docker compose ps` shows the `postgres` service as `running`/`healthy`.
 
-- [ ] **Step 3: Scaffold the NestJS app skeleton**
+- [x] **Step 3: Scaffold the NestJS app skeleton**
 
 `apps/api/package.json`:
 ```json
@@ -257,7 +257,7 @@ export class AppModule {}
 Run: `cd apps/api && npm install`
 Expected: installs without errors.
 
-- [ ] **Step 4: Write the failing health-check e2e test**
+- [x] **Step 4: Write the failing health-check e2e test**
 
 `apps/api/test/health.e2e-spec.ts`:
 ```ts
@@ -293,7 +293,7 @@ describe('Health (e2e)', () => {
 Run: `cd apps/api && npm run test:e2e`
 Expected: FAIL — `Cannot GET /health` (404), because `HealthController` doesn't exist yet.
 
-- [ ] **Step 5: Implement the health controller and wire it in**
+- [x] **Step 5: Implement the health controller and wire it in**
 
 `apps/api/src/health/health.controller.ts`:
 ```ts
@@ -321,12 +321,12 @@ import { HealthController } from './health/health.controller';
 export class AppModule {}
 ```
 
-- [ ] **Step 6: Run the test again, verify it passes**
+- [x] **Step 6: Run the test again, verify it passes**
 
 Run: `cd apps/api && npm run test:e2e`
 Expected: PASS (1 passed).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add package.json .gitignore docker-compose.yml docker/init-test-db.sql apps/api
@@ -349,7 +349,7 @@ git commit -m "Scaffold NestJS API monorepo with health check"
 - Produces: `PrismaService` (injectable, extends `PrismaClient`), importable Prisma-generated types/enums from `@prisma/client` (`Role`, `KurinGender`, `ProbyProgramVersion`, `ProgressStatus`, `ProgressAction`, `ApprovalStatus`, `ApprovalActionType`), and `cleanDatabase(prisma)` test helper. Every later task's Prisma models and enums are defined here — nothing else touches `schema.prisma` for the rest of this plan.
 - Consumes: Docker Postgres from Task 1 (`DATABASE_URL`, `DATABASE_URL_TEST`).
 
-- [ ] **Step 1: Write the full Prisma schema**
+- [x] **Step 1: Write the full Prisma schema**
 
 `apps/api/prisma/schema.prisma`:
 ```prisma
@@ -559,7 +559,7 @@ model ApprovalRequest {
 }
 ```
 
-- [ ] **Step 2: Generate and run the initial migration against the dev database**
+- [x] **Step 2: Generate and run the initial migration against the dev database**
 
 Run: `cd apps/api && npx prisma migrate dev --name init`
 Expected: creates `apps/api/prisma/migrations/<timestamp>_init/migration.sql`, applies it to `plast_dev`, and generates the Prisma client. No errors.
@@ -568,7 +568,7 @@ Also apply it to the test database:
 Run: `cd apps/api && DATABASE_URL="$DATABASE_URL_TEST" npx prisma migrate deploy` (or `env $(cat .env | grep DATABASE_URL_TEST) npx prisma migrate deploy` — any way of pointing `DATABASE_URL` at the test DB for this one command)
 Expected: applies the same migration to `plast_test`, no errors.
 
-- [ ] **Step 3: PrismaService and PrismaModule**
+- [x] **Step 3: PrismaService and PrismaModule**
 
 `apps/api/src/prisma/prisma.service.ts`:
 ```ts
@@ -614,7 +614,7 @@ import { PrismaModule } from './prisma/prisma.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 4: Test database cleanup helper**
+- [x] **Step 4: Test database cleanup helper**
 
 `apps/api/test/utils/clean-db.ts`:
 ```ts
@@ -638,7 +638,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
 }
 ```
 
-- [ ] **Step 5: Write the failing smoke test**
+- [x] **Step 5: Write the failing smoke test**
 
 `apps/api/test/prisma.e2e-spec.ts`:
 ```ts
@@ -685,12 +685,12 @@ Set `DATABASE_URL_TEST` in the shell before running (or load `apps/api/.env` via
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: FAIL — Prisma client doesn't yet exist / types not generated if Step 2 was skipped, or passes trivially if Step 2 already ran. If it fails because the client wasn't generated, this confirms the test is wired correctly; run `npx prisma generate` and retry to confirm it then passes (this validates the schema, not application code, so the "red" phase here is about catching schema/migration mistakes rather than missing implementation).
 
-- [ ] **Step 6: Run again, verify it passes**
+- [x] **Step 6: Run again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: PASS (2 passed, including Task 1's health test).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/prisma apps/api/src/prisma apps/api/src/app.module.ts apps/api/test
@@ -711,7 +711,7 @@ git commit -m "Add Prisma schema and PrismaService"
 - Consumes: `PrismaService` (Task 2), `Role` enum from `@prisma/client` (Task 2).
 - Produces: `AuthService` with `hashPassword(plain): Promise<string>`, `validatePassword(plain, hash): Promise<boolean>`, `signToken(userId, role, kurinId): { accessToken: string }`, `loginWithPassword(email, password): Promise<{ accessToken: string }>`, `loginWithGoogle(idToken): Promise<{ accessToken: string }>`. `JwtPayload` interface `{ sub: string; role: Role; kurinId: string }`. `GoogleTokenVerifierService.verify(idToken): Promise<{ email: string; sub: string } | null>`. Task 4 (login endpoint) and Task 5 (Google endpoint) wrap these in a controller; Task 6's `JwtStrategy` consumes `JwtPayload`'s shape.
 
-- [ ] **Step 1: Write the failing unit tests**
+- [x] **Step 1: Write the failing unit tests**
 
 `apps/api/src/auth/google-token-verifier.service.spec.ts`:
 ```ts
@@ -866,7 +866,7 @@ describe('AuthService', () => {
 Run: `cd apps/api && npm test -- auth`
 Expected: FAIL — `Cannot find module './google-token-verifier.service'` / `'./auth.service'`.
 
-- [ ] **Step 2: Implement GoogleTokenVerifierService and AuthService**
+- [x] **Step 2: Implement GoogleTokenVerifierService and AuthService**
 
 `apps/api/src/auth/google-token-verifier.service.ts`:
 ```ts
@@ -963,12 +963,12 @@ export class AuthService {
 }
 ```
 
-- [ ] **Step 3: Run the tests again, verify they pass**
+- [x] **Step 3: Run the tests again, verify they pass**
 
 Run: `cd apps/api && npm test -- auth`
 Expected: PASS (all `auth` unit tests green).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/auth
@@ -991,7 +991,7 @@ git commit -m "Add AuthService with password and Google login logic"
 - Consumes: `AuthService.loginWithPassword` (Task 3).
 - Produces: `POST /auth/login` → `{ accessToken: string }` (401 on bad credentials, 400 on invalid body). Test helpers `createProbyProgramTree(prisma, version, pointDescriptions)`, `createKurin(prisma, { probyProgramId, ... })`, `createUser(prisma, { role, kurinId, hurtokId?, email?, password? })`, `issueTokenFor(jwtService, user)` in `test/utils/fixtures.ts` — reused by every e2e test in every later task, unchanged.
 
-- [ ] **Step 1: Write the shared fixtures helper**
+- [x] **Step 1: Write the shared fixtures helper**
 
 `apps/api/test/utils/fixtures.ts`:
 ```ts
@@ -1079,7 +1079,7 @@ export function issueTokenFor(
 }
 ```
 
-- [ ] **Step 2: Write the failing e2e test**
+- [x] **Step 2: Write the failing e2e test**
 
 `apps/api/test/auth.e2e-spec.ts`:
 ```ts
@@ -1167,7 +1167,7 @@ describe('Auth (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- auth`
 Expected: FAIL — `POST /auth/login` doesn't exist (404), since `AuthModule` isn't wired in yet.
 
-- [ ] **Step 3: Implement the login DTO, controller, and module**
+- [x] **Step 3: Implement the login DTO, controller, and module**
 
 `apps/api/src/auth/dto/login.dto.ts`:
 ```ts
@@ -1239,12 +1239,12 @@ import { AuthModule } from './auth/auth.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 4: Run the test again, verify it passes**
+- [x] **Step 4: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- auth`
 Expected: PASS (4 passed).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/auth apps/api/src/app.module.ts apps/api/test
@@ -1264,7 +1264,7 @@ git commit -m "Add POST /auth/login and shared e2e fixtures"
 - Consumes: `AuthService.loginWithGoogle` (Task 3), `GoogleTokenVerifierService` (Task 3, overridden in this test via Nest's `overrideProvider`).
 - Produces: `POST /auth/google` → `{ accessToken: string }` (401 if no matching account or invalid token, 400 on invalid body).
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/auth-google.e2e-spec.ts`:
 ```ts
@@ -1344,7 +1344,7 @@ describe('Auth Google login (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- auth-google`
 Expected: FAIL — `POST /auth/google` doesn't exist (404).
 
-- [ ] **Step 2: Add the DTO and wire the controller route**
+- [x] **Step 2: Add the DTO and wire the controller route**
 
 `apps/api/src/auth/dto/google-login.dto.ts`:
 ```ts
@@ -1380,12 +1380,12 @@ export class AuthController {
 }
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- auth-google`
 Expected: PASS (4 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/auth apps/api/test/auth-google.e2e-spec.ts
@@ -1409,7 +1409,7 @@ git commit -m "Add POST /auth/google"
 - Consumes: `JwtPayload` (Task 3), `Role` enum (Task 2).
 - Produces: `JwtAuthGuard` (validates Bearer JWT, populates `request.user`), `@Roles(...roles: Role[])` decorator + `RolesGuard` (403 if `request.user.role` isn't in the list; passes through when no `@Roles` is set), `CurrentUserPayload` interface `{ userId: string; role: Role; kurinId: string }`, `@CurrentUser()` param decorator. Every controller from Task 7 onward uses `@UseGuards(JwtAuthGuard, RolesGuard)`, `@Roles(...)`, and `@CurrentUser()`.
 
-- [ ] **Step 1: Write the failing e2e test against a throwaway controller**
+- [x] **Step 1: Write the failing e2e test against a throwaway controller**
 
 `apps/api/test/guards.e2e-spec.ts`:
 ```ts
@@ -1493,7 +1493,7 @@ describe('Auth guards (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- guards`
 Expected: FAIL — `JwtAuthGuard`/`RolesGuard`/`Roles`/`CurrentUser` modules don't exist yet.
 
-- [ ] **Step 2: Implement the strategy, guards, and decorators**
+- [x] **Step 2: Implement the strategy, guards, and decorators**
 
 `apps/api/src/auth/strategies/jwt.strategy.ts`:
 ```ts
@@ -1607,12 +1607,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 export class AuthModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- guards`
 Expected: PASS (4 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/auth apps/api/src/common apps/api/test/guards.e2e-spec.ts
@@ -1637,7 +1637,7 @@ git commit -m "Add JwtAuthGuard, RolesGuard, and CurrentUser decorator"
 - Consumes: `AuthService.hashPassword` (Task 3), `KurinGender`/`Role` enums (Task 2).
 - Produces: `AdminKeyGuard` (checks `x-admin-key` header against `process.env.ADMIN_API_KEY`, 401 otherwise) — reused by Tasks 8 and 9. `POST /admin/kurins` → creates a Kurin (404 if `probyProgramId` doesn't exist). `POST /admin/kurins/zvyazkovyi` → creates the first ZVYAZKOVYI user for a kurin (404 if `kurinId` doesn't exist).
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/admin-kurins.e2e-spec.ts`:
 ```ts
@@ -1780,7 +1780,7 @@ describe('Admin kurins (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-kurins`
 Expected: FAIL — `/admin/kurins*` routes don't exist (404s where 401/201/etc. expected).
 
-- [ ] **Step 2: Implement the guard, DTOs, service, controller, and module**
+- [x] **Step 2: Implement the guard, DTOs, service, controller, and module**
 
 `apps/api/src/common/guards/admin-key.guard.ts`:
 ```ts
@@ -1947,12 +1947,12 @@ import { AdminModule } from './admin/admin.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-kurins`
 Expected: PASS (5 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/admin apps/api/src/common/guards/admin-key.guard.ts apps/api/src/app.module.ts apps/api/test/admin-kurins.e2e-spec.ts
@@ -1977,7 +1977,7 @@ git commit -m "Add admin endpoints: create kurin, bootstrap first zvyazkovyi"
 - Consumes: `AdminKeyGuard` (Task 7).
 - Produces: `POST /admin/proby-programs`, `POST /admin/proby-programs/:programId/stages`, `POST /admin/proby-stages/:stageId/categories`, `POST /admin/proby-categories/:categoryId/points` — each 404s if its parent id doesn't exist. This is how Andrii populates the "стара"/"нова" proby catalogs Andrii will hand over as reference material.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/admin-proby-catalog.e2e-spec.ts`:
 ```ts
@@ -2059,7 +2059,7 @@ describe('Admin proby catalog (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-proby-catalog`
 Expected: FAIL — none of the `/admin/proby-*` routes exist yet.
 
-- [ ] **Step 2: Implement the DTOs, service, and controller**
+- [x] **Step 2: Implement the DTOs, service, and controller**
 
 `apps/api/src/admin/dto/create-proby-program.dto.ts`:
 ```ts
@@ -2192,12 +2192,12 @@ import { ProbyCatalogAdminService } from './proby-catalog-admin.service';
 export class AdminModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-proby-catalog`
 Expected: PASS (3 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/admin apps/api/test/admin-proby-catalog.e2e-spec.ts
@@ -2219,7 +2219,7 @@ git commit -m "Add admin proby catalog endpoints"
 - Consumes: `AdminKeyGuard` (Task 7), `ProbyPoint` model (Task 2).
 - Produces: `POST /admin/point-mappings` → creates a `PointMapping` row (404 if either point doesn't exist, 409 on a duplicate pair). This is the `ТочкаВідповідність` table the migration logic in Task 16 reads from.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/admin-point-mapping.e2e-spec.ts`:
 ```ts
@@ -2300,7 +2300,7 @@ describe('Admin point mappings (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-point-mapping`
 Expected: FAIL — `/admin/point-mappings` doesn't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, and controller**
+- [x] **Step 2: Implement the DTO, service, and controller**
 
 `apps/api/src/admin/dto/create-point-mapping.dto.ts`:
 ```ts
@@ -2380,12 +2380,12 @@ import { PointMappingAdminService } from './point-mapping-admin.service';
 export class AdminModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- admin-point-mapping`
 Expected: PASS (3 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/admin apps/api/test/admin-point-mapping.e2e-spec.ts
@@ -2408,7 +2408,7 @@ git commit -m "Add admin point mapping endpoint"
 - Consumes: `JwtAuthGuard`/`RolesGuard`/`@Roles`/`@CurrentUser`/`CurrentUserPayload` (Task 6), `issueTokenFor`/`createKurin`/`createUser`/`createProbyProgramTree` (Task 4).
 - Produces: `POST /hurtky` (ZVYAZKOVYI only) → creates a Hurtok scoped to `user.kurinId`. `GET /hurtky` (any authenticated role) → lists only the caller's own kurin's hurtky. This is the first task that demonstrates the "no generic tenant guard — services filter by `kurinId`" approach from the Architecture section; every later module scoped by kurin follows this same pattern.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/hurtky.e2e-spec.ts`:
 ```ts
@@ -2501,7 +2501,7 @@ describe('Hurtky (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky`
 Expected: FAIL — `/hurtky` doesn't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, controller, and module**
+- [x] **Step 2: Implement the DTO, service, controller, and module**
 
 `apps/api/src/hurtky/dto/create-hurtok.dto.ts`:
 ```ts
@@ -2600,12 +2600,12 @@ import { HurtkyModule } from './hurtky/hurtky.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky`
 Expected: PASS (4 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/hurtky apps/api/src/app.module.ts apps/api/test/hurtky.e2e-spec.ts
@@ -2628,7 +2628,7 @@ git commit -m "Add Hurtky module with tenant-scoped create/list"
 - Consumes: `AuthService.hashPassword` (Task 3), guards/decorators (Task 6).
 - Produces: `POST /users` (ZVYAZKOVYI only) → creates a JUNAK/VYKHOVNYK/KURINNYI in the caller's own kurin (400 if trying to create another ZVYAZKOVYI, 400 if JUNAK has no `hurtokId`, 404 if `hurtokId` belongs to another kurin). `GET /users/me` (any role) → the caller's own profile, password hash excluded. Task 20 adds a `PATCH /users/:id/contact-info` route to this same controller/service.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/users.e2e-spec.ts`:
 ```ts
@@ -2762,7 +2762,7 @@ describe('Users (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users`
 Expected: FAIL — `/users*` routes don't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, controller, and module**
+- [x] **Step 2: Implement the DTO, service, controller, and module**
 
 `apps/api/src/users/dto/create-user.dto.ts`:
 ```ts
@@ -2913,12 +2913,12 @@ import { UsersModule } from './users/users.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users`
 Expected: PASS (5 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/users apps/api/src/app.module.ts apps/api/test/users.e2e-spec.ts
@@ -2941,7 +2941,7 @@ git commit -m "Add Users module: create by zvyazkovyi, GET /users/me"
 - Consumes: guards/decorators (Task 6), `VykhovnykHurtok` model (Task 2).
 - Produces: `POST /vykhovnyk-assignments` (ZVYAZKOVYI only) → assigns a VYKHOVNYK to a Hurtok (404 if either belongs to another kurin, 409 on a duplicate pair — multiple vykhovnyky per hurtok is allowed, per spec). `DELETE /vykhovnyk-assignments/:id` (ZVYAZKOVYI only) → removes an assignment (404 across tenants). Task 13's progress-visibility check and Tasks 14-15's confirm/unconfirm checks all query this table to verify a vykhovnyk is assigned to a junak's hurtok.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/vykhovnyk-assignments.e2e-spec.ts`:
 ```ts
@@ -3079,7 +3079,7 @@ describe('Vykhovnyk assignments (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- vykhovnyk-assignments`
 Expected: FAIL — `/vykhovnyk-assignments*` routes don't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, controller, and module**
+- [x] **Step 2: Implement the DTO, service, controller, and module**
 
 `apps/api/src/vykhovnyk-assignments/dto/assign-vykhovnyk.dto.ts`:
 ```ts
@@ -3210,12 +3210,12 @@ import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-as
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- vykhovnyk-assignments`
 Expected: PASS (5 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/vykhovnyk-assignments apps/api/src/app.module.ts apps/api/test/vykhovnyk-assignments.e2e-spec.ts
@@ -3237,7 +3237,7 @@ git commit -m "Add Vykhovnyk-Hurtok assignment module"
 - Consumes: `VykhovnykHurtok` (Task 12), `CurrentUserPayload` (Task 6).
 - Produces: `GET /junaky/:junakId/progress` → JUNAK can view only their own; VYKHOVNYK only if assigned to the junak's hurtok; ZVYAZKOVYI any junak in their own kurin; KURINNYI is forbidden entirely (per spec, курінний has no proby-progress visibility); 404 if the junak is in another kurin. `ProbyProgressService.getProgressFor(junakId, actor)` — Tasks 14-15 add `confirm`/`unconfirm` to this same service, reusing the same visibility/assignment checks.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/proby-progress.e2e-spec.ts`:
 ```ts
@@ -3362,7 +3362,7 @@ describe('Proby progress GET (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress`
 Expected: FAIL — `/junaky/:junakId/progress` doesn't exist yet.
 
-- [ ] **Step 2: Implement the service, controller, and module**
+- [x] **Step 2: Implement the service, controller, and module**
 
 `apps/api/src/proby-progress/proby-progress.service.ts`:
 ```ts
@@ -3469,12 +3469,12 @@ import { ProbyProgressModule } from './proby-progress/proby-progress.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress`
 Expected: PASS (6 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/proby-progress apps/api/src/app.module.ts apps/api/test/proby-progress.e2e-spec.ts
@@ -3494,7 +3494,7 @@ git commit -m "Add GET junak proby progress with role-based visibility"
 - Consumes: `ProgressAuditLog` model (Task 2), `VykhovnykHurtok` (Task 12).
 - Produces: `POST /junaky/:junakId/progress/:pointId/confirm` (VYKHOVNYK only, must be assigned to the junak's hurtok) → upserts `JunakProgress` to `DONE` with `confirmedById`/`confirmedAt`, and appends a `ProgressAuditLog` row with `action: CONFIRM`. Idempotent — confirming twice keeps one `JunakProgress` row. `ProbyProgressService.assertAssignedVykhovnyk(junakId, actor)` private helper — reused by Task 15's `unconfirm`.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/proby-progress-confirm.e2e-spec.ts`:
 ```ts
@@ -3604,7 +3604,7 @@ describe('Proby progress confirm (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress-confirm`
 Expected: FAIL — `POST /junaky/:junakId/progress/:pointId/confirm` doesn't exist yet.
 
-- [ ] **Step 2: Add `confirm` to the service and controller**
+- [x] **Step 2: Add `confirm` to the service and controller**
 
 Modify `apps/api/src/proby-progress/proby-progress.service.ts` (add imports for `ProgressStatus`, `ProgressAction`, and the `confirm`/`assertAssignedVykhovnyk` methods):
 ```ts
@@ -3714,12 +3714,12 @@ export class ProbyProgressController {
 }
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress-confirm`
 Expected: PASS (4 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/proby-progress apps/api/test/proby-progress-confirm.e2e-spec.ts
@@ -3739,7 +3739,7 @@ git commit -m "Add point confirmation with audit logging"
 - Consumes: `assertAssignedVykhovnyk` (Task 14).
 - Produces: `POST /junaky/:junakId/progress/:pointId/unconfirm` (VYKHOVNYK only, must be assigned) → sets `JunakProgress.status` back to `NOT_DONE`, clears `confirmedById`/`confirmedAt`, appends a `ProgressAuditLog` row with `action: UNCONFIRM`.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/proby-progress-unconfirm.e2e-spec.ts`:
 ```ts
@@ -3829,7 +3829,7 @@ describe('Proby progress unconfirm (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress-unconfirm`
 Expected: FAIL — `POST /junaky/:junakId/progress/:pointId/unconfirm` doesn't exist yet.
 
-- [ ] **Step 2: Add `unconfirm` to the service and controller**
+- [x] **Step 2: Add `unconfirm` to the service and controller**
 
 Modify `apps/api/src/proby-progress/proby-progress.service.ts` (add the `unconfirm` method, after `confirm`):
 ```ts
@@ -3861,12 +3861,12 @@ Modify `apps/api/src/proby-progress/proby-progress.controller.ts` (add the `unco
   }
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- proby-progress-unconfirm`
 Expected: PASS (2 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/proby-progress apps/api/test/proby-progress-unconfirm.e2e-spec.ts
@@ -3889,7 +3889,7 @@ git commit -m "Add point unconfirmation with audit logging"
 - Consumes: `PointMapping` (Task 9), `JunakProgress`/`ProgressStatus` (Task 2).
 - Produces: `PATCH /kurins/:id/proby-program` (ZVYAZKOVYI only, `id` must equal caller's own `kurinId` — 403 otherwise) → walks every JUNAK in the kurin, and for each `DONE` point under the *old* program, looks up `PointMapping` from either side (works moving old→new or new→old) and upserts a `DONE` `JunakProgress` on the mapped point with `transferredFromPointId` set, without ever overwriting a point that already has its own independent progress row. The original progress rows are never touched or deleted. This is the concrete implementation of assumption #4 and the spec's "Зміна програми проб куреня" scenario.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/kurins-proby-program.e2e-spec.ts`:
 ```ts
@@ -4060,7 +4060,7 @@ describe('Kurin proby-program change (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- kurins-proby-program`
 Expected: FAIL — `PATCH /kurins/:id/proby-program` doesn't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, controller, and module**
+- [x] **Step 2: Implement the DTO, service, controller, and module**
 
 `apps/api/src/kurins/dto/change-proby-program.dto.ts`:
 ```ts
@@ -4219,12 +4219,12 @@ import { KurinsModule } from './kurins/kurins.module';
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- kurins-proby-program`
 Expected: PASS (5 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/kurins apps/api/src/app.module.ts apps/api/test/kurins-proby-program.e2e-spec.ts
@@ -4247,7 +4247,7 @@ git commit -m "Add proby-program change with point-mapping carryover"
 - Consumes: `ApprovalRequest`/`ApprovalActionType`/`ApprovalStatus` models (Task 2).
 - Produces: `POST /approval-requests` (KURINNYI only) → creates a `PENDING` request; snapshots the junak's current values for the relevant fields into `oldData`; requires `junakId` for every action type except `CREATE_JUNAK`; 404 if `junakId` is outside the caller's kurin; does **not** touch the actual `User` row. `ApprovalRequestsService.extractRelevantFields` — reused nowhere else, but its field mapping is mirrored by Task 18's apply logic.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/approval-requests-create.e2e-spec.ts`:
 ```ts
@@ -4405,7 +4405,7 @@ describe('Approval requests create (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-create`
 Expected: FAIL — `POST /approval-requests` doesn't exist yet.
 
-- [ ] **Step 2: Implement the DTO, service, controller, and module**
+- [x] **Step 2: Implement the DTO, service, controller, and module**
 
 `apps/api/src/approval-requests/dto/create-approval-request.dto.ts`:
 ```ts
@@ -4549,12 +4549,12 @@ import { ApprovalRequestsModule } from './approval-requests/approval-requests.mo
 export class AppModule {}
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-create`
 Expected: PASS (6 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/approval-requests apps/api/src/app.module.ts apps/api/test/approval-requests-create.e2e-spec.ts
@@ -4574,7 +4574,7 @@ git commit -m "Add kurinnyi approval-request creation"
 - Consumes: `extractRelevantFields`'s field mapping (Task 17, mirrored here in reverse by `buildUpdateData`).
 - Produces: `GET /approval-requests?status=PENDING` (ZVYAZKOVYI only) → requests initiated within the caller's own kurin. `POST /approval-requests/:id/approve` (ZVYAZKOVYI only) → applies the change (updates the junak's fields, or creates a new JUNAK for `CREATE_JUNAK`), marks `APPROVED`; 400 if already decided, 403 cross-tenant. `POST /approval-requests/:id/reject` → marks `REJECTED`, applies nothing.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/approval-requests-decide.e2e-spec.ts`:
 ```ts
@@ -4868,7 +4868,7 @@ describe('Approval requests approve/reject (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-decide`
 Expected: FAIL — `GET /approval-requests`, `POST /approval-requests/:id/approve`, `POST /approval-requests/:id/reject` don't exist yet.
 
-- [ ] **Step 2: Add `list`, `approve`, `reject` to the service and controller**
+- [x] **Step 2: Add `list`, `approve`, `reject` to the service and controller**
 
 Modify `apps/api/src/approval-requests/approval-requests.service.ts` (add imports for `ForbiddenException`, `ApprovalStatus` already imported; add the three methods after `create`):
 ```ts
@@ -5059,12 +5059,12 @@ export class ApprovalRequestsController {
 }
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-decide`
 Expected: PASS (9 passed).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/approval-requests apps/api/test/approval-requests-decide.e2e-spec.ts
@@ -5085,7 +5085,7 @@ git commit -m "Add zvyazkovyi approve/reject/list for approval requests"
 - Consumes: `notes`/`phone` fields on `User` (Task 2, assumption #3).
 - Produces: `PATCH /users/:id/contact-info` (KURINNYI or ZVYAZKOVYI) → updates `notes`/`phone` on a JUNAK in the caller's own kurin immediately, no approval workflow (per spec: "другорядні дії... застосовуються без затвердження"). 404 across tenants, 403 for VYKHOVNYK/JUNAK. This is the last task of the backend plan.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 `apps/api/test/users-contact-info.e2e-spec.ts`:
 ```ts
@@ -5190,7 +5190,7 @@ describe('Users contact-info update (e2e)', () => {
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-contact-info`
 Expected: FAIL — `PATCH /users/:id/contact-info` doesn't exist yet.
 
-- [ ] **Step 2: Add the DTO, service method, and controller route**
+- [x] **Step 2: Add the DTO, service method, and controller route**
 
 `apps/api/src/users/dto/update-contact-info.dto.ts`:
 ```ts
@@ -5273,17 +5273,17 @@ export class UsersController {
 }
 ```
 
-- [ ] **Step 3: Run the test again, verify it passes**
+- [x] **Step 3: Run the test again, verify it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-contact-info`
 Expected: PASS (4 passed).
 
-- [ ] **Step 4: Run the full e2e suite once, verify everything still passes together**
+- [x] **Step 4: Run the full e2e suite once, verify everything still passes together**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: PASS — every e2e spec file from Tasks 1-19 green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/users apps/api/test/users-contact-info.e2e-spec.ts

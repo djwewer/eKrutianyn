@@ -32,7 +32,7 @@
 - Consumes: `Role` enum (`@prisma/client`), `PrismaService`, `CurrentUserPayload` (`apps/api/src/common/decorators/current-user.decorator.ts`) — all pre-existing.
 - Produces: `PROBY_TRACKING_ROLES: Role[]` exported from `apps/api/src/common/proby-tracking-roles.ts` — this is the only task in this plan, nothing downstream depends on it.
 
-- [ ] **Step 1: Create the shared constant**
+- [x] **Step 1: Create the shared constant**
 
 Create `apps/api/src/common/proby-tracking-roles.ts`:
 
@@ -42,7 +42,7 @@ import { Role } from '@prisma/client';
 export const PROBY_TRACKING_ROLES: Role[] = [Role.JUNAK, Role.KURINNYI];
 ```
 
-- [ ] **Step 2: Add the failing tests for `GET /junaky/:id/progress`**
+- [x] **Step 2: Add the failing tests for `GET /junaky/:id/progress`**
 
 In `apps/api/test/proby-progress.e2e-spec.ts`, insert these two tests immediately after the existing `it('forbids kurinnyi from viewing proby progress', ...)` test (which stays unchanged — it already covers a kurinnyi viewing a *junak's* progress, still forbidden) and before `it('returns 404 for a junak in another kurin', ...)`:
 
@@ -82,7 +82,7 @@ In `apps/api/test/proby-progress.e2e-spec.ts`, insert these two tests immediatel
   });
 ```
 
-- [ ] **Step 3: Add the failing tests for confirming a kurinnyi's point**
+- [x] **Step 3: Add the failing tests for confirming a kurinnyi's point**
 
 In `apps/api/test/proby-progress-confirm.e2e-spec.ts`, insert these two tests immediately after the existing `it('returns 404 when the pointId does not exist', ...)` test, before the closing `});` of the `describe` block:
 
@@ -121,7 +121,7 @@ In `apps/api/test/proby-progress-confirm.e2e-spec.ts`, insert these two tests im
   });
 ```
 
-- [ ] **Step 4: Add the failing test for proby-program migration**
+- [x] **Step 4: Add the failing test for proby-program migration**
 
 In `apps/api/test/kurins-proby-program.e2e-spec.ts`, insert this test immediately after the existing `it('carries over a DONE point via the mapping and preserves the old record', ...)` test, before `it('leaves an unmapped DONE point untouched with no new row created', ...)`:
 
@@ -154,12 +154,12 @@ In `apps/api/test/kurins-proby-program.e2e-spec.ts`, insert this test immediatel
   });
 ```
 
-- [ ] **Step 5: Run the three test files to verify the 5 new tests fail**
+- [x] **Step 5: Run the three test files to verify the 5 new tests fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/proby-progress.e2e-spec.ts test/proby-progress-confirm.e2e-spec.ts test/kurins-proby-program.e2e-spec.ts`
 Expected: FAIL — the 5 new tests fail (kurinnyi gets 403/404 instead of the expected 200s and the migration doesn't carry over the kurinnyi's point), the pre-existing tests in these files still pass.
 
-- [ ] **Step 6: Update `proby-progress.service.ts`**
+- [x] **Step 6: Update `proby-progress.service.ts`**
 
 Replace the full contents of `apps/api/src/proby-progress/proby-progress.service.ts` with:
 
@@ -262,7 +262,7 @@ export class ProbyProgressService {
 
 The only changes from the original file: the new `PROBY_TRACKING_ROLES` import; both `role !== Role.JUNAK` checks (in `getProgressFor` and `assertAssignedVykhovnyk`) became `!PROBY_TRACKING_ROLES.includes(junak.role)`; and the old unconditional `if (actor.role === Role.KURINNYI) throw ...` block became a self-view carve-out (`actor.userId !== junakId`), mirroring the JUNAK rule directly above it.
 
-- [ ] **Step 7: Update `kurins.service.ts`**
+- [x] **Step 7: Update `kurins.service.ts`**
 
 Replace the full contents of `apps/api/src/kurins/kurins.service.ts` with:
 
@@ -361,12 +361,12 @@ export class KurinsService {
 
 Note: `Role` is removed from the `@prisma/client` import — it was only used for the now-replaced `role: Role.JUNAK` filter, and an unused import will fail the TypeScript build. Everything else in the file is unchanged from the original.
 
-- [ ] **Step 8: Run the three test files to verify all tests pass**
+- [x] **Step 8: Run the three test files to verify all tests pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/proby-progress.e2e-spec.ts test/proby-progress-confirm.e2e-spec.ts test/kurins-proby-program.e2e-spec.ts`
 Expected: PASS — all tests in all three files pass (the 5 new tests plus every pre-existing test in these files)
 
-- [ ] **Step 9: Run the full e2e and unit suites to check for regressions**
+- [x] **Step 9: Run the full e2e and unit suites to check for regressions**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: PASS — every suite in the project green (including `proby-progress-unconfirm.e2e-spec.ts`, which is untouched by this plan but shares `assertAssignedVykhovnyk` with `confirm` and must still pass unchanged)
@@ -374,7 +374,7 @@ Expected: PASS — every suite in the project green (including `proby-progress-u
 Run: `cd apps/api && npm test`
 Expected: PASS — unit suites unaffected (this plan touches no unit-tested code)
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/api/src/common/proby-tracking-roles.ts apps/api/src/proby-progress/proby-progress.service.ts apps/api/src/kurins/kurins.service.ts apps/api/test/proby-progress.e2e-spec.ts apps/api/test/proby-progress-confirm.e2e-spec.ts apps/api/test/kurins-proby-program.e2e-spec.ts

@@ -33,7 +33,7 @@
 - Consumes: `CurrentUserPayload` (`userId`, `role`, `kurinId`, `isKurinniy`, `positions: PositionType[]`) from `common/decorators/current-user.decorator.ts`. `AssignPositionDto` (`userId`, `scope`, `positionType`, `hurtokId?`) from `kurin-positions/dto/assign-position.dto.ts`.
 - Produces: `KurinPositionsService.assign(dto, actor)` and `.remove(id, actor)` now throw `ForbiddenException` for a kurinniy actor touching a `KURINNYI` slot (assigning positionType `KURINNYI`, or removing/replacing a position record whose `positionType === 'KURINNYI'`), and otherwise allow a kurinniy actor through for any other KURIN-scope position. `list()` is unchanged (already open to any `@Roles`-cleared caller once the decorator below is relaxed).
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Append to `apps/api/test/kurin-positions.e2e-spec.ts` (add the import of `createKurinniyUser` to the existing fixtures import on line 8, then add these tests before the final closing `});`):
 
@@ -130,12 +130,12 @@ import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, is
   });
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail**
+- [x] **Step 2: Run the new tests to verify they fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- kurin-positions`
 Expected: the 5 new tests FAIL (the first four with 403 where 200/201 is expected or vice versa, because the controller still hard-gates on `@Roles(Role.ZVYAZKOVYI)` and a kurinniy's `role` is `JUNAK`).
 
-- [ ] **Step 3: Relax the controller decorator, add position-aware checks in the service**
+- [x] **Step 3: Relax the controller decorator, add position-aware checks in the service**
 
 In `apps/api/src/kurin-positions/kurin-positions.controller.ts`, remove `@Roles(Role.ZVYAZKOVYI)` from `list`, `assign`, and `remove` (delete all three `@Roles(Role.ZVYAZKOVYI)` lines and the now-unused `Role` import if nothing else in the file uses it — check with `grep -n Role apps/api/src/kurin-positions/kurin-positions.controller.ts` after removing). The file becomes:
 
@@ -205,17 +205,17 @@ Note: the existing `if (dto.scope === PositionScope.KURIN) {` line that currentl
 
 Add `ForbiddenException` to the existing `@nestjs/common` import at the top of `kurin-positions.service.ts` (it currently imports `BadRequestException, Injectable, NotFoundException`).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- kurin-positions`
 Expected: all tests in `kurin-positions.e2e-spec.ts` PASS (the 8 pre-existing ones plus the 5 new ones).
 
-- [ ] **Step 5: Run the full API e2e suite to check for regressions**
+- [x] **Step 5: Run the full API e2e suite to check for regressions**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS, no regressions (the pre-existing `'forbids a junak from assigning a position'` test used a plain junak with no position, which still gets 403 from the new logic).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/kurin-positions apps/api/test/kurin-positions.e2e-spec.ts
@@ -238,7 +238,7 @@ git commit -m "feat: let kurinniy manage Провід куреня, except the �
 - Consumes: `CurrentUserPayload`, `UpdateHurtokDto` (`foundedAt?: string | null`), both from Task 1's unchanged definitions.
 - Produces: a new fixture `createKurinSuddiaUser(prisma, { kurinId, hurtokId?, email?, password? })` in `apps/api/test/utils/fixtures.ts`, mirroring `createKurinniyUser` exactly but with `positionType: PositionType.SUDDIA`. `HurtkyController.membersBySlug` is reachable by any authenticated role (no `@Roles` left on it). `HurtkyService.update`/`archiveHurtok` accept a KURIN-scope suddia actor in addition to `ZVYAZKOVYI`. `HurtkyService.getMembersBySlug` no longer restricts a `VYKHOVNYK` actor to only their assigned hurtok.
 
-- [ ] **Step 1: Add the `createKurinSuddiaUser` fixture**
+- [x] **Step 1: Add the `createKurinSuddiaUser` fixture**
 
 In `apps/api/test/utils/fixtures.ts`, add this function right after `createKurinniyUser`:
 
@@ -267,7 +267,7 @@ export async function createKurinSuddiaUser(
 }
 ```
 
-- [ ] **Step 2: Write the failing e2e tests**
+- [x] **Step 2: Write the failing e2e tests**
 
 In `apps/api/test/hurtky-slug.e2e-spec.ts`, add `createKurinniyUser, createKurinSuddiaUser` to the fixtures import and append these tests (adjust the exact fixture-import list to whatever the file already imports, adding the two new names):
 
@@ -348,12 +348,12 @@ In `apps/api/test/hurtky-archive.e2e-spec.ts`, append (adding `createKurinSuddia
   });
 ```
 
-- [ ] **Step 3: Run the new tests to verify they fail**
+- [x] **Step 3: Run the new tests to verify they fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-slug hurtky-update hurtky-archive`
 Expected: the plain-junak-reads-by-slug test fails with 403 (JUNAK not in `@Roles(VYKHOVNYK, ZVYAZKOVYI)`); the plain-vykhovnyk-reads-unassigned-hurtok test fails with 404 (the `getMembersBySlug` assignment check); the suddia update/archive tests fail with 403.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 In `apps/api/src/hurtky/hurtky.controller.ts`, change the three relevant decorators/routes:
 
@@ -416,17 +416,17 @@ Remove the `VYKHOVNYK`-only-assigned-hurtok restriction in `getMembersBySlug` �
 
 (Every caller is already scoped to `kurinId: actor.kurinId` on the `hurtok` lookup two lines above, so dropping this block only removes the extra VYKHOVNYK-specific restriction — it does not open cross-tenant access.)
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-slug hurtky-update hurtky-archive hurtky-members`
 Expected: all PASS.
 
-- [ ] **Step 6: Run the full API e2e suite**
+- [x] **Step 6: Run the full API e2e suite**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/hurtky apps/api/test/hurtky-slug.e2e-spec.ts apps/api/test/hurtky-update.e2e-spec.ts apps/api/test/hurtky-archive.e2e-spec.ts apps/api/test/utils/fixtures.ts
@@ -447,7 +447,7 @@ git commit -m "feat: open hurtok read access to all members, let suddia edit hur
 - Consumes: `CurrentUserPayload`, `AssignVykhovnykDto` (`vykhovnykId`, `hurtokId`).
 - Produces: `VykhovnykAssignmentsService.assign(dto, actor)` / `.unassign(id, actor)` (signatures change from `(dto, actorKurinId: string)` / `(id, actorKurinId: string)` to take the full `actor: CurrentUserPayload`, since the authorization check now needs `actor.role`/`actor.positions`, not just `actor.kurinId`) now accept `ZVYAZKOVYI` or KURIN-scope suddia. `list()`'s existing role check is widened so any authenticated kurin member can read assignments (needed for the read-only Гуртки tier to show vykhovnyk names).
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 In `apps/api/test/vykhovnyk-assignments.e2e-spec.ts`, add `createKurinSuddiaUser` to the fixtures import and append:
 
@@ -504,12 +504,12 @@ In `apps/api/test/vykhovnyk-assignments-list.e2e-spec.ts`, append:
   });
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail**
+- [x] **Step 2: Run the new tests to verify they fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- vykhovnyk-assignments`
 Expected: suddia assign/unassign fails with 403 (`@Roles(ZVYAZKOVYI)`); plain junak list fails with 403 (`VykhovnykAssignmentsService.list`'s existing `actor.role !== ZVYAZKOVYI && actor.role !== VYKHOVNYK && !actor.isKurinniy` check).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.controller.ts`, remove both `@Roles(Role.ZVYAZKOVYI)` decorators and change the handlers to pass the full `user`:
 
@@ -598,17 +598,17 @@ In `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.service.ts`, change
 
 Change the `assignVykhovnyk`/`unassignVykhovnyk` call sites that previously passed `user.kurinId` — there are none outside this controller/service pair (confirmed by the controller rewrite above already passing `user`), so no other files need updating for this signature change. Add `PositionType` to the `@prisma/client` import in `vykhovnyk-assignments.service.ts` (currently `import { Role } from '@prisma/client';` → `import { PositionType, Role } from '@prisma/client';`) and `ForbiddenException` to the `@nestjs/common` import (currently has `BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException` already — `ForbiddenException` is already imported, no change needed there).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- vykhovnyk-assignments`
 Expected: all PASS.
 
-- [ ] **Step 5: Run the full API e2e suite**
+- [x] **Step 5: Run the full API e2e suite**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/vykhovnyk-assignments apps/api/test/vykhovnyk-assignments.e2e-spec.ts apps/api/test/vykhovnyk-assignments-list.e2e-spec.ts
@@ -628,7 +628,7 @@ git commit -m "feat: open vykhovnyk-assignment reads to all members, let suddia 
 - Consumes: `CurrentUserPayload`.
 - Produces: `UsersService.list()` and `.findScoped()`/`.isVisibleTo()` treat `actor.positions.includes(PositionType.SUDDIA)` the same as `actor.isKurinniy` for read access (list any role, view any user's detail page in-kurin). Write operations (`updateContactInfo`, `updateHurtok`, `archiveUser`) are **not** changed by this task — suddia's write path for archiving/moving a junak goes through the `CHANGE_HURTOK`/`ARCHIVE_JUNAK` approval-request flow (Task 5 and existing code), not direct writes, matching the approved design.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 In `apps/api/test/users-list.e2e-spec.ts`, add `createKurinSuddiaUser` to the fixtures import and append:
 
@@ -672,12 +672,12 @@ In `apps/api/test/users-detail.e2e-spec.ts`, add `createKurinSuddiaUser` to the 
   });
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail**
+- [x] **Step 2: Run the new tests to verify they fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-list users-detail`
 Expected: both FAIL — `list()` throws 403 (`actor.role === Role.JUNAK && !actor.isKurinniy`), `findScoped()` returns 404 (the early-return branch only allows a non-kurinniy JUNAK to see themselves).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `apps/api/src/users/users.service.ts`, update the three relevant methods. `list()`'s opening check and `isKurinniy` branch:
 
@@ -810,17 +810,17 @@ In `apps/api/src/users/users.service.ts`, update the three relevant methods. `li
 
 Add `PositionType` to the `@prisma/client` import at the top of `users.service.ts` (currently `import { Role } from '@prisma/client';` → `import { PositionType, Role } from '@prisma/client';`).
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-list users-detail`
 Expected: all PASS.
 
-- [ ] **Step 5: Run the full API e2e suite**
+- [x] **Step 5: Run the full API e2e suite**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/users apps/api/test/users-list.e2e-spec.ts apps/api/test/users-detail.e2e-spec.ts
@@ -839,7 +839,7 @@ git commit -m "feat: give KURIN-scope suddia kurinniy-level read access to users
 - Consumes: `CreateApprovalRequestDto` (`actionType`, `junakId?`, `newData`), `CurrentUserPayload`.
 - Produces: `ApprovalRequestsService.create()` now also accepts a KURIN-scope suddia actor submitting `actionType: 'CHANGE_HURTOK'`. Kurinniy's existing ability to submit `CHANGE_HURTOK` (already covered by the blanket `actor.isKurinniy` branch) is untouched.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 In `apps/api/test/approval-requests-create.e2e-spec.ts`, add `createKurinSuddiaUser` to the fixtures import (check the file's existing import line and add the name) and append:
 
@@ -875,12 +875,12 @@ In `apps/api/test/approval-requests-create.e2e-spec.ts`, add `createKurinSuddiaU
   });
 ```
 
-- [ ] **Step 2: Run the new test to verify it fails**
+- [x] **Step 2: Run the new test to verify it fails**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-create`
 Expected: the suddia test FAILS with 403 (`create()`'s `canInitiateBulkImport`/`canInitiateArchive`/`isKurinniy` checks don't cover suddia + `CHANGE_HURTOK`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `apps/api/src/approval-requests/approval-requests.service.ts`, change the top of `create()`:
 
@@ -897,17 +897,17 @@ In `apps/api/src/approval-requests/approval-requests.service.ts`, change the top
     }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-create`
 Expected: all PASS.
 
-- [ ] **Step 5: Run the full API e2e suite**
+- [x] **Step 5: Run the full API e2e suite**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS. This is the last backend task — confirm the full suite is green before moving to frontend work.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/approval-requests apps/api/test/approval-requests-create.e2e-spec.ts
@@ -927,7 +927,7 @@ git commit -m "feat: let KURIN-scope suddia create a CHANGE_HURTOK approval requ
 - Consumes: `useSession()` → `CurrentUserPayload` (`role`, `isKurinniy`, `positions`).
 - Produces: every authenticated session now has exactly one `{ href: '/kurin', label: 'Курінь' }` link (in addition to whatever role-specific links already exist: `Запити`/`Налаштування` for ZVYAZKOVYI, `Моя проба`/`Налаштування` for JUNAK, `Налаштування` for VYKHOVNYK, plus the existing `Облік реманенту`/`Суддівство` pushes and the `Діловодство` dropdown for ZVYAZKOVYI). `/users`, `/hurtky`, and `/positions` nav links are removed.
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 Replace `apps/web/components/nav.tsx`'s `LINKS_BY_ROLE` and the body of `Nav()` up to the `links` construction:
 
@@ -962,7 +962,7 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
 
 (This deletes the old `links.splice(1, 0, { href: '/users', label: 'Юнаки' }, { href: '/hurtky', label: 'Гуртки' });` block entirely — kurinniy already gets `Курінь` from the base `JUNAK` list above, it needs no separate splice anymore. The `Облік реманенту`/`Суддівство` push logic is otherwise unchanged.)
 
-- [ ] **Step 2: Update the two e2e specs that assert on removed nav links**
+- [x] **Step 2: Update the two e2e specs that assert on removed nav links**
 
 In `apps/web/e2e/kurinniy-junak.spec.ts`, the test currently clicks a `Юнаки` link and asserts `/users`. Replace lines 29-32:
 
@@ -979,14 +979,14 @@ In `apps/web/e2e/users-role-filter.spec.ts`, line 34 currently does `await page.
   await page.goto('/kurin');
 ```
 
-- [ ] **Step 3: Verify nav renders correctly for each role**
+- [x] **Step 3: Verify nav renders correctly for each role**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx playwright test e2e/kurinniy-junak.spec.ts`
 Expected: PASS.
 
 Note: `users-role-filter.spec.ts` is expected to still fail after this task (it exercises `/kurin`'s Кадра виховників section, built in Task 9) — do not try to make it pass yet.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/components/nav.tsx apps/web/e2e/kurinniy-junak.spec.ts apps/web/e2e/users-role-filter.spec.ts
@@ -1009,7 +1009,7 @@ git commit -m "feat: collapse nav to a single Курінь link for every role"
 - Consumes: `useKurin`, `useChangeProbyProgram`, `useChangeKurinNumber` (`lib/queries/kurin.ts`, unchanged), `useKurinPositions`, `useAssignPosition`, `useRemovePosition` (`lib/queries/positions.ts`, unchanged), `useUsers`, `useSession`.
 - Produces: `KurinInfoSection` — a self-contained component with no props, rendering exactly what `KurinPageContent` renders today (kurin data, program, Google Drive), gated the same way (`canChangeProgram = session?.role === 'ZVYAZKOVYI'`). `KurinProvidSection` — a self-contained component with no props, rendering the KURIN-scope position list, where each slot's edit controls are gated by a new `canEditSlot(positionType)` helper: `session?.role === 'ZVYAZKOVYI' || (session?.isKurinniy && positionType !== 'KURINNYI')`. `/kurin/page.tsx` becomes the 3-or-5-section accordion shell (this task wires the first two sections; Gurtky/Кадра/Список are wired in Tasks 8-9).
 
-- [ ] **Step 1: Extract `KurinInfoSection` from the current `/kurin/page.tsx`**
+- [x] **Step 1: Extract `KurinInfoSection` from the current `/kurin/page.tsx`**
 
 Create `apps/web/components/kurin-info-section.tsx` with exactly the body of today's `KurinPageContent` (everything from `const { data: kurin, isLoading } = useKurin();` through the closing `</div>` before the final `);`), renamed and exported as a named export instead of the page's default export, and with the `<Suspense>` wrapper's inner-component split no longer needed here — the `<Suspense>` boundary moves to the outer `/kurin/page.tsx` in Step 3, so `KurinInfoSection` keeps its `useSearchParams()` call (for Google Drive query params) but is itself already always rendered inside the page's single top-level `<Suspense>`:
 
@@ -1196,7 +1196,7 @@ export function KurinInfoSection() {
 
 (This drops the old page's `<h1>{kurin.name}</h1>` — the accordion row header in the outer shell already shows which section this is, so a repeated title inside the section body is redundant. The one behavioral change from the original is that the `<h1>` is gone; nothing else differs.)
 
-- [ ] **Step 2: Create `KurinProvidSection`**
+- [x] **Step 2: Create `KurinProvidSection`**
 
 Create `apps/web/components/kurin-provid-section.tsx`, adapted from the current `/positions/page.tsx`'s `PositionSlot` + `PositionsPage`, with the KURINNYI-lock added:
 
@@ -1357,7 +1357,7 @@ export function KurinProvidSection() {
 
 Note: `useKurinPositions()` currently requires no special role on the frontend (the hook itself has no gating), and Task 1 already opened the backend `list()` to any authenticated caller by removing `@Roles(ZVYAZKOVYI)` — so a plain member can call this hook too; this component works unmodified for the read-only tier (every `canEditSlot` call returns `false` for a plain member, so every slot renders filled-or-empty read-only).
 
-- [ ] **Step 3: Build the accordion shell in `/kurin/page.tsx`**
+- [x] **Step 3: Build the accordion shell in `/kurin/page.tsx`**
 
 Replace the full contents of `apps/web/app/kurin/page.tsx`:
 
@@ -1428,7 +1428,7 @@ function KurinPageContent() {
 
 This builds with only 2 sections for now; Tasks 8 and 9 each add one more `{ key, title, render }` entry to the `sections` array (Гуртки is always shown; Кадра виховників/Список юнацтва only when `hasFullAccess` — wired in Task 9).
 
-- [ ] **Step 4: Rewrite `kurin-number.spec.ts` and `kurin-settings.spec.ts` to expand the Інформація section first**
+- [x] **Step 4: Rewrite `kurin-number.spec.ts` and `kurin-settings.spec.ts` to expand the Інформація section first**
 
 In `apps/web/e2e/kurin-number.spec.ts`, after `await page.goto('/kurin');` add:
 
@@ -1438,7 +1438,7 @@ In `apps/web/e2e/kurin-number.spec.ts`, after `await page.goto('/kurin');` add:
 
 In `apps/web/e2e/kurin-settings.spec.ts`, find its `await page.goto('/kurin');` (or equivalent) line and add the same expand click immediately after it.
 
-- [ ] **Step 5: Rewrite `positions.spec.ts` to target the new section**
+- [x] **Step 5: Rewrite `positions.spec.ts` to target the new section**
 
 Replace `apps/web/e2e/positions.spec.ts` in full:
 
@@ -1565,18 +1565,18 @@ test('lets kurinniy edit a non-Курінний slot but not the Курінни�
 });
 ```
 
-- [ ] **Step 6: Run the affected specs**
+- [x] **Step 6: Run the affected specs**
 
 Restore the local `playwright.config.ts` `executablePath` tweak if needed, then run:
 `cd apps/web && npx playwright test e2e/kurin-number.spec.ts e2e/kurin-settings.spec.ts e2e/positions.spec.ts`
 Expected: all PASS.
 
-- [ ] **Step 7: Typecheck both apps**
+- [x] **Step 7: Typecheck both apps**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/components/kurin-info-section.tsx apps/web/components/kurin-provid-section.tsx apps/web/app/kurin/page.tsx apps/web/e2e/kurin-number.spec.ts apps/web/e2e/kurin-settings.spec.ts apps/web/e2e/positions.spec.ts
@@ -1602,7 +1602,7 @@ git commit -m "feat: build /kurin accordion shell with Інформація and 
 - Consumes: `useHurtky`, `useVykhovnykAssignments`, `useUsers`, `useSession`, `HurtokDetailPanel`.
 - Produces: `KurinHurtkySection` — a self-contained component, moving today's `/hurtky/page.tsx` body here unchanged except the page `<h1>` (redundant under the accordion row, same reasoning as Task 7) and the "Новий гурток" create link staying ZVYAZKOVYI-only. `HurtokDetailPanel`'s `canConfigure` now also admits KURIN-scope suddia: `(session?.role === 'ZVYAZKOVYI' || session?.positions.includes('SUDDIA')) && !data.hurtok.archivedAt`.
 
-- [ ] **Step 1: Extend `HurtokDetailPanel`'s `canConfigure`**
+- [x] **Step 1: Extend `HurtokDetailPanel`'s `canConfigure`**
 
 In `apps/web/components/hurtok-detail-panel.tsx`, change:
 
@@ -1614,7 +1614,7 @@ In `apps/web/components/hurtok-detail-panel.tsx`, change:
 
 (`canAddJunak` is unchanged — suddia is not in the "add junak" permission set per the approved design, only zvyazkovyi and kurinniy.)
 
-- [ ] **Step 2: Create `KurinHurtkySection`**
+- [x] **Step 2: Create `KurinHurtkySection`**
 
 Create `apps/web/components/kurin-hurtky-section.tsx` as today's `/hurtky/page.tsx` body minus the `<h1>Гуртки</h1>` line and the outer `<div className="space-y-4">` wrapper collapsing into this component's own root (the accordion shell in Task 7 already provides section framing via `CardContent`):
 
@@ -1744,7 +1744,7 @@ export function KurinHurtkySection() {
 
 (Delete the `useVykhovnykAssignments(undefined, { enabled: isVykhovnyk })` call, the `isVykhovnyk` constant, and the old `isLoading`/`isError`/`hurtokById` lines entirely — every role now sees the full `listForKurin` result, matching "all hurtky, read-only" for a plain `VYKHOVNYK` and "all hurtky" for everyone else too, which was already true. The final component is the version with this block applied, not the first draft above — use this corrected version when creating the file.)
 
-- [ ] **Step 3: Wire the section into `/kurin/page.tsx`**
+- [x] **Step 3: Wire the section into `/kurin/page.tsx`**
 
 In `apps/web/app/kurin/page.tsx`, add the import and the section entry:
 
@@ -1760,7 +1760,7 @@ import { KurinHurtkySection } from '@/components/kurin-hurtky-section';
   ];
 ```
 
-- [ ] **Step 4: Update the e2e specs that navigated to `/hurtky`**
+- [x] **Step 4: Update the e2e specs that navigated to `/hurtky`**
 
 For each of `hurtky-accordion.spec.ts`, `hurtky-accordion-settings.spec.ts`, `hurtok-members.spec.ts`, `hurtok-add-junak-link.spec.ts`, `hurtok-archive.spec.ts`, `hurtok-settings.spec.ts`: replace every `await page.goto('/hurtky');` with:
 
@@ -1771,7 +1771,7 @@ For each of `hurtky-accordion.spec.ts`, `hurtky-accordion-settings.spec.ts`, `hu
 
 and change every `await expect(page).toHaveURL('/hurtky');` (or equivalent URL assertion checking the row stayed expanded without navigating) to `await expect(page).toHaveURL('/kurin');`. Read each file first to confirm the exact lines before editing — the navigation and URL-assertion lines are the only ones that change; all Playwright locator/assertion logic inside each test (selecting hurtok rows, opening settings, filling the founding-date input, etc.) stays exactly as-is, since `KurinHurtkySection`'s rendered markup for the Гуртки content is byte-for-byte identical to the old `/hurtky` page's markup.
 
-- [ ] **Step 5: Add a suddia-can-configure test and a read-only-tier test to `hurtok-settings.spec.ts`**
+- [x] **Step 5: Add a suddia-can-configure test and a read-only-tier test to `hurtok-settings.spec.ts`**
 
 Append to `apps/web/e2e/hurtok-settings.spec.ts`:
 
@@ -1830,17 +1830,17 @@ test('a plain member sees hurtok info read-only, with no settings button', async
 });
 ```
 
-- [ ] **Step 6: Run the affected specs**
+- [x] **Step 6: Run the affected specs**
 
 Run: `cd apps/web && npx playwright test e2e/hurtky-accordion.spec.ts e2e/hurtky-accordion-settings.spec.ts e2e/hurtok-members.spec.ts e2e/hurtok-add-junak-link.spec.ts e2e/hurtok-archive.spec.ts e2e/hurtok-settings.spec.ts`
 Expected: all PASS.
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/components/kurin-hurtky-section.tsx apps/web/components/hurtok-detail-panel.tsx apps/web/app/kurin/page.tsx apps/web/e2e/hurtky-accordion.spec.ts apps/web/e2e/hurtky-accordion-settings.spec.ts apps/web/e2e/hurtok-members.spec.ts apps/web/e2e/hurtok-add-junak-link.spec.ts apps/web/e2e/hurtok-archive.spec.ts apps/web/e2e/hurtok-settings.spec.ts
@@ -1866,7 +1866,7 @@ git commit -m "feat: absorb /hurtky into the Курінь accordion, extend sudd
 - Consumes: `useUsers`, `useSession`, `ROLE_LABELS`.
 - Produces: `KurinRosterSection({ role }: { role: 'VYKHOVNYK' | 'JUNAK' })` — a single reusable component (no filter buttons, the fixed `role` prop replaces them) rendering the list and an optional "Додати людину" link, used twice: once for Кадра виховників (`role="VYKHOVNYK"`), once for Список юнацтва (`role="JUNAK"`). Both new sections are only added to `/kurin`'s `sections` array when `hasFullAccess` is true (computed in Task 7).
 
-- [ ] **Step 1: Create `KurinRosterSection`**
+- [x] **Step 1: Create `KurinRosterSection`**
 
 Create `apps/web/components/kurin-roster-section.tsx`, adapted from today's `/users/page.tsx` with the filter buttons removed (the `role` prop replaces them) and the create-link condition narrowed per role:
 
@@ -1920,7 +1920,7 @@ export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' |
 }
 ```
 
-- [ ] **Step 2: Make `/users/new` honor a `role` query param**
+- [x] **Step 2: Make `/users/new` honor a `role` query param**
 
 In `apps/web/app/users/new/page.tsx`, the ZVYAZKOVYI direct-create form (`ZvyazkovyiDirectCreateForm`) currently defaults `role` state to `'JUNAK'`. Read the `role` search param in `NewUserPageContent` and pass it down as an initial value, mirroring the existing `initialHurtokId` pattern exactly:
 
@@ -1947,7 +1947,7 @@ function ZvyazkovyiDirectCreateForm({ initialHurtokId, initialRole }: { initialH
 
 (`KurinnyiApprovalRequestForm` is unchanged — it only ever creates a JUNAK, matching the Список юнацтва section's kurinniy-create path; the `role` query param is only meaningful for the ZVYAZKOVYI form.) Add `Role` to the existing `@/lib/types` import in `users/new/page.tsx` if it is not already imported.
 
-- [ ] **Step 3: Wire both sections into `/kurin/page.tsx`**
+- [x] **Step 3: Wire both sections into `/kurin/page.tsx`**
 
 In `apps/web/app/kurin/page.tsx`:
 
@@ -1969,7 +1969,7 @@ import { KurinRosterSection } from '@/components/kurin-roster-section';
   ];
 ```
 
-- [ ] **Step 4: Rewrite the e2e specs that navigated to `/users`**
+- [x] **Step 4: Rewrite the e2e specs that navigated to `/users`**
 
 Replace `apps/web/e2e/users-role-filter.spec.ts` in full (this is the test Task 6 left half-broken, pointing at `/kurin`):
 
@@ -2051,17 +2051,17 @@ For `apps/web/e2e/users-new-direct.spec.ts`, `apps/web/e2e/users-new-hurtok-pref
 
 (or `'Кадра виховників'` for a test whose target user is a VYKHOVNYK — check which role the test's target user has before choosing), and any direct `await page.goto('/users/new');` stays as-is (that route is unchanged). Any assertion on the old filter buttons (`getByRole('button', { name: 'Юнаки' })`, etc.) is deleted — the new sections have no filter buttons, the section itself is the filter.
 
-- [ ] **Step 5: Run the affected specs**
+- [x] **Step 5: Run the affected specs**
 
 Run: `cd apps/web && npx playwright test e2e/users-role-filter.spec.ts e2e/users-new-direct.spec.ts e2e/users-new-hurtok-prefill.spec.ts e2e/users-hurtok.spec.ts e2e/users-detail.spec.ts e2e/user-archive.spec.ts`
 Expected: all PASS.
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/components/kurin-roster-section.tsx apps/web/app/kurin/page.tsx apps/web/app/users/new/page.tsx apps/web/e2e/users-role-filter.spec.ts apps/web/e2e/users-new-direct.spec.ts apps/web/e2e/users-new-hurtok-prefill.spec.ts apps/web/e2e/users-hurtok.spec.ts apps/web/e2e/users-detail.spec.ts apps/web/e2e/user-archive.spec.ts
@@ -2080,7 +2080,7 @@ git commit -m "feat: absorb /users into Кадра виховників and Сп
 - Consumes: `useCreateApprovalRequest` (`lib/queries/approval-requests.ts`, unchanged).
 - Produces: a user with `isKurinniy` or `positions.includes('SUDDIA')` (but not `ZVYAZKOVYI`) now sees the same hurtok `<select>` as `canMoveHurtok` renders for ZVYAZKOVYI, but submitting calls `useCreateApprovalRequest().mutate({ actionType: 'CHANGE_HURTOK', junakId, newData: { hurtokId } })` instead of the direct `useUpdateHurtok` mutation, and shows a "запит надіслано" confirmation instead of navigating/refreshing in place — mirroring the existing `ArchiveUserCard`'s `isZvyazkovyi ? direct : request` branch exactly.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 Create `apps/web/e2e/change-hurtok-request.spec.ts`:
 
@@ -2180,12 +2180,12 @@ test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, req
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Restore the local Playwright `executablePath` tweak if needed, then run: `cd apps/web && npx playwright test e2e/change-hurtok-request.spec.ts`
 Expected: FAILS — `canMoveHurtok` is `ZVYAZKOVYI`-only, so kurinniy sees the plain read-only `<p>{hurtky?.find(...).name}</p>` fallback with no `<select>`/`Перевести` button at all.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `apps/web/app/users/[id]/page.tsx`, change the `canMoveHurtok` derivation and the render branch. Replace:
 
@@ -2259,22 +2259,22 @@ Replace the `canMoveHurtok ? (...) : (...)` JSX block:
 
 `createRequest` is already declared at the top of `UserDetailPage` (`const createRequest = useCreateApprovalRequest();`, used by the existing `CHANGE_FULL_NAME` request below) — reuse it, do not create a second instance.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd apps/web && npx playwright test e2e/change-hurtok-request.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full Playwright suite**
+- [x] **Step 5: Run the full Playwright suite**
 
 Run: `cd apps/web && npx playwright test`
 Expected: all PASS, no regressions (in particular `users-hurtok.spec.ts`, which exercises the ZVYAZKOVYI direct-move path through `canDirectlyMoveHurtok`).
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/app/users/\[id\]/page.tsx apps/web/e2e/change-hurtok-request.spec.ts
@@ -2294,19 +2294,19 @@ git commit -m "feat: let kurinniy and suddia request a hurtok change via approva
 - Consumes: nothing new.
 - Produces: nothing new — this task only removes files that no longer have any route, link, or test pointing at them after Tasks 6-10.
 
-- [ ] **Step 1: Confirm nothing still references the three routes**
+- [x] **Step 1: Confirm nothing still references the three routes**
 
 Run: `cd apps/web && grep -rn "'/positions'\|\"/positions\"\|'/users'\]\|\"/users\"\]\|goto('/users')\|goto(\"/users\")\|href=\"/hurtky\"\|href='/hurtky'" app components e2e --include="*.tsx" --include="*.ts" | grep -v "/users/new\|/users/\[id\]\|/users/\${"`
 
 Expected: no output (every remaining reference to `/users` in the codebase is to `/users/new` or `/users/[id]`/`/users/${id}`, which stay). If this prints anything, stop and fix that reference before deleting — it means an earlier task's e2e-spec migration was incomplete.
 
-- [ ] **Step 2: Delete the three page files**
+- [x] **Step 2: Delete the three page files**
 
 ```bash
 git rm apps/web/app/positions/page.tsx apps/web/app/users/page.tsx apps/web/app/hurtky/page.tsx
 ```
 
-- [ ] **Step 3: Run the full typecheck and full Playwright suite**
+- [x] **Step 3: Run the full typecheck and full Playwright suite**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors (confirms no remaining import references the deleted files).
@@ -2314,7 +2314,7 @@ Expected: no errors (confirms no remaining import references the deleted files).
 Restore the local Playwright `executablePath` tweak if needed, then run: `cd apps/web && npx playwright test`
 Expected: all PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "chore: delete /positions, /users, and the old top-level /hurtky page"
@@ -2331,7 +2331,7 @@ git commit -m "chore: delete /positions, /users, and the old top-level /hurtky p
 - Consumes: everything built in Tasks 1-11.
 - Produces: one end-to-end test exercising the full-access tier's 5-section view in a single flow, plus a final confirmation that both the API and web suites are fully green.
 
-- [ ] **Step 1: Write the integration test**
+- [x] **Step 1: Write the integration test**
 
 Create `apps/web/e2e/kurin-accordion-full-tier.spec.ts`:
 
@@ -2384,28 +2384,28 @@ test('zvyazkovyi sees and can use all 5 sections of the Курінь accordion',
 });
 ```
 
-- [ ] **Step 2: Run the new test**
+- [x] **Step 2: Run the new test**
 
 Restore the local Playwright `executablePath` tweak if needed, then run: `cd apps/web && npx playwright test e2e/kurin-accordion-full-tier.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Run the full API e2e suite in isolation**
+- [x] **Step 3: Run the full API e2e suite in isolation**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all suites PASS.
 
-- [ ] **Step 4: Run the full Playwright suite in isolation (never concurrently with Step 3)**
+- [x] **Step 4: Run the full Playwright suite in isolation (never concurrently with Step 3)**
 
 Run: `cd apps/web && npx playwright test`
 Expected: all tests PASS.
 
-- [ ] **Step 5: Typecheck both apps**
+- [x] **Step 5: Typecheck both apps**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors in either.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/e2e/kurin-accordion-full-tier.spec.ts

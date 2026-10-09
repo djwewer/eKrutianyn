@@ -35,7 +35,7 @@
 - Consumes: nothing from other tasks (foundation task).
 - Produces: `KurinPosition`/`PositionScope`/`PositionType` Prisma models. `KURIN_POSITIONS`/`HURTOK_POSITIONS: PositionType[]` from `position-rules.ts` (Task 2 consumes these). `isKurinniyForUser(prisma: PrismaService, userId: string): Promise<boolean>` from `common/kurinniy.util.ts`. `CurrentUserPayload.isKurinniy: boolean` (every later backend task consumes this). `AuthService.signToken` now takes a 4th `isKurinniy: boolean` argument.
 
-- [ ] **Step 1: Add the schema additions**
+- [x] **Step 1: Add the schema additions**
 
 Open `apps/api/prisma/schema.prisma`. Add these two new enums anywhere after the existing `enum Role { ... }` block:
 
@@ -99,7 +99,7 @@ In the `Hurtok` model, add this line right after the existing `vykhovnykAssignme
   positions KurinPosition[]
 ```
 
-- [ ] **Step 2: Generate and apply the migration**
+- [x] **Step 2: Generate and apply the migration**
 
 Run (from `apps/api/`, against your local dev database):
 
@@ -109,7 +109,7 @@ npx prisma migrate dev --name add_kurin_positions
 
 Expected: it prints `Your database is now in sync with your schema`, and the generated `migration.sql` contains only `CREATE TYPE` (for the two new enums) and `CREATE TABLE`/`ADD CONSTRAINT` statements for `KurinPosition` — no `ALTER TABLE` on `User`, `Kurin`, or `Hurtok` (the three new relation fields on those models are virtual — Prisma doesn't add a column for the "many" side of a relation). If you see anything touching the existing `Role` enum or any existing table's columns, stop — Step 1 was applied incorrectly.
 
-- [ ] **Step 3: Write the position-scope rules**
+- [x] **Step 3: Write the position-scope rules**
 
 Create `apps/api/src/kurin-positions/position-rules.ts`:
 
@@ -134,7 +134,7 @@ export const HURTOK_POSITIONS: PositionType[] = [
 ];
 ```
 
-- [ ] **Step 4: Write the shared `isKurinniy` helper**
+- [x] **Step 4: Write the shared `isKurinniy` helper**
 
 Create `apps/api/src/common/kurinniy.util.ts`:
 
@@ -150,7 +150,7 @@ export async function isKurinniyForUser(prisma: PrismaService, userId: string): 
 }
 ```
 
-- [ ] **Step 5: Write the unit test**
+- [x] **Step 5: Write the unit test**
 
 Create `apps/api/src/common/kurinniy.util.spec.ts`:
 
@@ -180,7 +180,7 @@ describe('isKurinniyForUser', () => {
 Run: `cd apps/api && npx jest src/common/kurinniy.util.spec.ts`
 Expected: 2 tests pass.
 
-- [ ] **Step 6: Extend `CurrentUserPayload`**
+- [x] **Step 6: Extend `CurrentUserPayload`**
 
 In `apps/api/src/common/decorators/current-user.decorator.ts`, change:
 
@@ -203,7 +203,7 @@ export interface CurrentUserPayload {
 }
 ```
 
-- [ ] **Step 7: Compute `isKurinniy` fresh in `JwtStrategy`**
+- [x] **Step 7: Compute `isKurinniy` fresh in `JwtStrategy`**
 
 Replace the full content of `apps/api/src/auth/strategies/jwt.strategy.ts`:
 
@@ -234,7 +234,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
 (`PrismaService` is provided globally — `PrismaModule` is `@Global()` — so no module wiring is needed for this injection.)
 
-- [ ] **Step 8: Embed `isKurinniy` in the signed JWT (for the frontend's session decode only)**
+- [x] **Step 8: Embed `isKurinniy` in the signed JWT (for the frontend's session decode only)**
 
 In `apps/api/src/auth/auth.service.ts`, add this import:
 
@@ -288,14 +288,14 @@ to:
     return this.signToken(user.id, user.role, user.kurinId, isKurinniy);
 ```
 
-- [ ] **Step 9: Verify**
+- [x] **Step 9: Verify**
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean (note: this will show pre-existing errors in files this task doesn't touch if `CurrentUserPayload`'s new required field breaks call sites that construct a `CurrentUserPayload`-shaped object by hand outside of `JwtStrategy` — there should be none; if `tsc` reports any, note them in your report but do not fix files outside this task's list, that's Task 3's job).
 
 Run the full e2e suite to confirm nothing already broke: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 Expected: all tests that were passing before this task still pass (this task is purely additive — no existing behavior should change yet, since nothing consumes `isKurinniy` or the new models until Task 2/3).
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/kurin-positions/position-rules.ts apps/api/src/common/kurinniy.util.ts apps/api/src/common/kurinniy.util.spec.ts apps/api/src/common/decorators/current-user.decorator.ts apps/api/src/auth/strategies/jwt.strategy.ts apps/api/src/auth/auth.service.ts
@@ -318,7 +318,7 @@ git commit -m "feat: add KurinPosition data model and isKurinniy computation"
 - Consumes: `KURIN_POSITIONS`/`HURTOK_POSITIONS` (Task 1), `KurinPosition` model (Task 1), `USER_SELECT` (`apps/api/src/users/user-select.const.ts`, existing).
 - Produces: `GET /kurin-positions` (200 → array of `{ id, scope, positionType, hurtokId, assignedAt, user: UserSummary }`, active positions only). `POST /kurin-positions` (body `{ userId, scope, positionType, hurtokId? }`, 200/201 → the created position with `user` included, 400 on scope/positionType mismatch or missing/extra `hurtokId`, 404 if the target isn't a junak in this kurin/hurtok). `DELETE /kurin-positions/:id` (200/201 → `{ success: true }`). All three: `@Roles(Role.ZVYAZKOVYI)` only. No later backend task in this plan depends on these routes (Task 3 depends only on Task 1's `isKurinniy`), but Task 5 (frontend) consumes all three.
 
-- [ ] **Step 1: Write the DTO**
+- [x] **Step 1: Write the DTO**
 
 Create `apps/api/src/kurin-positions/dto/assign-position.dto.ts`:
 
@@ -334,7 +334,7 @@ export class AssignPositionDto {
 }
 ```
 
-- [ ] **Step 2: Write the service**
+- [x] **Step 2: Write the service**
 
 Create `apps/api/src/kurin-positions/kurin-positions.service.ts`:
 
@@ -441,7 +441,7 @@ export class KurinPositionsService {
 }
 ```
 
-- [ ] **Step 3: Write the controller**
+- [x] **Step 3: Write the controller**
 
 Create `apps/api/src/kurin-positions/kurin-positions.controller.ts`:
 
@@ -480,7 +480,7 @@ export class KurinPositionsController {
 }
 ```
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
 
 Create `apps/api/src/kurin-positions/kurin-positions.module.ts`:
 
@@ -498,7 +498,7 @@ import { KurinPositionsService } from './kurin-positions.service';
 export class KurinPositionsModule {}
 ```
 
-- [ ] **Step 5: Wire into `AppModule`**
+- [x] **Step 5: Wire into `AppModule`**
 
 In `apps/api/src/app.module.ts`, add the import:
 
@@ -508,7 +508,7 @@ import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 
 Add `KurinPositionsModule` to the `imports` array (anywhere, e.g. right after `ApprovalRequestsModule`).
 
-- [ ] **Step 6: Write the e2e test**
+- [x] **Step 6: Write the e2e test**
 
 Create `apps/api/test/kurin-positions.e2e-spec.ts`:
 
@@ -684,12 +684,12 @@ describe('kurin-positions (e2e)', () => {
 });
 ```
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand kurin-positions`
 Expected: 6 tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/kurin-positions/dto/assign-position.dto.ts apps/api/src/kurin-positions/kurin-positions.service.ts apps/api/src/kurin-positions/kurin-positions.controller.ts apps/api/src/kurin-positions/kurin-positions.module.ts apps/api/src/app.module.ts apps/api/test/kurin-positions.e2e-spec.ts
@@ -721,7 +721,7 @@ git commit -m "feat: add kurin-positions module (assign, list, remove)"
 
 This is a large mechanical-plus-precise task. Do the 9 backend logic files first (Steps 1–8), then the test infrastructure (Step 9 is a uniform mechanical pattern applied at 31 listed locations across 12 files; Steps 10–11 are two files needing a real rewrite, not a mechanical swap — do not apply Step 9's pattern to those two, follow their own instructions exactly).
 
-- [ ] **Step 1: `approval-requests`**
+- [x] **Step 1: `approval-requests`**
 
 In `apps/api/src/approval-requests/approval-requests.controller.ts`, remove the `@Roles(Role.KURINNYI)` line above the `create` method (leave the method itself, and its `@Post()` decorator, unchanged). The `Role` import may now be unused in this file — check whether `Role` is still referenced elsewhere in the file (it is, in the other methods' `@Roles(Role.ZVYAZKOVYI)` lines) — if so, keep the import as-is.
 
@@ -735,7 +735,7 @@ In `apps/api/src/approval-requests/approval-requests.service.ts`, add this as th
 
 `ForbiddenException` is already imported in this file (check the existing `@nestjs/common` import line — it already imports `BadRequestException, ForbiddenException, Injectable, NotFoundException`).
 
-- [ ] **Step 2: `vykhovnyk-assignments`**
+- [x] **Step 2: `vykhovnyk-assignments`**
 
 In `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.controller.ts`, change:
 
@@ -768,7 +768,7 @@ In `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.service.ts`, add th
 
 Add `ForbiddenException` to the existing `@nestjs/common` import line in this file (it currently imports `ConflictException, Injectable, NotFoundException` — add `ForbiddenException` to that list).
 
-- [ ] **Step 3: `proby-progress`**
+- [x] **Step 3: `proby-progress`**
 
 In `apps/api/src/proby-progress/proby-progress.service.ts`, change:
 
@@ -800,7 +800,7 @@ to:
 
 Remove the now-unused import line `import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';` from this file.
 
-- [ ] **Step 4: `users.controller.ts`**
+- [x] **Step 4: `users.controller.ts`**
 
 Change:
 
@@ -831,7 +831,7 @@ to:
 
 (Note: passing the full `user` object now, not just `user.kurinId` — the service needs `role`/`isKurinniy` too.)
 
-- [ ] **Step 5: `users.service.ts` — `updateContactInfo`**
+- [x] **Step 5: `users.service.ts` — `updateContactInfo`**
 
 Change the method signature and its first check — from:
 
@@ -856,7 +856,7 @@ to:
     }
 ```
 
-- [ ] **Step 6: `users.service.ts` — `create`**
+- [x] **Step 6: `users.service.ts` — `create`**
 
 Change:
 
@@ -885,7 +885,7 @@ to:
     }
 ```
 
-- [ ] **Step 7: `users.service.ts` — `list`, `isVisibleTo`, `updateOwnProfile`**
+- [x] **Step 7: `users.service.ts` — `list`, `isVisibleTo`, `updateOwnProfile`**
 
 In `list`, remove this block entirely (it no longer applies — there is at most one active kurinniy per kurin, and it's no longer a `role` filter value):
 
@@ -973,7 +973,7 @@ to:
 
 Remove the now-unused import line `import { PROBY_TRACKING_ROLES } from '../common/proby-tracking-roles';` from this file.
 
-- [ ] **Step 8: `kurins.service.ts` and `hurtky.service.ts`**
+- [x] **Step 8: `kurins.service.ts` and `hurtky.service.ts`**
 
 In `apps/api/src/kurins/kurins.service.ts`, change:
 
@@ -1019,7 +1019,7 @@ Remove the now-unused `import { PROBY_TRACKING_ROLES } from '../common/proby-tra
 
 Delete the file `apps/api/src/common/proby-tracking-roles.ts` entirely — after Steps 3, 7, and 8, nothing imports it anymore. Verify with `grep -rn "PROBY_TRACKING_ROLES\|proby-tracking-roles" apps/api/src` — it must return nothing before you delete the file.
 
-- [ ] **Step 9: Mechanical fixture swap across 12 test files**
+- [x] **Step 9: Mechanical fixture swap across 12 test files**
 
 Add this helper to `apps/api/test/utils/fixtures.ts`. First add `PositionScope, PositionType` to the file's existing `@prisma/client` import line (currently `PrismaClient, Role, KurinGender, ProbyProgramVersion`), then add this function anywhere after `createUser`:
 
@@ -1068,7 +1068,7 @@ users-detail.e2e-spec.ts:101, 129, 130, 155
 
 After applying all of the above, verify: `grep -rn "Role.KURINNYI" apps/api/test/*.e2e-spec.ts` should show matches **only** in `users-list.e2e-spec.ts` and `users.e2e-spec.ts` (which Steps 10–11 handle next) — if any other file still shows a match, you missed a location; fix it before moving on.
 
-- [ ] **Step 10: Rewrite `users-list.e2e-spec.ts`**
+- [x] **Step 10: Rewrite `users-list.e2e-spec.ts`**
 
 This file has two tests using `role: Role.KURINNYI` that also assert on now-obsolete `?role=KURINNYI` filter behavior — a mechanical swap isn't enough here. Read the current file first, find the two tests described below by their `it(...)` title, and replace each one's full body with the version given.
 
@@ -1134,7 +1134,7 @@ and remove this trailing block from the end of that same test (everything from `
 
 The rest of that test (the `all.body` assertion and the `onlyVykhovnyky` block) stays exactly as it is — `kurinnyi.id` still appears in the "no filter, all roles" list, since the underlying `User` row still exists in the kurin regardless of its position.
 
-- [ ] **Step 11: Rewrite the obsolete test in `users.e2e-spec.ts`**
+- [x] **Step 11: Rewrite the obsolete test in `users.e2e-spec.ts`**
 
 Find the test titled `'requires hurtokId for KURINNYI too'` (around line 78) and replace its entire body with:
 
@@ -1153,7 +1153,7 @@ Find the test titled `'requires hurtokId for KURINNYI too'` (around line 78) and
     });
 ```
 
-- [ ] **Step 12: Run the full backend suite**
+- [x] **Step 12: Run the full backend suite**
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
@@ -1162,7 +1162,7 @@ Expected: every test passes. This is the real correctness gate for this task —
 
 Run: `cd apps/api && npx jest` (plain unit tests) — expect all pass, unaffected by this task.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add apps/api/src/approval-requests/approval-requests.controller.ts apps/api/src/approval-requests/approval-requests.service.ts apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.controller.ts apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.service.ts apps/api/src/proby-progress/proby-progress.service.ts apps/api/src/users/users.controller.ts apps/api/src/users/users.service.ts apps/api/src/kurins/kurins.service.ts apps/api/src/hurtky/hurtky.service.ts apps/api/test/utils/fixtures.ts apps/api/test/approval-requests-decide.e2e-spec.ts apps/api/test/hurtky-board.e2e-spec.ts apps/api/test/approval-requests-detail.e2e-spec.ts apps/api/test/approval-requests-create.e2e-spec.ts apps/api/test/proby-progress.e2e-spec.ts apps/api/test/proby-progress-confirm.e2e-spec.ts apps/api/test/proby-catalog.e2e-spec.ts apps/api/test/kurins-proby-program.e2e-spec.ts apps/api/test/users-contact-info.e2e-spec.ts apps/api/test/vykhovnyk-assignments-list.e2e-spec.ts apps/api/test/users-detail.e2e-spec.ts apps/api/test/users-list.e2e-spec.ts apps/api/test/users.e2e-spec.ts
@@ -1183,7 +1183,7 @@ git commit -m "refactor: migrate every Role.KURINNYI check to isKurinniy, delete
 - Consumes: nothing (Tasks 1–3 must already be fully merged — verify with `grep -rn "Role.KURINNYI\|'KURINNYI'" apps/api/src` returning nothing before starting this task, aside from string values inside `PositionType.KURINNYI`/`'KURINNYI'` position-type literals, which are unrelated and must stay).
 - Produces: `Role` enum with exactly 3 values. No later task depends on this beyond "the migration must not break anything."
 
-- [ ] **Step 1: Edit the schema**
+- [x] **Step 1: Edit the schema**
 
 In `apps/api/prisma/schema.prisma`, remove the `KURINNYI` line from `enum Role`:
 
@@ -1195,7 +1195,7 @@ enum Role {
 }
 ```
 
-- [ ] **Step 2: Generate the migration without applying it, then hand-edit it**
+- [x] **Step 2: Generate the migration without applying it, then hand-edit it**
 
 Run:
 
@@ -1214,7 +1214,7 @@ UPDATE "User" SET "role" = 'JUNAK' WHERE "role" = 'KURINNYI';
 
 Read the rest of the generated SQL to confirm it does roughly: create a new `Role` enum type without `KURINNYI`, alter `"User"."role"` to the new type (casting existing values), rename types so the new one is called `Role`, and drop the old type. If it looks like anything else (e.g. it silently drops rows, or errors on an unrelated table), stop and report BLOCKED rather than guessing — this is the one genuinely delicate step in this whole plan.
 
-- [ ] **Step 3: Apply the migration**
+- [x] **Step 3: Apply the migration**
 
 Run:
 
@@ -1224,7 +1224,7 @@ npx prisma migrate dev
 
 (No `--name` needed — this applies the pending migration you just hand-edited.) Expected: it applies cleanly, no data-loss warnings (your Step 2 edit already resolved the only row that would have blocked it).
 
-- [ ] **Step 4: Remove the now-unreachable check**
+- [x] **Step 4: Remove the now-unreachable check**
 
 In `apps/api/src/users/users.service.ts`, `create()` now has a branch that can never trigger — `dto.role` can no longer be `KURINNYI` at the type level, since `@IsEnum(Role)` on `CreateUserDto` rejects it before the service method even runs. Remove this block (added in Task 3, Step 6):
 
@@ -1236,7 +1236,7 @@ In `apps/api/src/users/users.service.ts`, `create()` now has a branch that can n
 
 The e2e test added in Task 3 Step 11 (`'forbids creating a KURINNYI directly through this endpoint'`) still passes after this removal — it will now fail via `class-validator`'s enum rejection instead of this explicit check, both routes return 400. Do not change that test.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
@@ -1247,7 +1247,7 @@ Run: `cd apps/api && npx jest` — expect all pass.
 
 Run: `cd apps/api && npm run start:dev`, confirm it logs `Nest application successfully started`, then stop it.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/users/users.service.ts
@@ -1268,7 +1268,7 @@ git commit -m "feat: remove Role.KURINNYI from the schema"
 - Consumes: `GET /kurin-positions`, `POST /kurin-positions`, `DELETE /kurin-positions/:id` (Task 2), `apiFetch` (`apps/web/lib/api-client.ts`), `useHurtky` (`apps/web/lib/queries/hurtky.ts`), `useUsers` (`apps/web/lib/queries/users.ts`).
 - Produces: `KurinPosition`, `PositionType`, `PositionScope` types (`apps/web/lib/types.ts`) — Task 6 consumes `PositionType` for `POSITION_LABELS`. `useKurinPositions()`, `useAssignPosition()`, `useRemovePosition()` — no later task in this plan depends on these hooks beyond this task's own page.
 
-- [ ] **Step 1: Add the new types**
+- [x] **Step 1: Add the new types**
 
 In `apps/web/lib/types.ts`, add these types anywhere (e.g. right after the existing `Hurtok` interface):
 
@@ -1295,7 +1295,7 @@ export interface KurinPosition {
 }
 ```
 
-- [ ] **Step 2: Write the query hooks**
+- [x] **Step 2: Write the query hooks**
 
 Create `apps/web/lib/queries/positions.ts`:
 
@@ -1338,7 +1338,7 @@ export function useRemovePosition() {
 }
 ```
 
-- [ ] **Step 3: Write the page**
+- [x] **Step 3: Write the page**
 
 Create `apps/web/app/positions/page.tsx`:
 
@@ -1489,7 +1489,7 @@ export default function PositionsPage() {
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/positions.spec.ts`:
 
@@ -1528,12 +1528,12 @@ test('lets zvyazkovyi assign and remove kurin positions', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/positions.spec.ts`
 Expected: 1 test passes. If the `getByText('Курінний').locator('..')` selector proves too ambiguous in practice (multiple matches, since "Курінний" also appears in role labels elsewhere on the page), that's an acceptable, unambiguous fix to make directly — adjust to a more specific selector (e.g. add a `data-testid` per slot) and note the change in your report; do not change the page's actual behavior to work around a test problem.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/lib/queries/positions.ts apps/web/app/positions apps/web/e2e/positions.spec.ts
@@ -1559,7 +1559,7 @@ git commit -m "feat: add Діловоди positions page"
 - Consumes: `PositionType` (Task 5), backend's JWT payload now including `isKurinniy` (Task 1).
 - Produces: `CurrentUserPayload.isKurinniy: boolean` (`apps/web/lib/types.ts`) — final shape of the session object every page in this app reads.
 
-- [ ] **Step 1: Shrink `Role` and extend `CurrentUserPayload`**
+- [x] **Step 1: Shrink `Role` and extend `CurrentUserPayload`**
 
 In `apps/web/lib/types.ts`, change:
 
@@ -1586,7 +1586,7 @@ export interface CurrentUserPayload {
 }
 ```
 
-- [ ] **Step 2: Decode `isKurinniy` from the JWT**
+- [x] **Step 2: Decode `isKurinniy` from the JWT**
 
 In `apps/web/app/api/session/route.ts`, change:
 
@@ -1609,7 +1609,7 @@ to:
     };
 ```
 
-- [ ] **Step 3: Split `KURINNYI` out of `ROLE_LABELS` into `POSITION_LABELS`**
+- [x] **Step 3: Split `KURINNYI` out of `ROLE_LABELS` into `POSITION_LABELS`**
 
 Replace the full content of `apps/web/lib/role-labels.ts`:
 
@@ -1634,7 +1634,7 @@ export const POSITION_LABELS: Record<PositionType, string> = {
 };
 ```
 
-- [ ] **Step 4: `nav.tsx`**
+- [x] **Step 4: `nav.tsx`**
 
 Replace the full content of `apps/web/components/nav.tsx`:
 
@@ -1703,11 +1703,11 @@ export function Nav() {
 }
 ```
 
-- [ ] **Step 5: `app/page.tsx`**
+- [x] **Step 5: `app/page.tsx`**
 
 Remove the `KURINNYI: '/proby',` line from `HOME_BY_ROLE` (a kurinniy-holder's `role` is `JUNAK`, already covered by the existing `JUNAK: '/proby'` line — no other change needed in this file).
 
-- [ ] **Step 6: `app/users/page.tsx`**
+- [x] **Step 6: `app/users/page.tsx`**
 
 Replace the full content of `apps/web/app/users/page.tsx`:
 
@@ -1788,7 +1788,7 @@ export default function UsersPage() {
 }
 ```
 
-- [ ] **Step 7: `app/users/new/page.tsx`**
+- [x] **Step 7: `app/users/new/page.tsx`**
 
 Remove this line from `ZvyazkovyiDirectCreateForm`'s role `<select>`:
 
@@ -1837,7 +1837,7 @@ export default function NewUserPage() {
 }
 ```
 
-- [ ] **Step 8: `app/users/[id]/page.tsx`**
+- [x] **Step 8: `app/users/[id]/page.tsx`**
 
 Change:
 
@@ -1865,7 +1865,7 @@ to:
       {session?.isKurinniy && user.role === 'JUNAK' && (
 ```
 
-- [ ] **Step 9: Write the e2e test**
+- [x] **Step 9: Write the e2e test**
 
 Create `apps/web/e2e/kurinniy-junak.spec.ts`:
 
@@ -1908,14 +1908,14 @@ test('a junak with the kurinniy position sees the extended nav and can list user
 
 Check `apps/web/e2e/helpers/proby-seed.ts`'s `createUserAs` return shape before using `junak.id` above — if it doesn't already return the created user's `id`, adjust this test to fetch it another way (e.g. via the zvyazkovyi's `GET /users?role=JUNAK` list) rather than modifying the shared helper, since other tests depend on its current shape.
 
-- [ ] **Step 10: Run the tests**
+- [x] **Step 10: Run the tests**
 
 Run: `cd apps/web && npx tsc --noEmit` — expect clean.
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test`
 Expected: the full suite passes, including the two new files from this plan (`positions.spec.ts` from Task 5, `kurinniy-junak.spec.ts` from this task) and every pre-existing spec.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/app/api/session/route.ts apps/web/lib/role-labels.ts apps/web/components/nav.tsx apps/web/app/page.tsx apps/web/app/users/page.tsx apps/web/app/users/new/page.tsx apps/web/app/users/[id]/page.tsx apps/web/e2e/kurinniy-junak.spec.ts

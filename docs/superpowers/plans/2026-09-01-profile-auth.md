@@ -37,7 +37,7 @@
 - Consumes: nothing from other tasks (this is the foundation task).
 - Produces: three new Prisma models (`PasswordResetToken`, `EmailChangeRequest`, `ProfileChangeLog`) with fields exactly as below; `MailModule` exporting `MailService` with methods `sendPasswordReset(to: string, resetUrl: string): Promise<void>`, `sendEmailChangeConfirmation(to: string, confirmUrl: string): Promise<void>`, `sendProfileChangeNotification(to: string, params: { changedUserName: string; field: string; oldValue: string | null; newValue: string | null }): Promise<void>`, and `getLastMailFor(to: string): CapturedMail | undefined` (only populated when `process.env.MAIL_MODE === 'test'`, used by Task 6).
 
-- [ ] **Step 1: Add the three new models to the Prisma schema**
+- [x] **Step 1: Add the three new models to the Prisma schema**
 
 Open `apps/api/prisma/schema.prisma`. Find the `model User { ... }` block and add these three relation fields inside it, right after the existing `decidedRequests` line:
 
@@ -82,7 +82,7 @@ model ProfileChangeLog {
 }
 ```
 
-- [ ] **Step 2: Generate and apply the migration**
+- [x] **Step 2: Generate and apply the migration**
 
 Run (from `apps/api/`, against your local dev database — check `DATABASE_URL` in `apps/api/.env` first):
 
@@ -92,7 +92,7 @@ npx prisma migrate dev --name add_profile_auth
 
 Expected: it prints `Your database is now in sync with your schema` and creates a new folder under `apps/api/prisma/migrations/` starting with today's timestamp and ending in `_add_profile_auth`, containing a `migration.sql` that only has `CREATE TABLE` statements for the three new tables (no `ALTER TABLE` on any existing table). If it shows anything else (a warning about data loss, an `ALTER TABLE` on `User`, etc.) — stop and re-check Step 1, something is wrong.
 
-- [ ] **Step 3: Add the `resend` dependency**
+- [x] **Step 3: Add the `resend` dependency**
 
 Run from the **monorepo root** (not `apps/api/`) so the shared lockfile updates correctly:
 
@@ -102,7 +102,7 @@ npm install resend --workspace=api
 
 Expected: `apps/api/package.json`'s `dependencies` gains a `"resend"` entry, and the root `package-lock.json` changes.
 
-- [ ] **Step 4: Write the Mail module**
+- [x] **Step 4: Write the Mail module**
 
 Create `apps/api/src/mail/mail.module.ts`:
 
@@ -196,7 +196,7 @@ export class MailService {
 }
 ```
 
-- [ ] **Step 5: Write the unit test**
+- [x] **Step 5: Write the unit test**
 
 Create `apps/api/src/mail/mail.service.spec.ts`:
 
@@ -250,12 +250,12 @@ describe('MailService (test mode)', () => {
 });
 ```
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 Run: `cd apps/api && npx jest src/mail/mail.service.spec.ts`
 Expected: 3 tests pass.
 
-- [ ] **Step 7: Wire the module into the app**
+- [x] **Step 7: Wire the module into the app**
 
 In `apps/api/src/app.module.ts`, add the import and register it in the `imports` array:
 
@@ -265,7 +265,7 @@ import { MailModule } from './mail/mail.module';
 
 Add `MailModule` to the `imports: [...]` array (anywhere in the list, e.g. right after `AuthModule`).
 
-- [ ] **Step 8: Document the new environment variables**
+- [x] **Step 8: Document the new environment variables**
 
 Append to `apps/api/.env.example`:
 
@@ -278,7 +278,7 @@ MAIL_MODE=""
 
 Also add the same four lines (with real/dev values — `RESEND_API_KEY` can stay empty in dev since `MAIL_MODE` will be unset there too, meaning real Resend calls would only happen if someone sets a key) to your own local `apps/api/.env` so the app keeps booting: `FRONTEND_URL="http://localhost:3000"` is enough for local dev to not crash when this plan's later tasks build URLs.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/mail apps/api/src/app.module.ts apps/api/package.json apps/api/.env.example package-lock.json
@@ -306,7 +306,7 @@ git commit -m "feat: add profile-auth data model and mail module"
 - Consumes: `MailService.sendPasswordReset` (Task 1), `PasswordResetToken` model (Task 1).
 - Produces: `generateToken(): { raw: string; hash: string }` and `hashToken(raw: string): string` from `apps/api/src/common/token.util.ts` (Task 3 reuses these). `PATCH /users/me/password` (body `{ currentPassword?: string, newPassword: string }`, 200 → `{ ok: true }`, 403 on wrong current password). `POST /auth/forgot-password` (body `{ email: string }`, always 200/201 → `{ ok: true }`). `POST /auth/reset-password` (body `{ token: string, newPassword: string }`, 200/201 → `{ ok: true }`, 400 on invalid/expired token).
 
-- [ ] **Step 1: Write the token utility**
+- [x] **Step 1: Write the token utility**
 
 Create `apps/api/src/common/token.util.ts`:
 
@@ -323,7 +323,7 @@ export function hashToken(raw: string): string {
 }
 ```
 
-- [ ] **Step 2: Add `MailModule` to `AuthModule`'s imports**
+- [x] **Step 2: Add `MailModule` to `AuthModule`'s imports**
 
 In `apps/api/src/auth/auth.module.ts`, add the import and add `MailModule` to the `imports` array:
 
@@ -344,7 +344,7 @@ imports: [
 ],
 ```
 
-- [ ] **Step 3: Add forgot/reset-password to `AuthService`**
+- [x] **Step 3: Add forgot/reset-password to `AuthService`**
 
 In `apps/api/src/auth/auth.service.ts`, add these imports at the top:
 
@@ -402,7 +402,7 @@ async resetPassword(token: string, newPassword: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: Add the two DTOs**
+- [x] **Step 4: Add the two DTOs**
 
 Create `apps/api/src/auth/dto/forgot-password.dto.ts`:
 
@@ -425,7 +425,7 @@ export class ResetPasswordDto {
 }
 ```
 
-- [ ] **Step 5: Add the two routes to `AuthController`**
+- [x] **Step 5: Add the two routes to `AuthController`**
 
 In `apps/api/src/auth/auth.controller.ts`, add imports:
 
@@ -450,7 +450,7 @@ async resetPassword(@Body() dto: ResetPasswordDto) {
 }
 ```
 
-- [ ] **Step 6: Add `PATCH /users/me/password`**
+- [x] **Step 6: Add `PATCH /users/me/password`**
 
 Create `apps/api/src/users/dto/change-password.dto.ts`:
 
@@ -503,7 +503,7 @@ changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: CurrentUserP
 }
 ```
 
-- [ ] **Step 7: Write the e2e tests**
+- [x] **Step 7: Write the e2e tests**
 
 Create `apps/api/test/change-password.e2e-spec.ts`:
 
@@ -710,12 +710,12 @@ describe('Forgot / reset password (e2e)', () => {
 });
 ```
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand change-password forgot-reset-password`
 Expected: 7 tests pass total — 3 in `change-password.e2e-spec.ts`, 4 in `forgot-reset-password.e2e-spec.ts`.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/common/token.util.ts apps/api/src/users/dto/change-password.dto.ts apps/api/src/auth/dto/forgot-password.dto.ts apps/api/src/auth/dto/reset-password.dto.ts apps/api/src/users/users.controller.ts apps/api/src/users/users.service.ts apps/api/src/auth/auth.controller.ts apps/api/src/auth/auth.service.ts apps/api/src/auth/auth.module.ts apps/api/test/change-password.e2e-spec.ts apps/api/test/forgot-reset-password.e2e-spec.ts
@@ -739,7 +739,7 @@ git commit -m "feat: add password change and forgot/reset-password flows"
 - Consumes: `generateToken`/`hashToken` (Task 2), `MailService.sendEmailChangeConfirmation` (Task 1), `EmailChangeRequest` model (Task 1).
 - Produces: `PATCH /users/me/email` (body `{ newEmail: string, currentPassword: string }`, 200/201 → `{ ok: true }`, 403 on wrong password, 400 if email already taken). `GET /auth/confirm-email-change?token=...` (200/201 → `{ ok: true }`, 400 on invalid/expired/already-used token).
 
-- [ ] **Step 1: Add `MailModule` to `UsersModule`'s imports**
+- [x] **Step 1: Add `MailModule` to `UsersModule`'s imports**
 
 In `apps/api/src/users/users.module.ts`, add the import and add it to `imports`:
 
@@ -756,7 +756,7 @@ import { MailModule } from '../mail/mail.module';
 export class UsersModule {}
 ```
 
-- [ ] **Step 2: Add the DTO**
+- [x] **Step 2: Add the DTO**
 
 Create `apps/api/src/users/dto/change-email.dto.ts`:
 
@@ -769,7 +769,7 @@ export class ChangeEmailDto {
 }
 ```
 
-- [ ] **Step 3: Add `requestEmailChange` to `UsersService`**
+- [x] **Step 3: Add `requestEmailChange` to `UsersService`**
 
 In `apps/api/src/users/users.service.ts`, add this import:
 
@@ -828,7 +828,7 @@ Add the import for `ChangeEmailDto` at the top of the file:
 import { ChangeEmailDto } from './dto/change-email.dto';
 ```
 
-- [ ] **Step 4: Add `PATCH /users/me/email` to `UsersController`**
+- [x] **Step 4: Add `PATCH /users/me/email` to `UsersController`**
 
 In `apps/api/src/users/users.controller.ts`, add the import:
 
@@ -845,7 +845,7 @@ changeEmail(@Body() dto: ChangeEmailDto, @CurrentUser() user: CurrentUserPayload
 }
 ```
 
-- [ ] **Step 5: Add `confirmEmailChange` to `AuthService`**
+- [x] **Step 5: Add `confirmEmailChange` to `AuthService`**
 
 In `apps/api/src/auth/auth.service.ts`, add this method:
 
@@ -867,7 +867,7 @@ async confirmEmailChange(token: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 6: Add `GET /auth/confirm-email-change` to `AuthController`**
+- [x] **Step 6: Add `GET /auth/confirm-email-change` to `AuthController`**
 
 In `apps/api/src/auth/auth.controller.ts`, add `Query` to the existing `@nestjs/common` import, and add `Get`:
 
@@ -885,7 +885,7 @@ async confirmEmailChange(@Query('token') token: string) {
 }
 ```
 
-- [ ] **Step 7: Write the e2e test**
+- [x] **Step 7: Write the e2e test**
 
 Create `apps/api/test/change-email.e2e-spec.ts`:
 
@@ -1005,12 +1005,12 @@ describe('Email change (e2e)', () => {
 });
 ```
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand change-email`
 Expected: 3 tests pass.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/users/dto/change-email.dto.ts apps/api/src/users/users.controller.ts apps/api/src/users/users.service.ts apps/api/src/users/users.module.ts apps/api/src/auth/auth.controller.ts apps/api/src/auth/auth.service.ts apps/api/test/change-email.e2e-spec.ts
@@ -1031,7 +1031,7 @@ git commit -m "feat: add self-service email change with confirmation"
 - Consumes: `PROBY_TRACKING_ROLES` (`apps/api/src/common/proby-tracking-roles.ts`), `MailService.sendProfileChangeNotification` (Task 1), `ProfileChangeLog` model (Task 1), `VykhovnykHurtok` Prisma model (existing — relation field to the assigned vykhovnyk's User row is named `vykhovnyk`).
 - Produces: `PATCH /users/me` (body: any subset of `{ nickname?, phone?, firstName?, lastName?, birthDate? }`, 200/201 → the updated `UserDetail`-shaped object). No later backend task depends on this; Task 5 (frontend) is the consumer.
 
-- [ ] **Step 1: Add the DTO**
+- [x] **Step 1: Add the DTO**
 
 Create `apps/api/src/users/dto/update-own-profile.dto.ts`:
 
@@ -1047,7 +1047,7 @@ export class UpdateOwnProfileDto {
 }
 ```
 
-- [ ] **Step 2: Add `updateOwnProfile` to `UsersService`**
+- [x] **Step 2: Add `updateOwnProfile` to `UsersService`**
 
 In `apps/api/src/users/users.service.ts`, add these imports:
 
@@ -1114,7 +1114,7 @@ async updateOwnProfile(userId: string, dto: UpdateOwnProfileDto) {
 }
 ```
 
-- [ ] **Step 3: Add `PATCH /users/me` to `UsersController`**
+- [x] **Step 3: Add `PATCH /users/me` to `UsersController`**
 
 In `apps/api/src/users/users.controller.ts`, add the import:
 
@@ -1131,7 +1131,7 @@ updateOwnProfile(@Body() dto: UpdateOwnProfileDto, @CurrentUser() user: CurrentU
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/api/test/update-own-profile.e2e-spec.ts`:
 
@@ -1253,12 +1253,12 @@ describe('PATCH /users/me (e2e)', () => {
 });
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand update-own-profile`
 Expected: 4 tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/users/dto/update-own-profile.dto.ts apps/api/src/users/users.controller.ts apps/api/src/users/users.service.ts apps/api/test/update-own-profile.e2e-spec.ts
@@ -1279,7 +1279,7 @@ git commit -m "feat: add self-edit of personal data with change log and vykhovny
 - Consumes: `PATCH /users/me`, `PATCH /users/me/password`, `PATCH /users/me/email`, `GET /users/me` (all from Tasks 2–4 and the pre-existing `GET /users/me`), `apiFetch` (`apps/web/lib/api-client.ts`), `UserDetail` type (`apps/web/lib/types.ts`).
 - Produces: `useOwnProfile()`, `useUpdateOwnProfile()`, `useChangePassword()`, `useRequestEmailChange()` hooks in `apps/web/lib/queries/settings.ts` — no later task in this plan depends on these.
 
-- [ ] **Step 1: Write the query hooks**
+- [x] **Step 1: Write the query hooks**
 
 Create `apps/web/lib/queries/settings.ts`:
 
@@ -1328,7 +1328,7 @@ export function useRequestEmailChange() {
 }
 ```
 
-- [ ] **Step 2: Write the settings page**
+- [x] **Step 2: Write the settings page**
 
 Create `apps/web/app/settings/page.tsx`:
 
@@ -1542,7 +1542,7 @@ export default function SettingsPage() {
 }
 ```
 
-- [ ] **Step 3: Add the nav link**
+- [x] **Step 3: Add the nav link**
 
 In `apps/web/components/nav.tsx`, add a "Налаштування" link to every role's array in `LINKS_BY_ROLE`:
 
@@ -1573,7 +1573,7 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
 };
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/settings.spec.ts`:
 
@@ -1607,12 +1607,12 @@ test('lets zvyazkovyi change their own nickname and password from settings', asy
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/settings.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/settings.ts apps/web/app/settings apps/web/components/nav.tsx apps/web/e2e/settings.spec.ts
@@ -1641,7 +1641,7 @@ git commit -m "feat: add self-service settings page"
 - Consumes: `POST /auth/forgot-password`, `POST /auth/reset-password`, `GET /auth/confirm-email-change` (Tasks 2–3), `MailService.getLastMailFor` (Task 1), `AdminKeyGuard` (`apps/api/src/common/guards/admin-key.guard.ts`, existing).
 - Produces: nothing consumed by later tasks in this plan.
 
-- [ ] **Step 1: Add the test-only mail-inspection admin endpoint**
+- [x] **Step 1: Add the test-only mail-inspection admin endpoint**
 
 Create `apps/api/src/admin/test-mail-admin.controller.ts`:
 
@@ -1683,7 +1683,7 @@ import { TestMailAdminController } from './test-mail-admin.controller';
 export class AdminModule {}
 ```
 
-- [ ] **Step 2: Update the Playwright config to run the API in test mail mode**
+- [x] **Step 2: Update the Playwright config to run the API in test mail mode**
 
 In `apps/web/playwright.config.ts`, add `MAIL_MODE`, `MAIL_FROM`, and `FRONTEND_URL` to the API webServer's `env` block:
 
@@ -1699,7 +1699,7 @@ env: {
 },
 ```
 
-- [ ] **Step 3: Add the Next.js route handlers**
+- [x] **Step 3: Add the Next.js route handlers**
 
 Create `apps/web/app/api/auth/forgot-password/route.ts`:
 
@@ -1751,7 +1751,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 4: Add the three pages**
+- [x] **Step 4: Add the three pages**
 
 Create `apps/web/app/forgot-password/page.tsx`:
 
@@ -1953,7 +1953,7 @@ export default function ConfirmEmailChangePage({
 }
 ```
 
-- [ ] **Step 5: Make the pages reachable while logged out**
+- [x] **Step 5: Make the pages reachable while logged out**
 
 In `apps/web/middleware.ts`, update `PUBLIC_PATHS`:
 
@@ -1961,7 +1961,7 @@ In `apps/web/middleware.ts`, update `PUBLIC_PATHS`:
 const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change'];
 ```
 
-- [ ] **Step 6: Link from the login page**
+- [x] **Step 6: Link from the login page**
 
 In `apps/web/app/login/page.tsx`, add this right after the closing `</form>` tag (before the `<GoogleSignInButton />` div):
 
@@ -1979,7 +1979,7 @@ Add the import at the top:
 import Link from 'next/link';
 ```
 
-- [ ] **Step 7: Write the e2e test**
+- [x] **Step 7: Write the e2e test**
 
 Create `apps/web/e2e/forgot-password.spec.ts`:
 
@@ -2016,12 +2016,12 @@ test('lets a user reset a forgotten password end to end', async ({ page, request
 });
 ```
 
-- [ ] **Step 8: Run the test**
+- [x] **Step 8: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/forgot-password.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/admin/test-mail-admin.controller.ts apps/api/src/admin/admin.module.ts apps/web/app/api/auth/forgot-password apps/web/app/api/auth/reset-password apps/web/app/api/auth/confirm-email-change apps/web/app/forgot-password apps/web/app/reset-password apps/web/app/confirm-email-change apps/web/middleware.ts apps/web/app/login/page.tsx apps/web/playwright.config.ts apps/web/e2e/forgot-password.spec.ts
@@ -2041,7 +2041,7 @@ git commit -m "feat: add forgot/reset-password and email-change confirmation pag
 - Consumes: `Role` type (`apps/web/lib/types.ts`).
 - Produces: `ROLE_LABELS: Record<Role, string>` from `apps/web/lib/role-labels.ts` — no later task in this plan depends on it, but it's the natural place any future screen should import from instead of rendering `.role` raw.
 
-- [ ] **Step 1: Create the shared label map**
+- [x] **Step 1: Create the shared label map**
 
 Create `apps/web/lib/role-labels.ts`:
 
@@ -2056,7 +2056,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 ```
 
-- [ ] **Step 2: Fix `apps/web/app/users/[id]/page.tsx`**
+- [x] **Step 2: Fix `apps/web/app/users/[id]/page.tsx`**
 
 Find this line (around line 48):
 
@@ -2076,7 +2076,7 @@ Add the import at the top of the file:
 import { ROLE_LABELS } from '@/lib/role-labels';
 ```
 
-- [ ] **Step 3: Fix `apps/web/app/users/page.tsx`**
+- [x] **Step 3: Fix `apps/web/app/users/page.tsx`**
 
 Find this line (around line 67):
 
@@ -2096,12 +2096,12 @@ Add the import at the top of the file:
 import { ROLE_LABELS } from '@/lib/role-labels';
 ```
 
-- [ ] **Step 4: Verify by running the existing regression tests for these two pages**
+- [x] **Step 4: Verify by running the existing regression tests for these two pages**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/users-detail.spec.ts e2e/users-role-filter.spec.ts`
 Expected: all tests still pass (this task only changes what text renders, not any behavior these tests assert on — if a test asserts on the literal English role string, it would need updating, but the existing specs assert on names/labels, not raw role values).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/lib/role-labels.ts apps/web/app/users/[id]/page.tsx apps/web/app/users/page.tsx

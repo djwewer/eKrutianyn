@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: Prisma models `Announcement`, `AnnouncementImage`, `AnnouncementReaction`, enum `ReactionEmoji`, all available via `PrismaService` (`this.prisma.announcement`, `this.prisma.announcementImage`, `this.prisma.announcementReaction`) for every later task.
 
-- [ ] **Step 1: Add the models to schema.prisma**
+- [x] **Step 1: Add the models to schema.prisma**
 
 Add to `apps/api/prisma/schema.prisma`, right after the final existing model (`AiMessage`):
 
@@ -107,7 +107,7 @@ On `model User`, after `activityEntries JunakActivityEntry[] @relation("JunakAct
   announcementReactions    AnnouncementReaction[]
 ```
 
-- [ ] **Step 2: Generate and write the migration**
+- [x] **Step 2: Generate and write the migration**
 
 ```bash
 cd apps/api
@@ -126,7 +126,7 @@ mkdir -p "apps/api/prisma/migrations/${TS}_add_announcements"
 
 Write the printed SQL verbatim into `apps/api/prisma/migrations/<that timestamp>_add_announcements/migration.sql`.
 
-- [ ] **Step 3: Apply the migration to dev and test databases, regenerate the client**
+- [x] **Step 3: Apply the migration to dev and test databases, regenerate the client**
 
 ```bash
 cd apps/api
@@ -137,7 +137,7 @@ npx prisma generate
 
 Expected: both `migrate deploy` runs report `All migrations have been successfully applied.`; `generate` reports `Generated Prisma Client`.
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 ```bash
 cd apps/api && npx tsc --noEmit -p .
@@ -145,7 +145,7 @@ cd apps/api && npx tsc --noEmit -p .
 
 Expected: no output (clean).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations
@@ -166,7 +166,7 @@ git commit -m "Add Announcement/AnnouncementImage/AnnouncementReaction Prisma mo
 - Consumes: `PrismaService` (`src/prisma/prisma.service.ts`), `CurrentUserPayload` (`src/common/decorators/current-user.decorator.ts`, shape `{ userId, role, kurinId, isKurinniy, positions }`).
 - Produces: `AnnouncementsService` with methods `list(kurinId, actor)`, `create(kurinId, dto, actor)`, `update(kurinId, id, dto, actor)`, `remove(kurinId, id, actor)` — consumed by Task 3's controller and by Task 5 (which wires push into `create`).
 
-- [ ] **Step 1: Write the DTOs**
+- [x] **Step 1: Write the DTOs**
 
 `apps/api/src/announcements/dto/create-announcement.dto.ts`:
 
@@ -192,7 +192,7 @@ export class UpdateAnnouncementDto {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 `apps/api/src/announcements/announcements.service.spec.ts`:
 
@@ -335,7 +335,7 @@ describe('AnnouncementsService', () => {
 });
 ```
 
-- [ ] **Step 2b: Run it to verify it fails**
+- [x] **Step 2b: Run it to verify it fails**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -343,7 +343,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: FAIL — `Cannot find module './announcements.service'`.
 
-- [ ] **Step 3: Implement the service**
+- [x] **Step 3: Implement the service**
 
 `apps/api/src/announcements/announcements.service.ts`:
 
@@ -427,7 +427,7 @@ export class AnnouncementsService {
 
 Note: the `update` test above doesn't mock `announcementImage.updateMany` resolution and passes `imageIds: []`, so that branch is skipped — no mock needed for that test. The `create` test passes two image ids and does assert on `announcementImage.updateMany`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -435,7 +435,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: `Tests: 7 passed, 7 total`.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 ```bash
 cd apps/api && npx tsc --noEmit -p .
@@ -443,7 +443,7 @@ cd apps/api && npx tsc --noEmit -p .
 
 Expected: no output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/announcements
@@ -465,7 +465,7 @@ git commit -m "Add AnnouncementsService with CRUD and писар/звʼязко�
 - Consumes: `JwtAuthGuard` (`src/common/guards/jwt-auth.guard.ts`), `detectSafeImageMimeType` (`src/common/image-sniff.util.ts`).
 - Produces: `AnnouncementsService.uploadImage(kurinId, file, actor): Promise<{id: string}>` and `getImage(kurinId, imageId): Promise<{data: Buffer, mimeType: string} | null>`, both consumed by `AnnouncementsController`.
 
-- [ ] **Step 1: Write the failing tests for uploadImage/getImage**
+- [x] **Step 1: Write the failing tests for uploadImage/getImage**
 
 Append to `apps/api/src/announcements/announcements.service.spec.ts`, inside the `describe('AnnouncementsService', ...)` block (add `announcementImage.create` and `.findUnique` mocks to the `prisma` object built in `beforeEach` first):
 
@@ -539,7 +539,7 @@ Append to `apps/api/src/announcements/announcements.service.spec.ts`, inside the
   });
 ```
 
-- [ ] **Step 1b: Run to verify it fails**
+- [x] **Step 1b: Run to verify it fails**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -547,7 +547,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: FAIL — `service.uploadImage is not a function`.
 
-- [ ] **Step 2: Implement uploadImage/getImage**
+- [x] **Step 2: Implement uploadImage/getImage**
 
 Add to the top of `apps/api/src/announcements/announcements.service.ts`:
 
@@ -583,7 +583,7 @@ import { detectSafeImageMimeType } from '../common/image-sniff.util';
   }
 ```
 
-- [ ] **Step 3: Run tests to verify they pass**
+- [x] **Step 3: Run tests to verify they pass**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -591,7 +591,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: all tests pass (13 total: 7 from Task 2 + 6 new).
 
-- [ ] **Step 4: Write the controller**
+- [x] **Step 4: Write the controller**
 
 `apps/api/src/announcements/announcements.controller.ts`:
 
@@ -690,7 +690,7 @@ export class AnnouncementsController {
 }
 ```
 
-- [ ] **Step 5: Write the module**
+- [x] **Step 5: Write the module**
 
 `apps/api/src/announcements/announcements.module.ts`:
 
@@ -709,7 +709,7 @@ import { AnnouncementsService } from './announcements.service';
 export class AnnouncementsModule {}
 ```
 
-- [ ] **Step 6: Register the module**
+- [x] **Step 6: Register the module**
 
 In `apps/api/src/app.module.ts`, add the import:
 
@@ -719,7 +719,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 
 and add `AnnouncementsModule,` to the `imports` array (after `PushNotificationsModule,`).
 
-- [ ] **Step 7: Typecheck and run the full announcements spec**
+- [x] **Step 7: Typecheck and run the full announcements spec**
 
 ```bash
 cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements
@@ -727,7 +727,7 @@ cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements
 
 Expected: tsc silent; all 13 tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/announcements apps/api/src/app.module.ts
@@ -747,7 +747,7 @@ git commit -m "Add Announcements controller/module, image upload and serve endpo
 **Interfaces:**
 - Produces: `AnnouncementsService.setReaction(kurinId, announcementId, emoji, actor)`, `.removeReaction(kurinId, announcementId, actor)`.
 
-- [ ] **Step 1: Write the DTO**
+- [x] **Step 1: Write the DTO**
 
 `apps/api/src/announcements/dto/set-reaction.dto.ts`:
 
@@ -760,7 +760,7 @@ export class SetReactionDto {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Append to `apps/api/src/announcements/announcements.service.spec.ts` (add `announcementReaction: { upsert: jest.Mock; deleteMany: jest.Mock }` to the `prisma` object in `beforeEach`):
 
@@ -800,7 +800,7 @@ Append to `apps/api/src/announcements/announcements.service.spec.ts` (add `annou
   });
 ```
 
-- [ ] **Step 2b: Run to verify it fails**
+- [x] **Step 2b: Run to verify it fails**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -808,7 +808,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: FAIL — `service.setReaction is not a function`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `apps/api/src/announcements/announcements.service.ts`, update the Prisma import to include the enum type and add these two methods after `getImage`:
 
@@ -834,7 +834,7 @@ import { ReactionEmoji } from '@prisma/client';
   }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 cd apps/api && npx jest src/announcements/announcements.service.spec.ts
@@ -842,7 +842,7 @@ cd apps/api && npx jest src/announcements/announcements.service.spec.ts
 
 Expected: all tests pass (16 total).
 
-- [ ] **Step 5: Add the controller endpoints**
+- [x] **Step 5: Add the controller endpoints**
 
 Add to `apps/api/src/announcements/announcements.controller.ts`, importing `SetReactionDto` and adding after `getImage`:
 
@@ -870,7 +870,7 @@ import { SetReactionDto } from './dto/set-reaction.dto';
 
 (Using `POST` rather than `PUT` for `setReaction` here keeps it consistent with every other write endpoint in this controller and avoids a bare HTTP verb mismatch with the rest of the codebase's convention, which uses `POST` for both "create" and "upsert-like" actions — e.g. `kurin-positions` assign. This is a deliberate, minor deviation from the design spec's `PUT` wording; functionally identical.)
 
-- [ ] **Step 6: Typecheck and run the full suite**
+- [x] **Step 6: Typecheck and run the full suite**
 
 ```bash
 cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements
@@ -878,7 +878,7 @@ cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements
 
 Expected: tsc silent; all 16 tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/announcements
@@ -902,7 +902,7 @@ git commit -m "Add Announcements reactions endpoints (set/remove, one per user)"
 - Consumes: `PushNotificationsService` (exported from `PushNotificationsModule`).
 - Produces: `PushNotificationsService.sendToKurin(kurinId: string, payload: { title: string; body: string; url: string }): Promise<void>`.
 
-- [ ] **Step 1: Write the failing test for sendToKurin**
+- [x] **Step 1: Write the failing test for sendToKurin**
 
 Replace the `describe('sendTestPushToAll', ...)` block in `apps/api/src/push-notifications/push-notifications.service.spec.ts` with `describe('sendToKurin', ...)`, and update the `prisma.pushSubscription` mock shape in `beforeEach` to include a `findMany` that can be asserted on with a `where` clause:
 
@@ -940,7 +940,7 @@ Replace the `describe('sendTestPushToAll', ...)` block in `apps/api/src/push-not
   });
 ```
 
-- [ ] **Step 1b: Run to verify it fails**
+- [x] **Step 1b: Run to verify it fails**
 
 ```bash
 cd apps/api && npx jest src/push-notifications/push-notifications.service.spec.ts
@@ -948,7 +948,7 @@ cd apps/api && npx jest src/push-notifications/push-notifications.service.spec.t
 
 Expected: FAIL — `service.sendToKurin is not a function` (and the deleted `sendTestPushToAll` describe block's tests no longer exist, which is correct — that method is being removed).
 
-- [ ] **Step 2: Replace sendTestPushToAll with sendToKurin**
+- [x] **Step 2: Replace sendTestPushToAll with sendToKurin**
 
 In `apps/api/src/push-notifications/push-notifications.service.ts`, remove the `TEST_NOTIFICATION_TITLE`/`TEST_NOTIFICATION_BODY` constants and the `sendTestPushToAll` method, replacing it with:
 
@@ -965,7 +965,7 @@ In `apps/api/src/push-notifications/push-notifications.service.ts`, remove the `
 
 (`sendAndPruneIfGone` and the rest of the class are unchanged.)
 
-- [ ] **Step 3: Run tests to verify they pass**
+- [x] **Step 3: Run tests to verify they pass**
 
 ```bash
 cd apps/api && npx jest src/push-notifications/push-notifications.service.spec.ts
@@ -973,7 +973,7 @@ cd apps/api && npx jest src/push-notifications/push-notifications.service.spec.t
 
 Expected: `subscribe`/`unsubscribe` tests unchanged and passing; new `sendToKurin` tests pass (6 total: 2 + 2 + 2 from the two unchanged describe blocks plus these two).
 
-- [ ] **Step 4: Delete the test cron**
+- [x] **Step 4: Delete the test cron**
 
 ```bash
 cd apps/api
@@ -999,7 +999,7 @@ export class PushNotificationsModule {}
 
 (Note the added `exports: [PushNotificationsService]` — required so `AnnouncementsModule` can inject it in the next step.)
 
-- [ ] **Step 5: Wire push into AnnouncementsService.create**
+- [x] **Step 5: Wire push into AnnouncementsService.create**
 
 Update the `create` test in `apps/api/src/announcements/announcements.service.spec.ts` to also assert the push call. Add a `pushNotifications` mock to the test file:
 
@@ -1050,7 +1050,7 @@ In `create`, after the `announcementImage.updateMany` block and before `return a
     });
 ```
 
-- [ ] **Step 6: Wire the module dependency**
+- [x] **Step 6: Wire the module dependency**
 
 In `apps/api/src/announcements/announcements.module.ts`, import `PushNotificationsModule`:
 
@@ -1070,7 +1070,7 @@ import { AnnouncementsService } from './announcements.service';
 export class AnnouncementsModule {}
 ```
 
-- [ ] **Step 7: Run both affected suites, typecheck**
+- [x] **Step 7: Run both affected suites, typecheck**
 
 ```bash
 cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements src/push-notifications
@@ -1078,7 +1078,7 @@ cd apps/api && npx tsc --noEmit -p . && npx jest src/announcements src/push-noti
 
 Expected: tsc silent; all tests in both directories pass.
 
-- [ ] **Step 8: Full API unit regression**
+- [x] **Step 8: Full API unit regression**
 
 ```bash
 cd apps/api && npm run test
@@ -1086,7 +1086,7 @@ cd apps/api && npm run test
 
 Expected: all suites pass (confirms removing the cron didn't break anything registered against it elsewhere, e.g. `app.module.ts` doesn't reference it directly).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/push-notifications apps/api/src/announcements
@@ -1105,7 +1105,7 @@ git commit -m "Send real kurin-scoped push on announcement publish; remove test-
 **Interfaces:**
 - Produces: `useAnnouncements(kurinId)`, `useCreateAnnouncement(kurinId)`, `useUpdateAnnouncement(kurinId, id)`, `useDeleteAnnouncement(kurinId)`, `useUploadAnnouncementImage(kurinId)`, `useSetReaction(kurinId)`, `useRemoveReaction(kurinId)` — consumed by Tasks 7 and 8.
 
-- [ ] **Step 1: Install Tiptap**
+- [x] **Step 1: Install Tiptap**
 
 ```bash
 cd apps/web
@@ -1114,7 +1114,7 @@ npm install @tiptap/react @tiptap/pm @tiptap/starter-kit @tiptap/extension-link 
 
 Expected: `package.json`/`package-lock.json` updated, no install errors.
 
-- [ ] **Step 2: Add types**
+- [x] **Step 2: Add types**
 
 Append to `apps/web/lib/types.ts`:
 
@@ -1134,7 +1134,7 @@ export interface Announcement {
 }
 ```
 
-- [ ] **Step 3: Write the query hooks**
+- [x] **Step 3: Write the query hooks**
 
 `apps/web/lib/queries/announcements.ts`:
 
@@ -1217,7 +1217,7 @@ export function useRemoveReaction(kurinId: string) {
 }
 ```
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 ```bash
 cd apps/web && npx tsc --noEmit -p .
@@ -1225,7 +1225,7 @@ cd apps/web && npx tsc --noEmit -p .
 
 Expected: no output.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/package.json apps/web/package-lock.json apps/web/lib/types.ts apps/web/lib/queries/announcements.ts
@@ -1245,7 +1245,7 @@ git commit -m "Add Tiptap deps, Announcement types, and announcements query hook
 - Consumes: `useAnnouncements`, `useSetReaction`, `useRemoveReaction` (Task 6), `useSession` (`lib/session-client`), `Card`/`CardHeader`/`CardTitle`/`CardContent`/`Button` (`components/ui/*`).
 - Produces: default export `NewsPage` at route `/news`.
 
-- [ ] **Step 1: Reaction emoji map**
+- [x] **Step 1: Reaction emoji map**
 
 `apps/web/lib/reaction-emoji.ts`:
 
@@ -1264,7 +1264,7 @@ export const REACTION_EMOJI: Record<ReactionEmoji, string> = {
 export const REACTION_ORDER: ReactionEmoji[] = ['THUMBS_UP', 'HEART', 'CLAP', 'WOW', 'LAUGH', 'SAD'];
 ```
 
-- [ ] **Step 2: Announcement card component**
+- [x] **Step 2: Announcement card component**
 
 `apps/web/components/announcement-card.tsx`:
 
@@ -1359,7 +1359,7 @@ export function AnnouncementCard({
 }
 ```
 
-- [ ] **Step 3: Feed page**
+- [x] **Step 3: Feed page**
 
 `apps/web/app/news/page.tsx`:
 
@@ -1420,7 +1420,7 @@ export default function NewsPage() {
 }
 ```
 
-- [ ] **Step 4: Typecheck and lint**
+- [x] **Step 4: Typecheck and lint**
 
 ```bash
 cd apps/web && npx tsc --noEmit -p . && npx eslint app/news/page.tsx components/announcement-card.tsx lib/reaction-emoji.ts
@@ -1428,7 +1428,7 @@ cd apps/web && npx tsc --noEmit -p . && npx eslint app/news/page.tsx components/
 
 Expected: tsc silent; eslint reports no errors (warnings for e.g. `any` on `announcement.content as any` are expected and acceptable here — Tiptap's own `generateHTML` signature requires a loosely-typed JSON document; check the lint output and add a narrow `// eslint-disable-next-line` only if the project's eslint config actually errors on it, matching how other call sites in this codebase handle a similar unavoidable `any`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/lib/reaction-emoji.ts apps/web/components/announcement-card.tsx apps/web/app/news/page.tsx
@@ -1448,7 +1448,7 @@ git commit -m "Add /news feed page with read-only Tiptap render and emoji reacti
 - Consumes: `useEditor`/`EditorContent` from `@tiptap/react`, `useCreateAnnouncement`/`useUpdateAnnouncement`/`useUploadAnnouncementImage` (Task 6).
 - Produces: `AnnouncementEditor` component, reused by both the "new" and "edit" pages with a `mode` prop.
 
-- [ ] **Step 1: Editor component**
+- [x] **Step 1: Editor component**
 
 `apps/web/components/announcement-editor.tsx`:
 
@@ -1558,7 +1558,7 @@ export function AnnouncementEditor({
 }
 ```
 
-- [ ] **Step 2: "New announcement" page**
+- [x] **Step 2: "New announcement" page**
 
 `apps/web/app/news/new/page.tsx`:
 
@@ -1600,7 +1600,7 @@ export default function NewAnnouncementPage() {
 }
 ```
 
-- [ ] **Step 3: "Edit announcement" page**
+- [x] **Step 3: "Edit announcement" page**
 
 `apps/web/app/news/[id]/edit/page.tsx`:
 
@@ -1647,7 +1647,7 @@ export default function EditAnnouncementPage({ params }: { params: Promise<{ id:
 }
 ```
 
-- [ ] **Step 4: Typecheck and lint**
+- [x] **Step 4: Typecheck and lint**
 
 ```bash
 cd apps/web && npx tsc --noEmit -p . && npx eslint components/announcement-editor.tsx app/news/new/page.tsx "app/news/[id]/edit/page.tsx"
@@ -1655,7 +1655,7 @@ cd apps/web && npx tsc --noEmit -p . && npx eslint components/announcement-edito
 
 Expected: tsc silent; eslint no errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/announcement-editor.tsx "apps/web/app/news/new/page.tsx" "apps/web/app/news/[id]/edit/page.tsx"
@@ -1673,7 +1673,7 @@ git commit -m "Add Tiptap announcement editor and publish/edit pages"
 **Interfaces:**
 - No new interfaces — this task only rewires existing navigation/routing.
 
-- [ ] **Step 1: Wrap the kurin name in a Link, add "Оголошення" nav links**
+- [x] **Step 1: Wrap the kurin name in a Link, add "Оголошення" nav links**
 
 In `apps/web/components/nav.tsx`, change:
 
@@ -1705,7 +1705,7 @@ to:
 
 Then add `{ href: '/news', label: 'Оголошення' },` as the first entry in each of the three arrays inside `LINKS_BY_ROLE` (`JUNAK`, `VYKHOVNYK`, `ZVYAZKOVYI`).
 
-- [ ] **Step 2: Make `/news` the default landing page for every role**
+- [x] **Step 2: Make `/news` the default landing page for every role**
 
 Replace the full contents of `apps/web/app/page.tsx`:
 
@@ -1730,7 +1730,7 @@ export default function HomePage() {
 }
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 ```bash
 cd apps/web && npx tsc --noEmit -p .
@@ -1738,7 +1738,7 @@ cd apps/web && npx tsc --noEmit -p .
 
 Expected: no output.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/components/nav.tsx apps/web/app/page.tsx
@@ -1755,7 +1755,7 @@ git commit -m "Make /news the default home page for every role; link kurin name 
 **Interfaces:**
 - Consumes: `seedProbyProgram`, `seedKurinWithZvyazkovyi` (`e2e/helpers/seed.ts`), `loginAs` (`e2e/helpers/auth.ts`), `createUserAs`/`loginForToken` (`e2e/helpers/proby-seed.ts`).
 
-- [ ] **Step 1: Write the e2e spec**
+- [x] **Step 1: Write the e2e spec**
 
 `apps/web/e2e/announcements.spec.ts`:
 
@@ -1837,7 +1837,7 @@ test('a plain junak (no писар position) does not see edit/delete controls o
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 ```bash
 cd apps/web && npx playwright test e2e/announcements.spec.ts
@@ -1845,7 +1845,7 @@ cd apps/web && npx playwright test e2e/announcements.spec.ts
 
 Expected: `2 passed`. If `createUserAs`/`loginForToken` style helpers turn out to already exist with different names in `e2e/helpers/proby-seed.ts` (check that file first — it was referenced in other specs this session), prefer those over the raw `fetch` calls shown above to stay consistent with existing spec style; the raw-fetch version above is the fallback if no such helper fits this exact shape (creating a plain JUNAK under an already-seeded kurin without a hurtok).
 
-- [ ] **Step 3: Full regression — API unit tests**
+- [x] **Step 3: Full regression — API unit tests**
 
 ```bash
 cd apps/api && npm run test
@@ -1853,7 +1853,7 @@ cd apps/api && npm run test
 
 Expected: all suites pass.
 
-- [ ] **Step 4: Full regression — targeted web e2e specs most likely to interact with nav/home changes**
+- [x] **Step 4: Full regression — targeted web e2e specs most likely to interact with nav/home changes**
 
 ```bash
 cd apps/web && npx playwright test e2e/announcements.spec.ts e2e/calendar.spec.ts e2e/hurtok-archive.spec.ts e2e/user-archive.spec.ts
@@ -1861,7 +1861,7 @@ cd apps/web && npx playwright test e2e/announcements.spec.ts e2e/calendar.spec.t
 
 Expected: review output carefully. Any failure that is the same pre-existing Select/Accordion "element detached from DOM" flakiness documented earlier this session (unrelated Base UI issue, not caused by this feature) can be disregarded after confirming via `git stash` that it reproduces identically on the pre-feature commit — do not silently wave away a failure without that check. A failure caused by the `/` redirect change (anything that used to rely on landing on `/proby`, `/kurin`, or `/approval-requests` by default after login) is a real regression from this plan and must be fixed — check whether any existing spec calls `page.goto('/')` and asserts on a role-specific page afterward, and update it to navigate directly to that page instead, since `/` now always goes to `/news`.
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
 
 ```bash
 cd /home/user/eKrutianyn

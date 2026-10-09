@@ -29,7 +29,7 @@
 - Consumes: nothing from other tasks (foundation task).
 - Produces: `Kurin.kurinNumber` is now `@@unique`. `createKurin`'s default `kurinNumber` generation is collision-safe — Tasks 2-5 and every future test written against this fixture can call `createKurin(prisma, { probyProgramId, name })` without worrying about a second kurin in the same test colliding.
 
-- [ ] **Step 1: Fix the fixture's default `kurinNumber` generation**
+- [x] **Step 1: Fix the fixture's default `kurinNumber` generation**
 
 In `apps/api/test/utils/fixtures.ts`, change `createKurin` — from:
 
@@ -83,7 +83,7 @@ export async function createKurin(
 
 (This makes every call that doesn't explicitly pass `kurinNumber` collision-safe by construction — no test file needs to change, since none of them assert on the literal value `'1'` for `kurinNumber`, only on `name`/`id`.)
 
-- [ ] **Step 2: Add the schema constraint**
+- [x] **Step 2: Add the schema constraint**
 
 In `apps/api/prisma/schema.prisma`, change the `Kurin` model's `kurinNumber` line — from:
 
@@ -97,7 +97,7 @@ to:
   kurinNumber    String      @unique
 ```
 
-- [ ] **Step 3: Generate and apply the migration**
+- [x] **Step 3: Generate and apply the migration**
 
 Run (from `apps/api/`, against your local dev database):
 
@@ -107,7 +107,7 @@ npx prisma migrate dev --name add_kurin_number_unique
 
 Expected: it prints `Your database is now in sync with your schema`, and the generated `migration.sql` contains only `CREATE UNIQUE INDEX` on `Kurin.kurinNumber` — no other column touched. If your local dev database already has two kurins sharing the same `kurinNumber` (unlikely, but check the error message if the migration fails), resolve by manually updating one of them to a distinct value before retrying — do not weaken the constraint to work around local dev data; production has no such conflict.
 
-- [ ] **Step 4: Run the FULL backend e2e suite — this is the real correctness gate for this task**
+- [x] **Step 4: Run the FULL backend e2e suite — this is the real correctness gate for this task**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 
@@ -115,7 +115,7 @@ Expected: every single test still passes — all 32+ suites, 157+ tests. If ANY 
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/test/utils/fixtures.ts apps/api/prisma/schema.prisma apps/api/prisma/migrations
@@ -137,7 +137,7 @@ git commit -m "feat: add unique constraint on Kurin.kurinNumber, fix test fixtur
 - Consumes: `Kurin.kurinNumber @unique` (Task 1) — the auto-generation logic relies on being able to trust that no two kurins ever silently share a number.
 - Produces: `POST /admin/kurins` now accepts an optional `kurinNumber`; when omitted, the created kurin gets the next available `"П-N"`. No later task in this plan depends on this beyond the admin API contract itself.
 
-- [ ] **Step 1: Make `kurinNumber` optional in the DTO**
+- [x] **Step 1: Make `kurinNumber` optional in the DTO**
 
 In `apps/api/src/admin/dto/create-kurin.dto.ts`, change:
 
@@ -169,7 +169,7 @@ export class CreateKurinDto {
 }
 ```
 
-- [ ] **Step 2: Auto-generate the next `"П-N"` when omitted, and reject an explicit duplicate cleanly**
+- [x] **Step 2: Auto-generate the next `"П-N"` when omitted, and reject an explicit duplicate cleanly**
 
 In `apps/api/src/admin/kurins-admin.service.ts`, add `ConflictException` to the existing `@nestjs/common` import (it currently imports `Injectable, NotFoundException` — add `ConflictException` to that list). Change `createKurin` — from:
 
@@ -214,7 +214,7 @@ to:
   }
 ```
 
-- [ ] **Step 3: Extend the e2e test**
+- [x] **Step 3: Extend the e2e test**
 
 In `apps/api/test/admin-kurins.e2e-spec.ts`, add these two tests inside the `describe('POST /admin/kurins', ...)` block, alongside the existing ones:
 
@@ -281,14 +281,14 @@ In `apps/api/test/admin-kurins.e2e-spec.ts`, add these two tests inside the `des
     });
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand admin-kurins`
 Expected: all tests pass (6 total: the 3 pre-existing under `POST /admin/kurins` plus the 3 new ones, plus the 2 under `POST /admin/kurins/zvyazkovyi`).
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/admin/dto/create-kurin.dto.ts apps/api/src/admin/kurins-admin.service.ts apps/api/test/admin-kurins.e2e-spec.ts
@@ -309,7 +309,7 @@ git commit -m "feat: auto-assign next П-N preparatory number when kurinNumber i
 - Consumes: `Kurin.kurinNumber @unique` (Task 1).
 - Produces: `PATCH /kurins/:id/kurin-number` (body `{ newNumber: string }`, 200/201 → updated `Kurin`, 403 if actor isn't `ZVYAZKOVYI` or `id` isn't their own kurin, 409 if `newNumber` is already taken by another kurin). No later task in this plan depends on backend internals beyond this one route — Task 5 (frontend) consumes only the HTTP contract.
 
-- [ ] **Step 1: Write the DTO**
+- [x] **Step 1: Write the DTO**
 
 Create `apps/api/src/kurins/dto/change-kurin-number.dto.ts`:
 
@@ -321,7 +321,7 @@ export class ChangeKurinNumberDto {
 }
 ```
 
-- [ ] **Step 2: Add the service method**
+- [x] **Step 2: Add the service method**
 
 In `apps/api/src/kurins/kurins.service.ts`, add this import at the top:
 
@@ -350,7 +350,7 @@ Add this method anywhere in the `KurinsService` class, e.g. right after `findByI
   }
 ```
 
-- [ ] **Step 3: Add the controller route**
+- [x] **Step 3: Add the controller route**
 
 In `apps/api/src/kurins/kurins.controller.ts`, add the import:
 
@@ -375,7 +375,7 @@ Add this method inside `KurinsController`, right after `changeProbyProgram`:
   }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/api/test/kurins-kurin-number.e2e-spec.ts`:
 
@@ -470,7 +470,7 @@ describe('PATCH /kurins/:id/kurin-number (e2e)', () => {
 });
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand kurins-kurin-number`
 Expected: 4 tests pass.
@@ -479,7 +479,7 @@ Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
 Run the full e2e suite to confirm nothing broke: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/kurins/dto/change-kurin-number.dto.ts apps/api/src/kurins/kurins.controller.ts apps/api/src/kurins/kurins.service.ts apps/api/test/kurins-kurin-number.e2e-spec.ts
@@ -498,7 +498,7 @@ git commit -m "feat: let zvyazkovyi self-service change their kurin's number"
 - Consumes: nothing from Tasks 1-3 directly (independent of the kurins module changes, though it reads the same `Kurin.kurinNumber` field).
 - Produces: `JwtPayload.kurinNumber: string` — the frontend (Task 5) decodes this from the signed token via `/api/session`. `AuthService.signToken` now takes a 5th parameter, `kurinNumber: string`.
 
-- [ ] **Step 1: Extend `JwtPayload` and `signToken`**
+- [x] **Step 1: Extend `JwtPayload` and `signToken`**
 
 In `apps/api/src/auth/auth.service.ts`, change:
 
@@ -547,7 +547,7 @@ to:
   }
 ```
 
-- [ ] **Step 2: Fetch `kurinNumber` at login and pass it to `signToken`**
+- [x] **Step 2: Fetch `kurinNumber` at login and pass it to `signToken`**
 
 Change `loginWithPassword`'s final two lines — from:
 
@@ -581,7 +581,7 @@ to:
 
 (The non-null assertion `kurin!` is safe here: `user.kurinId` is a required foreign key to an existing `Kurin` row — a user can never exist with a `kurinId` pointing to a deleted or nonexistent kurin.)
 
-- [ ] **Step 3: Update the unit test**
+- [x] **Step 3: Update the unit test**
 
 In `apps/api/src/auth/auth.service.spec.ts`, change the `prisma` mock in `beforeEach` — from:
 
@@ -632,7 +632,7 @@ to:
   });
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd apps/api && npx jest src/auth/auth.service.spec.ts`
 Expected: all tests pass (the `beforeEach` mock change doesn't require touching `loginWithPassword`'s or `loginWithGoogle`'s individual test bodies — they already mock `prisma.user.findUnique` per-test, and now also implicitly get a working `prisma.kurin.findUnique` from the shared `beforeEach` mock).
@@ -641,7 +641,7 @@ Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
 Run the full backend suite (unit + e2e) to confirm nothing else broke: `cd apps/api && npx jest && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/auth/auth.service.ts apps/api/src/auth/auth.service.spec.ts
@@ -666,7 +666,7 @@ git commit -m "feat: add kurinNumber to the JWT payload for frontend routing"
 - Consumes: `PATCH /kurins/:id/kurin-number` (Task 3), `kurinNumber` in the decoded JWT (Task 4).
 - Produces: `CurrentUserPayload.kurinNumber: string` (`apps/web/lib/types.ts`) — the final shape of the session object. No later task in this plan depends on it beyond this task's own pages.
 
-- [ ] **Step 1: Add `kurinNumber` to the session type and decode**
+- [x] **Step 1: Add `kurinNumber` to the session type and decode**
 
 In `apps/web/lib/types.ts`, change:
 
@@ -714,7 +714,7 @@ to:
     };
 ```
 
-- [ ] **Step 2: Move the hurtok page to the renamed route folder**
+- [x] **Step 2: Move the hurtok page to the renamed route folder**
 
 Create `apps/web/app/[kurinNumber]/hurtky/[slug]/page.tsx` with this exact content (identical to the current `apps/web/app/[kurinId]/hurtky/[slug]/page.tsx`, only the `params` type's key renamed from `kurinId` to `kurinNumber` — the component still doesn't read that param, matching the design spec's decision that this URL segment is decorative):
 
@@ -765,13 +765,13 @@ export default function HurtokMembersPage({ params }: { params: Promise<{ kurinN
 }
 ```
 
-- [ ] **Step 3: Delete the old route folder**
+- [x] **Step 3: Delete the old route folder**
 
 ```bash
 git rm apps/web/app/[kurinId]/hurtky/[slug]/page.tsx
 ```
 
-- [ ] **Step 4: Update the hurtky list page's link**
+- [x] **Step 4: Update the hurtky list page's link**
 
 In `apps/web/app/hurtky/page.tsx`, change:
 
@@ -785,7 +785,7 @@ to:
           <Link key={h.id} href={`/${session?.kurinNumber}/hurtky/${h.slug}`}>
 ```
 
-- [ ] **Step 5: Add the change-kurin-number mutation hook**
+- [x] **Step 5: Add the change-kurin-number mutation hook**
 
 In `apps/web/lib/queries/kurin.ts`, add this export (keep the existing `useKurin`/`useChangeProbyProgram` as-is):
 
@@ -805,7 +805,7 @@ export function useChangeKurinNumber(kurinId: string) {
 }
 ```
 
-- [ ] **Step 6: Add the editable number field to `/kurin`**
+- [x] **Step 6: Add the editable number field to `/kurin`**
 
 Open `apps/web/app/kurin/page.tsx`. Add the import:
 
@@ -879,7 +879,7 @@ to:
 
 (`canChangeProgram` already exists in this file, reused here since it's the same `session?.role === 'ZVYAZKOVYI'` check. This file does not currently import `accessErrorMessage` — add `import { accessErrorMessage } from '@/lib/error-message';` as a new import line at the top of the file, alongside the existing `Card`/`Button`/`Input`/`Label` imports.)
 
-- [ ] **Step 7: Write the e2e test**
+- [x] **Step 7: Write the e2e test**
 
 Create `apps/web/e2e/kurin-number.spec.ts`:
 
@@ -904,14 +904,14 @@ test('lets zvyazkovyi change their kurin number from the settings page', async (
 
 (`seedKurinWithZvyazkovyi` in `apps/web/e2e/helpers/seed.ts:44` passes `kurinNumber: '1'` explicitly to `/admin/kurins` — the seeded kurin's number is always exactly `'1'`, not auto-generated, so the input's `placeholder={kurin.kurinNumber}` is always `'1'` in this test.)
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `cd apps/web && npx tsc --noEmit` — expect clean.
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test`
 Expected: the full suite passes, including the new `kurin-number.spec.ts` and the pre-existing `hurtok-members.spec.ts` (which navigates through `/hurtky` to the renamed route — confirm its assertion `toHaveURL(/\/hurtky\/vovky$/)` still matches, since it doesn't anchor on the first path segment's name, only the trailing `/hurtky/vovky` part, so the rename from `[kurinId]` to `[kurinNumber]` shouldn't break it — but the actual VALUE in that segment changes from a UUID to a `kurinNumber` value, which that test's regex doesn't care about either way).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/app/api/session/route.ts "apps/web/app/[kurinNumber]" apps/web/app/hurtky/page.tsx apps/web/lib/queries/kurin.ts apps/web/app/kurin/page.tsx apps/web/e2e/kurin-number.spec.ts

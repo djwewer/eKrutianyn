@@ -35,7 +35,7 @@
 - Consumes: `CurrentUserPayload` (`apps/api/src/common/decorators/current-user.decorator.ts`, existing — has `userId`, `role`, `kurinId`, `isKurinniy`), `JwtAuthGuard`/`RolesGuard` (existing, `apps/api/src/common/guards/`).
 - Produces: `GET /users/:junakId/guardian-contacts` (200 → `GuardianContact[]`, each `{ id, name, phone, role, email, createdAt, updatedAt }`, ordered by `createdAt` ascending). `POST /users/:junakId/guardian-contacts` (body `{ name, phone, role?, email? }`, 200/201 → the created record). `PATCH /users/:junakId/guardian-contacts/:guardianId` (body any subset of `{ name, phone, role, email }`, 200/201 → the updated record, 404 if `guardianId` doesn't belong to `junakId`). `DELETE /users/:junakId/guardian-contacts/:guardianId` (200/201 → `{ success: true }`). All four: 403 if actor isn't `ZVYAZKOVYI`/`isKurinniy`; 404 if `junakId` isn't a `JUNAK` in actor's kurin. No later task in this plan depends on backend internals beyond these four HTTP routes — Task 2 (frontend) consumes only the HTTP contract above.
 
-- [ ] **Step 1: Add the schema additions**
+- [x] **Step 1: Add the schema additions**
 
 Open `apps/api/prisma/schema.prisma`. Add this model anywhere after the `KurinPosition` model:
 
@@ -59,7 +59,7 @@ In the `User` model, add this line right after the existing `positionsRemoved  K
   guardianContacts  GuardianContact[] @relation("JunakGuardians")
 ```
 
-- [ ] **Step 2: Generate and apply the migration**
+- [x] **Step 2: Generate and apply the migration**
 
 Run (from `apps/api/`, against your local dev database):
 
@@ -69,7 +69,7 @@ npx prisma migrate dev --name add_guardian_contacts
 
 Expected: it prints `Your database is now in sync with your schema`, and the generated `migration.sql` contains only `CREATE TABLE "GuardianContact"` and `ADD CONSTRAINT` (the FK to `User`) — no `ALTER TABLE` on `User`'s existing columns (the new relation field on `User` is virtual — Prisma doesn't add a column for the "many" side of a relation). If you see anything touching an existing column, stop — Step 1 was applied incorrectly.
 
-- [ ] **Step 3: Write the DTOs**
+- [x] **Step 3: Write the DTOs**
 
 Create `apps/api/src/guardian-contacts/dto/create-guardian-contact.dto.ts`:
 
@@ -97,7 +97,7 @@ export class UpdateGuardianContactDto {
 }
 ```
 
-- [ ] **Step 4: Write the service**
+- [x] **Step 4: Write the service**
 
 Create `apps/api/src/guardian-contacts/guardian-contacts.service.ts`:
 
@@ -162,7 +162,7 @@ export class GuardianContactsService {
 }
 ```
 
-- [ ] **Step 5: Write the controller**
+- [x] **Step 5: Write the controller**
 
 Create `apps/api/src/guardian-contacts/guardian-contacts.controller.ts`:
 
@@ -217,7 +217,7 @@ export class GuardianContactsController {
 
 (No `@Roles()` decorator on any route — the access rule is `ZVYAZKOVYI OR isKurinniy`, which the simple `@Roles()` allowlist can't express; `RolesGuard` allows any authenticated request through when no `@Roles()` metadata is present, matching the exact pattern already used by `updateContactInfo`'s controller method, and the real check lives in the service's `assertAccess`.)
 
-- [ ] **Step 6: Write the module**
+- [x] **Step 6: Write the module**
 
 Create `apps/api/src/guardian-contacts/guardian-contacts.module.ts`:
 
@@ -235,7 +235,7 @@ import { GuardianContactsService } from './guardian-contacts.service';
 export class GuardianContactsModule {}
 ```
 
-- [ ] **Step 7: Wire into `AppModule`**
+- [x] **Step 7: Wire into `AppModule`**
 
 In `apps/api/src/app.module.ts`, add the import:
 
@@ -245,7 +245,7 @@ import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.mo
 
 Add `GuardianContactsModule` to the `imports` array (anywhere, e.g. right after `KurinPositionsModule`).
 
-- [ ] **Step 8: Write the e2e test**
+- [x] **Step 8: Write the e2e test**
 
 Create `apps/api/test/guardian-contacts.e2e-spec.ts`:
 
@@ -400,7 +400,7 @@ describe('guardian-contacts (e2e)', () => {
 });
 ```
 
-- [ ] **Step 9: Run the tests**
+- [x] **Step 9: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand guardian-contacts`
 Expected: 5 tests pass.
@@ -410,7 +410,7 @@ Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 Run the full e2e suite to confirm nothing already broke: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 Expected: every test still passes.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/guardian-contacts apps/api/src/app.module.ts apps/api/test/guardian-contacts.e2e-spec.ts
@@ -431,7 +431,7 @@ git commit -m "feat: add guardian-contacts CRUD module"
 - Consumes: `GET/POST /users/:junakId/guardian-contacts`, `PATCH/DELETE /users/:junakId/guardian-contacts/:guardianId` (Task 1), `apiFetch` (`apps/web/lib/api-client.ts`, existing), `useSession` (`apps/web/lib/session-client.ts`, existing), `useUser` (`apps/web/lib/queries/users.ts`, existing).
 - Produces: `GuardianContact` type (`apps/web/lib/types.ts`) — no later task in this plan depends on it beyond this task's own page.
 
-- [ ] **Step 1: Add the type**
+- [x] **Step 1: Add the type**
 
 In `apps/web/lib/types.ts`, add this type anywhere (e.g. right after `KurinPosition`):
 
@@ -445,7 +445,7 @@ export interface GuardianContact {
 }
 ```
 
-- [ ] **Step 2: Write the query hooks**
+- [x] **Step 2: Write the query hooks**
 
 Create `apps/web/lib/queries/guardian-contacts.ts`:
 
@@ -503,7 +503,7 @@ export function useRemoveGuardianContact(junakId: string) {
 }
 ```
 
-- [ ] **Step 3: Add the "Опікуни" section to the junak detail page**
+- [x] **Step 3: Add the "Опікуни" section to the junak detail page**
 
 Open `apps/web/app/users/[id]/page.tsx`. Add these imports at the top, alongside the existing ones:
 
@@ -659,7 +659,7 @@ Add this new `<Card>` right after the existing "Контакти" `<Card>` block
       )}
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/guardian-contacts.spec.ts`:
 
@@ -700,14 +700,14 @@ test('lets zvyazkovyi add and remove a guardian contact from the junak detail pa
 
 Check `apps/web/e2e/helpers/proby-seed.ts`'s `createUserAs` return shape before using `junak.id` above — if it doesn't already return the created user's `id`, adjust this test to fetch it another way (e.g. via the zvyazkovyi's `GET /users?role=JUNAK` list) rather than modifying the shared helper.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd apps/web && npx tsc --noEmit` — expect clean.
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test`
 Expected: the full suite passes, including the new `guardian-contacts.spec.ts` and every pre-existing spec.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/lib/queries/guardian-contacts.ts apps/web/app/users/[id]/page.tsx apps/web/e2e/guardian-contacts.spec.ts

@@ -41,7 +41,7 @@
 - Consumes: `PrismaService` (`apps/api/src/prisma/prisma.service.ts`), `JwtAuthGuard` (`apps/api/src/common/guards/jwt-auth.guard.ts`), `CurrentUser`/`CurrentUserPayload` (`apps/api/src/common/decorators/current-user.decorator.ts`) — all pre-existing.
 - Produces: `GET /proby-programs/current` — no other task depends on this.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/proby-catalog.e2e-spec.ts`:
 
@@ -118,12 +118,12 @@ describe('Proby catalog (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/proby-catalog.e2e-spec.ts`
 Expected: FAIL — `Cannot GET /proby-programs/current` (404, route doesn't exist yet)
 
-- [ ] **Step 3: Create the service**
+- [x] **Step 3: Create the service**
 
 Create `apps/api/src/proby-catalog/proby-catalog.service.ts`:
 
@@ -164,7 +164,7 @@ export class ProbyCatalogService {
 }
 ```
 
-- [ ] **Step 4: Create the controller**
+- [x] **Step 4: Create the controller**
 
 Create `apps/api/src/proby-catalog/proby-catalog.controller.ts`:
 
@@ -186,7 +186,7 @@ export class ProbyCatalogController {
 }
 ```
 
-- [ ] **Step 5: Create the module**
+- [x] **Step 5: Create the module**
 
 Create `apps/api/src/proby-catalog/proby-catalog.module.ts`:
 
@@ -204,7 +204,7 @@ import { ProbyCatalogService } from './proby-catalog.service';
 export class ProbyCatalogModule {}
 ```
 
-- [ ] **Step 6: Wire the module into AppModule**
+- [x] **Step 6: Wire the module into AppModule**
 
 In `apps/api/src/app.module.ts`, add the import:
 
@@ -230,12 +230,12 @@ And add `ProbyCatalogModule` to the `imports` array (anywhere in the list — or
   ],
 ```
 
-- [ ] **Step 7: Run the tests to verify they pass**
+- [x] **Step 7: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/proby-catalog.e2e-spec.ts`
 Expected: PASS — 3 tests passed
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/proby-catalog apps/api/src/app.module.ts apps/api/test/proby-catalog.e2e-spec.ts
@@ -255,7 +255,7 @@ git commit -m "feat: add GET /proby-programs/current read endpoint"
 - Consumes: `PrismaService`, `JwtAuthGuard`, `RolesGuard`, `CurrentUser`/`CurrentUserPayload` — all pre-existing.
 - Produces: `GET /kurins/me` — no other task depends on this.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/kurins-me.e2e-spec.ts`:
 
@@ -314,12 +314,12 @@ describe('Kurins self-read (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/kurins-me.e2e-spec.ts`
 Expected: FAIL — `Cannot GET /kurins/me` (404, route doesn't exist yet)
 
-- [ ] **Step 3: Add the service method**
+- [x] **Step 3: Add the service method**
 
 In `apps/api/src/kurins/kurins.service.ts`, add this method inside the `KurinsService` class (alongside the existing `changeProbyProgram`):
 
@@ -333,7 +333,7 @@ In `apps/api/src/kurins/kurins.service.ts`, add this method inside the `KurinsSe
   }
 ```
 
-- [ ] **Step 4: Add the controller route**
+- [x] **Step 4: Add the controller route**
 
 In `apps/api/src/kurins/kurins.controller.ts`, update the import line to add `Get`:
 
@@ -378,17 +378,17 @@ export class KurinsController {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/kurins-me.e2e-spec.ts`
 Expected: PASS — 2 tests passed
 
-- [ ] **Step 6: Run the full kurins e2e suite to check for regressions**
+- [x] **Step 6: Run the full kurins e2e suite to check for regressions**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/kurins-proby-program.e2e-spec.ts`
 Expected: PASS — no regressions from the `me` route insertion
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/kurins apps/api/test/kurins-me.e2e-spec.ts
@@ -416,7 +416,7 @@ git commit -m "feat: add GET /kurins/me read endpoint"
 - ZVYAZKOVYI: list/detail JUNAK and VYKHOVNYK users in their kurin. With no `role` filter, both roles are returned together.
 - `?hurtokId=` filter: 404 if the hurtok doesn't belong to the caller's kurin, or (for VYKHOVNYK) isn't one of their assignments.
 
-- [ ] **Step 1: Write the failing e2e tests for the list endpoint**
+- [x] **Step 1: Write the failing e2e tests for the list endpoint**
 
 Create `apps/api/test/users-list.e2e-spec.ts`:
 
@@ -561,12 +561,12 @@ describe('GET /users (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/users-list.e2e-spec.ts`
 Expected: FAIL — `GET /users` returns 404 (route doesn't exist yet)
 
-- [ ] **Step 3: Write the failing e2e tests for the detail endpoint**
+- [x] **Step 3: Write the failing e2e tests for the detail endpoint**
 
 Create `apps/api/test/users-detail.e2e-spec.ts`:
 
@@ -704,12 +704,12 @@ describe('GET /users/:id (e2e)', () => {
 });
 ```
 
-- [ ] **Step 4: Run the tests to verify they fail**
+- [x] **Step 4: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/users-detail.e2e-spec.ts`
 Expected: FAIL — `GET /users/:id` returns 404 for every case including ones expected to be 200 (route doesn't exist yet)
 
-- [ ] **Step 5: Add the service methods**
+- [x] **Step 5: Add the service methods**
 
 In `apps/api/src/users/users.service.ts`, add these two methods inside the `UsersService` class (alongside the existing `create`, `updateContactInfo`, `findById`). This file needs `ForbiddenException` and `CurrentUserPayload` added to its imports:
 
@@ -855,7 +855,7 @@ Add these methods:
   }
 ```
 
-- [ ] **Step 6: Add the controller routes**
+- [x] **Step 6: Add the controller routes**
 
 In `apps/api/src/users/users.controller.ts`, update the imports:
 
@@ -909,17 +909,17 @@ export class UsersController {
 }
 ```
 
-- [ ] **Step 7: Run the tests to verify they pass**
+- [x] **Step 7: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/users-list.e2e-spec.ts test/users-detail.e2e-spec.ts`
 Expected: PASS — 12 tests passed (7 in `users-list.e2e-spec.ts` + 5 in `users-detail.e2e-spec.ts`)
 
-- [ ] **Step 8: Run the full users e2e suite to check for regressions**
+- [x] **Step 8: Run the full users e2e suite to check for regressions**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/users.e2e-spec.ts test/users-contact-info.e2e-spec.ts`
 Expected: PASS — no regressions from the new routes/imports
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/users apps/api/test/users-list.e2e-spec.ts apps/api/test/users-detail.e2e-spec.ts
@@ -958,7 +958,7 @@ extracted into a shared module-level constant in the same fix.
 - Consumes: `PrismaService`, `JwtAuthGuard`, `RolesGuard`, `Roles`, `CurrentUser`/`CurrentUserPayload` — all pre-existing.
 - Produces: `GET /vykhovnyk-assignments?hurtokId=` — no other task depends on this.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/vykhovnyk-assignments-list.e2e-spec.ts`:
 
@@ -1079,12 +1079,12 @@ describe('GET /vykhovnyk-assignments (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/vykhovnyk-assignments-list.e2e-spec.ts`
 Expected: FAIL — `GET /vykhovnyk-assignments` returns 403 for the zvyazkovyi/vykhovnyk cases (class-level `@Roles(Role.ZVYAZKOVYI)` blocks the route entirely, and no `list` method exists yet, so the whole file fails)
 
-- [ ] **Step 3: Add the service method**
+- [x] **Step 3: Add the service method**
 
 In `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.service.ts`, add this method inside the `VykhovnykAssignmentsService` class (alongside `assign`/`unassign`). This file needs `CurrentUserPayload` added to its imports:
 
@@ -1123,7 +1123,7 @@ import { AssignVykhovnykDto } from './dto/assign-vykhovnyk.dto';
   }
 ```
 
-- [ ] **Step 4: Update the controller**
+- [x] **Step 4: Update the controller**
 
 Replace the full contents of `apps/api/src/vykhovnyk-assignments/vykhovnyk-assignments.controller.ts` with:
 
@@ -1164,17 +1164,17 @@ export class VykhovnykAssignmentsController {
 
 Note: `@Roles` moved from the class level down to each individual method — `assign`/`unassign` keep the same `ZVYAZKOVYI`-only restriction as before, and `list` now allows both `ZVYAZKOVYI` and `VYKHOVNYK`.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/vykhovnyk-assignments-list.e2e-spec.ts`
 Expected: PASS — 5 tests passed
 
-- [ ] **Step 6: Run the full vykhovnyk-assignments e2e suite to check for regressions**
+- [x] **Step 6: Run the full vykhovnyk-assignments e2e suite to check for regressions**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/vykhovnyk-assignments.e2e-spec.ts`
 Expected: PASS — `assign`/`unassign` still behave exactly as before (still ZVYAZKOVYI-only)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/vykhovnyk-assignments apps/api/test/vykhovnyk-assignments-list.e2e-spec.ts
@@ -1194,7 +1194,7 @@ git commit -m "feat: add GET /vykhovnyk-assignments read endpoint"
 - Consumes: `PrismaService`, `JwtAuthGuard`, `RolesGuard`, `Roles`, `CurrentUser`/`CurrentUserPayload` — all pre-existing.
 - Produces: `GET /hurtky/:id/board` — no other task depends on this.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/hurtky-board.e2e-spec.ts`:
 
@@ -1325,12 +1325,12 @@ describe('GET /hurtky/:id/board (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/hurtky-board.e2e-spec.ts`
 Expected: FAIL — `Cannot GET /hurtky/:id/board` (404, route doesn't exist yet)
 
-- [ ] **Step 3: Add the service method**
+- [x] **Step 3: Add the service method**
 
 Replace the full contents of `apps/api/src/hurtky/hurtky.service.ts` with:
 
@@ -1401,7 +1401,7 @@ export class HurtkyService {
 }
 ```
 
-- [ ] **Step 4: Add the controller route**
+- [x] **Step 4: Add the controller route**
 
 Replace the full contents of `apps/api/src/hurtky/hurtky.controller.ts` with:
 
@@ -1439,17 +1439,17 @@ export class HurtkyController {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/hurtky-board.e2e-spec.ts`
 Expected: PASS — 6 tests passed
 
-- [ ] **Step 6: Run the full hurtky e2e suite to check for regressions**
+- [x] **Step 6: Run the full hurtky e2e suite to check for regressions**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/hurtky.e2e-spec.ts`
 Expected: PASS — `create`/`list` still behave exactly as before
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/hurtky apps/api/test/hurtky-board.e2e-spec.ts
@@ -1469,7 +1469,7 @@ git commit -m "feat: add GET /hurtky/:id/board aggregate view"
 - Consumes: `PrismaService`, `JwtAuthGuard`, `RolesGuard`, `Roles`, `CurrentUser`/`CurrentUserPayload` — all pre-existing.
 - Produces: `GET /approval-requests/:id` — no other task depends on this.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/approval-requests-detail.e2e-spec.ts`:
 
@@ -1629,12 +1629,12 @@ describe('GET /approval-requests/:id (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/approval-requests-detail.e2e-spec.ts`
 Expected: FAIL — `Cannot GET /approval-requests/:id` (404, route doesn't exist yet)
 
-- [ ] **Step 3: Add the service method**
+- [x] **Step 3: Add the service method**
 
 In `apps/api/src/approval-requests/approval-requests.service.ts`, add this method inside the `ApprovalRequestsService` class (alongside `create`, `list`, `approve`, `reject`):
 
@@ -1652,7 +1652,7 @@ In `apps/api/src/approval-requests/approval-requests.service.ts`, add this metho
   }
 ```
 
-- [ ] **Step 4: Add the controller route**
+- [x] **Step 4: Add the controller route**
 
 In `apps/api/src/approval-requests/approval-requests.controller.ts`, add this method inside the `ApprovalRequestsController` class, after `list`:
 
@@ -1664,17 +1664,17 @@ In `apps/api/src/approval-requests/approval-requests.controller.ts`, add this me
   }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/approval-requests-detail.e2e-spec.ts`
 Expected: PASS — 5 tests passed
 
-- [ ] **Step 6: Run the full approval-requests e2e suite to check for regressions**
+- [x] **Step 6: Run the full approval-requests e2e suite to check for regressions**
 
 Run: `DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- test/approval-requests-create.e2e-spec.ts test/approval-requests-decide.e2e-spec.ts`
 Expected: PASS — `create`/`list`/`approve`/`reject` still behave exactly as before
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/approval-requests apps/api/test/approval-requests-detail.e2e-spec.ts

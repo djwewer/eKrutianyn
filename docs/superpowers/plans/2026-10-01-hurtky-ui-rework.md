@@ -34,7 +34,7 @@
 **Interfaces:**
 - Produces: `Hurtok.foundedAt: DateTime?` — споживається Task 2 (бекенд) і Task 3 (фронтенд-типи).
 
-- [ ] **Step 1: Додати поле в схему**
+- [x] **Step 1: Додати поле в схему**
 
 У `apps/api/prisma/schema.prisma`, у моделі `Hurtok`, додати `foundedAt` (nullable, без значення за замовчуванням — не бекфілимо старі гуртки):
 
@@ -57,22 +57,22 @@ model Hurtok {
 }
 ```
 
-- [ ] **Step 2: Згенерувати і застосувати міграцію в dev-базі**
+- [x] **Step 2: Згенерувати і застосувати міграцію в dev-базі**
 
 Run: `cd apps/api && npx prisma migrate dev --name add_hurtok_founded_at`
 Expected: нова папка в `apps/api/prisma/migrations/`, вивід закінчується "Your database is now in sync with your schema."
 
-- [ ] **Step 3: Застосувати ту саму міграцію в test-базі**
+- [x] **Step 3: Застосувати ту саму міграцію в test-базі**
 
 Run: `cd apps/api && DATABASE_URL="postgresql://plast:plast@localhost:5432/plast_test" npx prisma migrate deploy`
 Expected: "1 migration found... Applied." (або "No pending migrations" якщо вже застосовано — не повинно бути помилок).
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations/
@@ -93,7 +93,7 @@ git commit -m "feat: add Hurtok.foundedAt column"
 - Consumes: `Hurtok.foundedAt` з Task 1.
 - Produces: `HurtkyService.update(hurtokId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload): Promise<Hurtok>`, `PATCH /hurtky/:id` (ZVYAZKOVYI only) — споживається Task 3's `useUpdateHurtok`. Також додає `foundedAt` у відповідь `getMembersBySlug()` — споживається Task 6 (модалка показує поточну дату) і Task 5 (`HurtokDetailPanel` показує дату в заголовку).
 
-- [ ] **Step 1: Написати падаючі e2e-тести**
+- [x] **Step 1: Написати падаючі e2e-тести**
 
 Create `apps/api/test/hurtky-update.e2e-spec.ts`:
 
@@ -212,12 +212,12 @@ describe('Hurtok update (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у падінні**
+- [x] **Step 2: Прогнати, впевнитись у падінні**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-update.e2e-spec.ts`
 Expected: FAIL — `404 Not Found` на кожному тесті (роут не існує).
 
-- [ ] **Step 3: Створити `UpdateHurtokDto`**
+- [x] **Step 3: Створити `UpdateHurtokDto`**
 
 Create `apps/api/src/hurtky/dto/update-hurtok.dto.ts`:
 
@@ -232,7 +232,7 @@ export class UpdateHurtokDto {
 }
 ```
 
-- [ ] **Step 4: Додати `update()` до `HurtkyService` і `foundedAt` у `getMembersBySlug()`**
+- [x] **Step 4: Додати `update()` до `HurtkyService` і `foundedAt` у `getMembersBySlug()`**
 
 У `apps/api/src/hurtky/hurtky.service.ts`, додати імпорт DTO:
 
@@ -271,7 +271,7 @@ import { UpdateHurtokDto } from './dto/update-hurtok.dto';
 
 (Замінити існуючий рядок `hurtok: { id: hurtok.id, name: hurtok.name, slug: hurtok.slug, number: hurtok.number, archivedAt: hurtok.archivedAt },` на наведений вище багаторядковий варіант — лише додає поле `foundedAt`, решта полів і логіка `members.map(...)` далі лишаються без змін.)
 
-- [ ] **Step 5: Додати роут у контролер**
+- [x] **Step 5: Додати роут у контролер**
 
 У `apps/api/src/hurtky/hurtky.controller.ts`, додати імпорт DTO:
 
@@ -289,22 +289,22 @@ import { UpdateHurtokDto } from './dto/update-hurtok.dto';
   }
 ```
 
-- [ ] **Step 6: Прогнати тести, впевнитись у проходженні**
+- [x] **Step 6: Прогнати тести, впевнитись у проходженні**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-update.e2e-spec.ts`
 Expected: PASS (5/5)
 
-- [ ] **Step 7: Повна регресія e2e-пакету**
+- [x] **Step 7: Повна регресія e2e-пакету**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: усі проходять
 
-- [ ] **Step 8: Typecheck**
+- [x] **Step 8: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/hurtky/dto/update-hurtok.dto.ts apps/api/src/hurtky/hurtky.service.ts apps/api/src/hurtky/hurtky.controller.ts apps/api/test/hurtky-update.e2e-spec.ts
@@ -323,7 +323,7 @@ git commit -m "feat: add PATCH /hurtky/:id for editing founding date"
 - Consumes: `PATCH /hurtky/:id` з Task 2.
 - Produces: `Hurtok.foundedAt: string | null`, `HurtokMembers.hurtok.foundedAt: string | null`, `useUpdateHurtok(id: string)` — споживається Task 6.
 
-- [ ] **Step 1: Додати `foundedAt` до типів**
+- [x] **Step 1: Додати `foundedAt` до типів**
 
 У `apps/web/lib/types.ts`, у `Hurtok`:
 
@@ -347,7 +347,7 @@ export interface HurtokMembers {
 }
 ```
 
-- [ ] **Step 2: Додати `useUpdateHurtok` до `apps/web/lib/queries/hurtky.ts`**
+- [x] **Step 2: Додати `useUpdateHurtok` до `apps/web/lib/queries/hurtky.ts`**
 
 Додати до файлу (після `useArchiveHurtok`):
 
@@ -368,12 +368,12 @@ export function useUpdateHurtok(id: string, slug: string | undefined) {
 }
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/lib/queries/hurtky.ts
@@ -391,7 +391,7 @@ git commit -m "feat: add frontend types and useUpdateHurtok hook for founding da
 **Interfaces:**
 - Produces: `/users/new?hurtokId=<id>` попередньо вибирає гурток в обох формах — споживається Task 5 (кнопка "Додати юнака/чку" в `HurtokDetailPanel`).
 
-- [ ] **Step 1: Написати падаючий e2e-тест**
+- [x] **Step 1: Написати падаючий e2e-тест**
 
 Create `apps/web/e2e/users-new-hurtok-prefill.spec.ts`:
 
@@ -414,12 +414,12 @@ test('pre-fills the hurtok select on /users/new when hurtokId is in the query st
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у падінні**
+- [x] **Step 2: Прогнати, впевнитись у падінні**
 
 Run: `cd apps/web && npx playwright test e2e/users-new-hurtok-prefill.spec.ts --workers=1`
 Expected: FAIL — select лишається порожнім (`""`), бо query-параметр зараз ніде не читається.
 
-- [ ] **Step 3: Прочитати query-параметр і прокинути як початкове значення**
+- [x] **Step 3: Прочитати query-параметр і прокинути як початкове значення**
 
 У `apps/web/app/users/new/page.tsx`, змінити імпорти (додати `Suspense` і `useSearchParams`):
 
@@ -485,22 +485,22 @@ function NewUserPageContent() {
 }
 ```
 
-- [ ] **Step 4: Прогнати тест, впевнитись у проходженні**
+- [x] **Step 4: Прогнати тест, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/users-new-hurtok-prefill.spec.ts --workers=1`
 Expected: PASS (1/1)
 
-- [ ] **Step 5: Повна регресія Playwright-пакету**
+- [x] **Step 5: Повна регресія Playwright-пакету**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: усі проходять (існуючі тести на `/users/new`, якщо є, і далі мають проходити — пересвідчитись, що жодна форма не зламалась).
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/app/users/new/page.tsx apps/web/e2e/users-new-hurtok-prefill.spec.ts
@@ -522,7 +522,7 @@ git commit -m "feat: pre-fill hurtok on /users/new via hurtokId query param"
 
 Цей крок — чистий рефакторинг (винесення існуючого вмісту сторінки в компонент) плюс одна нова кнопка. Поведінка сторінки `/[kurinNumber]/hurtky/[slug]` не повинна змінитись, окрім появи нової кнопки.
 
-- [ ] **Step 1: Написати падаючий e2e-тест на нову кнопку**
+- [x] **Step 1: Написати падаючий e2e-тест на нову кнопку**
 
 Create `apps/web/e2e/hurtok-add-junak-link.spec.ts`:
 
@@ -550,12 +550,12 @@ test('shows a link to add a junak directly into this hurtok', async ({ page }) =
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у падінні**
+- [x] **Step 2: Прогнати, впевнитись у падінні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-add-junak-link.spec.ts --workers=1`
 Expected: FAIL — такого лінка ще немає.
 
-- [ ] **Step 3: Створити `HurtokDetailPanel`**
+- [x] **Step 3: Створити `HurtokDetailPanel`**
 
 Create `apps/web/components/hurtok-detail-panel.tsx` — вміст ідентичний поточній сторінці, плюс нова кнопка "Додати юнака/чку" (видима звʼязковому й курінному, як і `/users/new` сам по собі), плюс порожній `onOpenSettings` проп, який Task 6 заповнить реальною модалкою (тут — просто кнопка "Налаштування", що поки нічого не робить, щоб Task 6 міг додати логіку, не чіпаючи цей компонент повторно зайвий раз):
 
@@ -657,7 +657,7 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
 
 **Важливо:** кнопка "Розформувати гурток" зі старої назви тепер видалена звідси окремим блоком — вона переїде в модалку налаштувань у Task 6 (разом з заміною кнопки-плейсхолдера "Налаштування" на реальну). Поки що в цьому кроці кнопка "Розформувати гурток" ТИМЧАСОВО лишається тут же (блок `canArchive`), щоб не губити функціональність між Task 5 і Task 6 — Task 6 перенесе цей блок усередину модалки і видалить його звідси.
 
-- [ ] **Step 4: Переписати сторінку, щоб використовувати новий компонент**
+- [x] **Step 4: Переписати сторінку, щоб використовувати новий компонент**
 
 Replace увесь вміст `apps/web/app/[kurinNumber]/hurtky/[slug]/page.tsx`:
 
@@ -673,22 +673,22 @@ export default function HurtokMembersPage({ params }: { params: Promise<{ kurinN
 }
 ```
 
-- [ ] **Step 5: Прогнати новий тест, впевнитись у проходженні**
+- [x] **Step 5: Прогнати новий тест, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-add-junak-link.spec.ts --workers=1`
 Expected: PASS (1/1)
 
-- [ ] **Step 6: Повна регресія Playwright-пакету**
+- [x] **Step 6: Повна регресія Playwright-пакету**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: усі проходять, зокрема `hurtok-archive.spec.ts` і `user-archive.spec.ts` (не повинні зламатись рефакторингом).
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/components/hurtok-detail-panel.tsx apps/web/app/[kurinNumber]/hurtky/[slug]/page.tsx apps/web/e2e/hurtok-add-junak-link.spec.ts
@@ -709,7 +709,7 @@ git commit -m "refactor: extract HurtokDetailPanel, add link to add a junak into
 - Consumes: `useUpdateHurtok` (Task 3), `useKurinPositions`/`useAssignPosition`/`useRemovePosition` (існують), `useUsers`/`useVykhovnykAssignments`/`useAssignVykhovnyk`/`useUnassignVykhovnyk` (існують), `useArchiveHurtok` (існує).
 - Produces: `<HurtokSettingsDialog hurtok={...} members={...} open={boolean} onOpenChange={(open) => void} />` — споживається лише `HurtokDetailPanel` у цьому ж завданні (і далі переносно в Task 7 через сам `HurtokDetailPanel`, без змін).
 
-- [ ] **Step 1: Написати падаючі e2e-тести**
+- [x] **Step 1: Написати падаючі e2e-тести**
 
 Create `apps/web/e2e/hurtok-settings.spec.ts`:
 
@@ -865,12 +865,12 @@ test('disables disbanding a hurtok that still has a junak, enables it once empty
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у падінні**
+- [x] **Step 2: Прогнати, впевнитись у падінні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-settings.spec.ts --workers=1`
 Expected: FAIL — кнопка "Налаштування" не відкриває нічого (зараз вона `disabled` і без обробника).
 
-- [ ] **Step 3: Створити обгортку `Dialog` над `@base-ui/react/dialog`**
+- [x] **Step 3: Створити обгортку `Dialog` над `@base-ui/react/dialog`**
 
 Create `apps/web/components/ui/dialog.tsx`:
 
@@ -912,7 +912,7 @@ export { Dialog, DialogContent, DialogTitle };
 
 **Примітка:** навмисно без обгортки над `DialogPrimitive.Close` — Base UI (на відміну від Radix) не має пропу `asChild`, лише `render` (пропс, що приймає `React.ReactElement`). Щоб не розбиратись із цим API заради єдиної кнопки "Закрити", `HurtokSettingsDialog` керує закриттям напряму через уже контрольований `onOpenChange` проп (див. Step 4) — простіше і без нового незвіреного API.
 
-- [ ] **Step 4: Створити `HurtokSettingsDialog`**
+- [x] **Step 4: Створити `HurtokSettingsDialog`**
 
 Create `apps/web/components/hurtok-settings-dialog.tsx`:
 
@@ -1132,7 +1132,7 @@ export function HurtokSettingsDialog({
 }
 ```
 
-- [ ] **Step 5: Прибрати стару кнопку "Розформувати гурток" з `HurtokDetailPanel`, підключити `HurtokSettingsDialog`**
+- [x] **Step 5: Прибрати стару кнопку "Розформувати гурток" з `HurtokDetailPanel`, підключити `HurtokSettingsDialog`**
 
 У `apps/web/components/hurtok-detail-panel.tsx`:
 
@@ -1228,12 +1228,12 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
 }
 ```
 
-- [ ] **Step 6: Прогнати тести, впевнитись у проходженні**
+- [x] **Step 6: Прогнати тести, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-settings.spec.ts --workers=1`
 Expected: PASS (5/5)
 
-- [ ] **Step 7: Оновити `hurtok-archive.spec.ts` під нову поведінку**
+- [x] **Step 7: Оновити `hurtok-archive.spec.ts` під нову поведінку**
 
 Архівація тепер лише через модалку "Налаштування", кнопка перейменована на
 "Розформувати гурток" і тепер завжди видима, але `disabled` замість того,
@@ -1311,17 +1311,17 @@ test('a vykhovnyk does not see the settings button at all', async ({ page }) => 
 });
 ```
 
-- [ ] **Step 8: Повна регресія Playwright-пакету**
+- [x] **Step 8: Повна регресія Playwright-пакету**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: усі проходять.
 
-- [ ] **Step 9: Typecheck**
+- [x] **Step 9: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/web/components/ui/dialog.tsx apps/web/components/hurtok-settings-dialog.tsx apps/web/components/hurtok-detail-panel.tsx apps/web/e2e/hurtok-settings.spec.ts
@@ -1350,7 +1350,7 @@ Task 6. `apps/web/lib/queries/vykhovnyk-assignments.ts` (хуки) НЕ
 VYKHOVNYK-фільтр на `/hurtky` (`useVykhovnykAssignments` для списку "Мої
 гуртки").
 
-- [ ] **Step 1: Видалити сторінку і тест призначення виховників**
+- [x] **Step 1: Видалити сторінку і тест призначення виховників**
 
 ```bash
 rm apps/web/app/vykhovnyk-assignments/page.tsx
@@ -1360,7 +1360,7 @@ rm apps/web/e2e/vykhovnyk-assignments.spec.ts
 (Якщо папка `apps/web/app/vykhovnyk-assignments/` після цього порожня —
 видалити й саму папку.)
 
-- [ ] **Step 2: Прибрати пункти навігації**
+- [x] **Step 2: Прибрати пункти навігації**
 
 У `apps/web/components/nav.tsx`, у `LINKS_BY_ROLE.ZVYAZKOVYI`, видалити
 рядок `{ href: '/vykhovnyk-assignments', label: 'Призначення' },`:
@@ -1392,7 +1392,7 @@ rm apps/web/e2e/vykhovnyk-assignments.spec.ts
   }
 ```
 
-- [ ] **Step 3: Прибрати HURTOK-секцію з `/positions`**
+- [x] **Step 3: Прибрати HURTOK-секцію з `/positions`**
 
 У `apps/web/app/positions/page.tsx`, видалити константу
 `HURTOK_POSITION_TYPES` (вона більше ніде не використовується після цього
@@ -1444,7 +1444,7 @@ const HURTOK_POSITION_TYPES: { value: PositionType; label: string }[] = [
 гурток). `PositionSlot`-компонент і `KURIN_POSITION_TYPES`-блок лишаються
 без змін.
 
-- [ ] **Step 4: Оновити `positions.spec.ts` — прибрати HURTOK-сценарій**
+- [x] **Step 4: Оновити `positions.spec.ts` — прибрати HURTOK-сценарій**
 
 У `apps/web/e2e/positions.spec.ts`, видалити третій тест цілком (`'warns
 before reassigning a hurtok position even when the conflicting position is
@@ -1457,7 +1457,7 @@ positions'` і `'warns before reassigning a junak who already holds another
 position in the same scope'`) — обидва вже коректно обмежені
 `kurinCard`-локатором і без змін проходитимуть далі.
 
-- [ ] **Step 5: Прогнати Playwright-тести на позиції й регресію**
+- [x] **Step 5: Прогнати Playwright-тести на позиції й регресію**
 
 Run: `cd apps/web && npx playwright test e2e/positions.spec.ts --workers=1`
 Expected: PASS (2/2)
@@ -1467,12 +1467,12 @@ Expected: усі проходять (зокрема `hurtok-settings.spec.ts` з
 тест на конфлікт посад має вже проходити, якщо Task 6 реалізовано
 правильно).
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/components/nav.tsx apps/web/app/positions/page.tsx apps/web/e2e/positions.spec.ts
@@ -1491,7 +1491,7 @@ git commit -m "refactor: remove vykhovnyk-assignments page and HURTOK positions 
 **Interfaces:**
 - Consumes: `<HurtokDetailPanel slug={string} />` з Task 5/6, `useHurtky()` (існує).
 
-- [ ] **Step 1: Написати падаючі e2e-тести**
+- [x] **Step 1: Написати падаючі e2e-тести**
 
 Create `apps/web/e2e/hurtky-accordion.spec.ts`:
 
@@ -1540,12 +1540,12 @@ test('keeps two rows expanded at the same time', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у падінні**
+- [x] **Step 2: Прогнати, впевнитись у падінні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtky-accordion.spec.ts --workers=1`
 Expected: FAIL — клік на назву гуртка зараз веде на окрему сторінку, а не розгортає рядок.
 
-- [ ] **Step 3: Переписати `/hurtky` як акордеон**
+- [x] **Step 3: Переписати `/hurtky` як акордеон**
 
 Replace увесь вміст `apps/web/app/hurtky/page.tsx`:
 
@@ -1647,12 +1647,12 @@ export default function HurtkyPage() {
 }
 ```
 
-- [ ] **Step 4: Прогнати тести, впевнитись у проходженні**
+- [x] **Step 4: Прогнати тести, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtky-accordion.spec.ts --workers=1`
 Expected: PASS (2/2)
 
-- [ ] **Step 5: Оновити `hurtok-members.spec.ts` під нову поведінку**
+- [x] **Step 5: Оновити `hurtok-members.spec.ts` під нову поведінку**
 
 Цей існуючий тест очікує, що клік на картку гуртка на `/hurtky` змінює URL на
 `/hurtky/vovky` — тепер клік лише розгортає рядок, URL лишається `/hurtky`.
@@ -1691,17 +1691,17 @@ test('lets zvyazkovyi expand a hurtok row and navigate to a member profile', asy
 });
 ```
 
-- [ ] **Step 6: Повна регресія Playwright-пакету**
+- [x] **Step 6: Повна регресія Playwright-пакету**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: усі проходять.
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/app/hurtky/page.tsx apps/web/e2e/hurtky-accordion.spec.ts
@@ -1719,7 +1719,7 @@ git commit -m "feat: turn /hurtky into an accordion with inline member tables"
 **Interfaces:**
 - Consumes: усе з Tasks 1–8.
 
-- [ ] **Step 1: Написати тест на використання модалки налаштувань прямо з розгорнутого рядка акордеону**
+- [x] **Step 1: Написати тест на використання модалки налаштувань прямо з розгорнутого рядка акордеону**
 
 Create `apps/web/e2e/hurtky-accordion-settings.spec.ts`:
 
@@ -1749,27 +1749,27 @@ test('opens the settings dialog from an accordion row and saves the founding dat
 });
 ```
 
-- [ ] **Step 2: Прогнати, впевнитись у проходженні**
+- [x] **Step 2: Прогнати, впевнитись у проходженні**
 
 Run: `cd apps/web && npx playwright test e2e/hurtky-accordion-settings.spec.ts --workers=1`
 Expected: PASS (1/1) — якщо все з Task 1–7 реалізовано правильно, цей тест має пройти без додаткових змін коду.
 
-- [ ] **Step 3: Повна регресія всього API e2e-пакету**
+- [x] **Step 3: Повна регресія всього API e2e-пакету**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: усі проходять, без регресій.
 
-- [ ] **Step 4: Повна регресія всього Playwright-пакету**
+- [x] **Step 4: Повна регресія всього Playwright-пакету**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: усі проходять, без регресій.
 
-- [ ] **Step 5: Typecheck обох застосунків**
+- [x] **Step 5: Typecheck обох застосунків**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json && cd ../web && npx tsc --noEmit -p tsconfig.json`
 Expected: без помилок
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/e2e/hurtky-accordion-settings.spec.ts

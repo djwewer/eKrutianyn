@@ -29,7 +29,7 @@
 - Produces: `autoMapColumns(headers: string[], savedMapping?: { header: string; field: string }[]): Record<number, JunakImportField | ''>` — consumed directly by `page.tsx`, and by Task 2's file (same module).
 - Consumes: `JunakImportField` type from `@/lib/types` (already imported in `page.tsx`).
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 Create `apps/web/e2e/junak-import-auto-map.spec.ts`:
 
@@ -76,12 +76,12 @@ test('auto-maps obvious column headers on Крок 1, leaves an unknown header u
 });
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `cd apps/web && npx playwright test e2e/junak-import-auto-map.spec.ts --workers=1`
 Expected: FAIL — `selects.nth(0)` has value `''`, not `'FIRST_LAST_NAME'` (no auto-map exists yet).
 
-- [ ] **Step 3: Create the auto-map module**
+- [x] **Step 3: Create the auto-map module**
 
 Create `apps/web/lib/junak-import-auto-map.ts`:
 
@@ -156,7 +156,7 @@ export function autoMapColumns(
 }
 ```
 
-- [ ] **Step 4: Wire it into the wizard**
+- [x] **Step 4: Wire it into the wizard**
 
 In `apps/web/app/suddivstvo/junak-import/page.tsx`, add the import next to the other `@/lib/...` imports:
 
@@ -177,17 +177,17 @@ Then, immediately after the existing `const dataRows = rawRows.slice(1);` line, 
 
 (`status` and `header` are already in scope at that point in the component; `setColumnMapping` is the existing state setter.)
 
-- [ ] **Step 5: Run the test to confirm it passes**
+- [x] **Step 5: Run the test to confirm it passes**
 
 Run: `cd apps/web && npx playwright test e2e/junak-import-auto-map.spec.ts --workers=1`
 Expected: PASS
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/lib/junak-import-auto-map.ts apps/web/app/suddivstvo/junak-import/page.tsx apps/web/e2e/junak-import-auto-map.spec.ts
@@ -207,7 +207,7 @@ git commit -m "feat: auto-map obvious column headers in the junak import wizard"
 - Consumes: `autoMapColumns` from Task 1 (same file) — untouched by this task.
 - Produces: `autoMapPositionValues(rawValues: string[], savedMapping?: { rawValue: string; positionType: string | null }[]): Record<string, string>` — consumed by `page.tsx`.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 Append to `apps/web/e2e/junak-import-auto-map.spec.ts`:
 
@@ -257,12 +257,12 @@ test('auto-maps exact position values on Крок 2, leaves deputy roles and typ
 });
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `cd apps/web && npx playwright test e2e/junak-import-auto-map.spec.ts --workers=1`
 Expected: FAIL — the "Суддя" select has value `''`, not `'SUDDIA'` (no auto-map for position values yet). (Task 1's test should still pass.)
 
-- [ ] **Step 3: Add `autoMapPositionValues` to the module**
+- [x] **Step 3: Add `autoMapPositionValues` to the module**
 
 Append to `apps/web/lib/junak-import-auto-map.ts`:
 
@@ -301,7 +301,7 @@ export function autoMapPositionValues(
 
 (`normalize` already exists in this file from Task 1 — reuse it, don't redefine it.)
 
-- [ ] **Step 4: Wire it into the wizard**
+- [x] **Step 4: Wire it into the wizard**
 
 In `apps/web/app/suddivstvo/junak-import/page.tsx`, update the import from Task 1 to:
 
@@ -320,22 +320,22 @@ Immediately after the existing `uniquePositionValues` `useMemo` block, add:
   }, [uniquePositionValues]);
 ```
 
-- [ ] **Step 5: Run both tests to confirm they pass**
+- [x] **Step 5: Run both tests to confirm they pass**
 
 Run: `cd apps/web && npx playwright test e2e/junak-import-auto-map.spec.ts --workers=1`
 Expected: PASS (both tests)
 
-- [ ] **Step 6: Run the full existing e2e suite for regressions**
+- [x] **Step 6: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: all pass — no other spec renders this wizard with pre-set mapping state that this change could disturb (`suddivstvo.spec.ts`'s tests either don't reach Крок 1 or hit the read-error path before any mapping state exists).
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/lib/junak-import-auto-map.ts apps/web/app/suddivstvo/junak-import/page.tsx apps/web/e2e/junak-import-auto-map.spec.ts

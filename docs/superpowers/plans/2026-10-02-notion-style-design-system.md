@@ -33,13 +33,13 @@
 **Interfaces:**
 - Produces: the Tailwind utility classes every later task's components use — `bg-background`, `text-foreground`, `bg-card`, `border-border`, `bg-primary`/`text-primary-foreground`, `bg-muted`/`text-muted-foreground`, and three **new** utilities this task introduces: `bg-accent`/`text-accent`/`border-accent` (brand blue), `bg-accent-soft`/`text-accent-soft` (light accent tint), `bg-warning-soft`/`text-warning-foreground` (amber "vacancy"/warning pills). Radius utilities `rounded-sm`/`rounded-md`/`rounded-lg` resolve to 8px/12px/16px.
 
-- [ ] **Step 1: Read the current file to confirm line numbers before editing**
+- [x] **Step 1: Read the current file to confirm line numbers before editing**
 
 Run: `grep -n "" apps/web/app/globals.css | sed -n '1,130p'`
 
 This file currently has two blocks you will change: the `@theme inline { ... }` block (which maps CSS variables to Tailwind utility names) and the `:root { ... }` / `.dark { ... }` blocks (which hold this app's actual default-shadcn gray values today).
 
-- [ ] **Step 2: Replace the `@theme inline` block**
+- [x] **Step 2: Replace the `@theme inline` block**
 
 Replace the entire existing `@theme inline { ... }` block with:
 
@@ -94,7 +94,7 @@ Replace the entire existing `@theme inline { ... }` block with:
 
 (This is the same block as before, with `--radius-*` now pinned instead of `calc()`-derived, and three new `--color-accent-soft`/`--color-warning-soft`/`--color-warning-foreground` lines added — every other line is unchanged, so nothing that already worked stops working.)
 
-- [ ] **Step 3: Replace the `:root` block**
+- [x] **Step 3: Replace the `:root` block**
 
 Replace the entire existing `:root { ... }` block with:
 
@@ -140,7 +140,7 @@ Replace the entire existing `:root { ... }` block with:
 
 (`--destructive` and the five `--chart-*` tokens are deliberately left at their existing default values — the spec has no warning/error color requirement beyond the amber "vacancy" pill, which uses the new `--warning-*` tokens instead, and no page currently renders a chart. `--sidebar-*` tokens are likewise unused today — no sidebar layout exists — and are set to sensible values consistent with the rest of the palette rather than left as stale gray defaults, in case something starts using them later.)
 
-- [ ] **Step 4: Replace the `.dark` block**
+- [x] **Step 4: Replace the `.dark` block**
 
 Replace the entire existing `.dark { ... }` block with:
 
@@ -183,17 +183,17 @@ Replace the entire existing `.dark { ... }` block with:
 }
 ```
 
-- [ ] **Step 5: Confirm nothing else in the codebase references a token this didn't account for**
+- [x] **Step 5: Confirm nothing else in the codebase references a token this didn't account for**
 
 Run: `grep -rn "var(--radius)" apps/web/components apps/web/app --include=*.tsx --include=*.css`
 Expected: zero matches, or only matches inside files this task itself just edited. (Button's `xs`/`sm` sizes use `min(var(--radius-md),10px)`-style arbitrary values, not `var(--radius)` directly, so this should come back empty — confirming the radius change is safe.)
 
-- [ ] **Step 6: Verify the app still builds**
+- [x] **Step 6: Verify the app still builds**
 
 Run: `cd apps/web && npx tsc --noEmit`
 Expected: no new errors (CSS changes don't affect TypeScript, this just confirms the repo's baseline is still clean before you commit).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/app/globals.css
@@ -211,11 +211,11 @@ git commit -m "feat(web): replace default shadcn theme with Notion-style tokens"
 - Consumes: nothing from Task 1.
 - Produces: the `--font-sans` CSS variable resolving to Manrope on every page (consumed implicitly by every component via the `font-sans`/`font-heading` Tailwind utilities Task 1 already wires up).
 
-- [ ] **Step 1: Read the current file**
+- [x] **Step 1: Read the current file**
 
 Run: `cat apps/web/app/layout.tsx`
 
-- [ ] **Step 2: Add the Manrope import and font instance**
+- [x] **Step 2: Add the Manrope import and font instance**
 
 Near the top of the file, add:
 
@@ -230,23 +230,23 @@ const manrope = Manrope({
 });
 ```
 
-- [ ] **Step 3: Apply the font's CSS variable to `<html>`**
+- [x] **Step 3: Apply the font's CSS variable to `<html>`**
 
 Find the root `<html ...>` element in the file's returned JSX and add `manrope.variable` to its `className` (creating a `className` prop if one doesn't already exist, or appending to it with a template string if it does — keep whatever `lang` or other existing attributes are already there).
 
-- [ ] **Step 4: Verify the build succeeds with the new font**
+- [x] **Step 4: Verify the build succeeds with the new font**
 
 Run: `cd apps/web && npm run build`
 Expected: build succeeds with no font-subset error. (If this specific command errors with a message naming an invalid subset for Manrope, that is the one acceptable reason to come back and remove `'cyrillic'` from the `subsets` array in Step 2 and rebuild — do not pre-emptively remove it without seeing that exact error, since Manrope does support Cyrillic on Google Fonts and the self-hosted subset is what gives every page's Ukrainian text crisp Manrope rendering instead of a fallback font.)
 
 Run: `rm -rf apps/web/.next` if you need a clean rebuild after fixing anything (Next.js's dev cache can go stale across edits — see `apps/web/AGENTS.md`).
 
-- [ ] **Step 5: Spot-check the font is actually served**
+- [x] **Step 5: Spot-check the font is actually served**
 
 Run: `cd apps/web && npm run dev &` then, once `http://localhost:3000` responds, `curl -s http://localhost:3000/login | grep -o 'Manrope' | head -1`
 Expected: prints `Manrope` (Next.js embeds the font's generated class/family name in the page's inlined styles). Stop the dev server afterward (`kill %1` or `fg` then Ctrl-C).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/app/layout.tsx
@@ -266,7 +266,7 @@ git commit -m "feat(web): load Manrope as the app's font"
 - Consumes: `cn` from `apps/web/lib/utils.ts` (`export function cn(...inputs: ClassValue[]): string`, already exists).
 - Produces: `Badge` — `function Badge({ className, variant, ...props }: React.ComponentProps<"span"> & VariantProps<typeof badgeVariants>)`, variants `"accent" | "warning" | "neutral"` (default `"accent"`). Later tasks (6, 8) import `{ Badge } from "@/components/ui/badge"`. Also produces the `apps/web/app/dev-ui-kit/page.tsx` file structure every later task appends a `<section>` to.
 
-- [ ] **Step 1: Write the Badge component**
+- [x] **Step 1: Write the Badge component**
 
 Create `apps/web/components/ui/badge.tsx`:
 
@@ -308,7 +308,7 @@ function Badge({
 export { Badge, badgeVariants }
 ```
 
-- [ ] **Step 2: Create the dev-ui-kit scaffold page with a Badge section**
+- [x] **Step 2: Create the dev-ui-kit scaffold page with a Badge section**
 
 Create `apps/web/app/dev-ui-kit/page.tsx`:
 
@@ -336,7 +336,7 @@ export default function DevUiKitPage() {
 }
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-badge.spec.ts`:
 
@@ -366,14 +366,14 @@ test('renders all three Badge variants with distinct backgrounds', async ({ page
 
 This route renders with no authentication and no backend data, so it does not need any seed helpers other Playwright specs use.
 
-- [ ] **Step 4: Run the test and confirm it passes**
+- [x] **Step 4: Run the test and confirm it passes**
 
 Restore the sandbox-local Chromium path in `apps/web/playwright.config.ts` if a prior `git` operation reverted it (see Global Constraints), then:
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-badge.spec.ts`
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/badge.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-badge.spec.ts
@@ -393,7 +393,7 @@ git commit -m "feat(web): add Badge component and dev-ui-kit test scaffold"
 - Consumes: `cn` from `apps/web/lib/utils.ts`.
 - Produces: `Avatar` — `function Avatar({ initials, className, ...props }: React.ComponentProps<"div"> & { initials: string })`. Later task (8) imports `{ Avatar } from "@/components/ui/avatar"`.
 
-- [ ] **Step 1: Write the Avatar component**
+- [x] **Step 1: Write the Avatar component**
 
 Create `apps/web/components/ui/avatar.tsx`:
 
@@ -422,7 +422,7 @@ function Avatar({
 export { Avatar }
 ```
 
-- [ ] **Step 2: Add an Avatar section to the dev-ui-kit page**
+- [x] **Step 2: Add an Avatar section to the dev-ui-kit page**
 
 In `apps/web/app/dev-ui-kit/page.tsx`, add the import `import { Avatar } from "@/components/ui/avatar"` and a new `<section>` right after the Badge section:
 
@@ -438,7 +438,7 @@ In `apps/web/app/dev-ui-kit/page.tsx`, add the import `import { Avatar } from "@
       </section>
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-avatar.spec.ts`:
 
@@ -453,12 +453,12 @@ test('renders avatar initials', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-avatar.spec.ts`
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/avatar.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-avatar.spec.ts
@@ -478,7 +478,7 @@ git commit -m "feat(web): add Avatar component"
 - Consumes: `cn` from `apps/web/lib/utils.ts`; `Accordion` from `@base-ui/react/accordion` (installed — exposes `Accordion.Root`, `Accordion.Item`, `Accordion.Header`, `Accordion.Trigger`, `Accordion.Panel`; `Accordion.Item` carries a `data-open` attribute when its panel is open; `Accordion.Panel` exposes a `--accordion-panel-height` CSS variable and `data-starting-style`/`data-ending-style` attributes for height transitions; `Accordion.Root`'s `multiple` prop defaults to `false`, i.e. single-item-open-at-a-time by default).
 - Produces: `AccordionRoot`, `AccordionItem`, `AccordionTrigger`, `AccordionContent` (all typed re-exports of the underlying primitives with this app's styling baked in). Project 2 (not this plan) will import these on real pages.
 
-- [ ] **Step 1: Write the Accordion component**
+- [x] **Step 1: Write the Accordion component**
 
 Create `apps/web/components/ui/accordion.tsx`:
 
@@ -577,7 +577,7 @@ function AccordionContent({
 export { AccordionRoot, AccordionItem, AccordionTrigger, AccordionContent }
 ```
 
-- [ ] **Step 2: Add a nested-accordion section to the dev-ui-kit page**
+- [x] **Step 2: Add a nested-accordion section to the dev-ui-kit page**
 
 In `apps/web/app/dev-ui-kit/page.tsx`, add the import:
 
@@ -621,7 +621,7 @@ and a new `<section>`:
       </section>
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-accordion.spec.ts`:
 
@@ -671,12 +671,12 @@ test('opening a second top-level item closes the first (single-open accordion)',
 });
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-accordion.spec.ts`
 Expected: 3 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/accordion.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-accordion.spec.ts
@@ -696,7 +696,7 @@ git commit -m "feat(web): add Accordion component with nested-expansion support"
 - Consumes: `cn`; `Select` from `@base-ui/react/select` (installed — exposes `Select.Root`, `Select.Trigger`, `Select.Value`, `Select.Icon`, `Select.Portal`, `Select.Positioner`, `Select.Popup`, `Select.Item`, `Select.ItemText`, `Select.ItemIndicator`); `Badge` is not used here.
 - Produces: `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem` (typed re-exports with this app's styling). Project 2 will use these to replace the hand-rolled `<select>` elements in `components/hurtok-settings-dialog.tsx` and position-assignment forms (not this plan's job).
 
-- [ ] **Step 1: Write the Select component**
+- [x] **Step 1: Write the Select component**
 
 Create `apps/web/components/ui/select.tsx`:
 
@@ -791,7 +791,7 @@ function SelectItem({
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem }
 ```
 
-- [ ] **Step 2: Add a Select section to the dev-ui-kit page**
+- [x] **Step 2: Add a Select section to the dev-ui-kit page**
 
 In `apps/web/app/dev-ui-kit/page.tsx`, add the import:
 
@@ -819,7 +819,7 @@ and a new `<section>`:
       </section>
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-select.spec.ts`:
 
@@ -841,12 +841,12 @@ test('opens the select, shows options, and selecting one updates the trigger', a
 });
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-select.spec.ts`
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/select.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-select.spec.ts
@@ -866,7 +866,7 @@ git commit -m "feat(web): add Select component"
 - Consumes: `cn`; `Switch` from `@base-ui/react/switch` (installed — exposes `Switch.Root`, `Switch.Thumb`; `Switch.Root` carries `data-checked`/`data-unchecked` attributes).
 - Produces: `ThemeToggle` — `function ThemeToggle(props: React.ComponentProps<typeof SwitchPrimitive.Root>)`. This component **only** flips the `dark` class on `document.documentElement` when clicked — it has no persistence (`localStorage`/cookie) and no system-preference detection. Deciding and building the app's actual theme-persistence architecture (so a toggle anywhere in the real app would mean something across page loads) is explicitly Project 2's job per the design spec's "Open questions" section — this component is the *visual control* only, proven to work in isolation.
 
-- [ ] **Step 1: Write the ThemeToggle component**
+- [x] **Step 1: Write the ThemeToggle component**
 
 Create `apps/web/components/ui/theme-toggle.tsx`:
 
@@ -905,7 +905,7 @@ function ThemeToggle({
 export { ThemeToggle }
 ```
 
-- [ ] **Step 2: Add a ThemeToggle section to the dev-ui-kit page**
+- [x] **Step 2: Add a ThemeToggle section to the dev-ui-kit page**
 
 In `apps/web/app/dev-ui-kit/page.tsx`, add the import `import { ThemeToggle } from "@/components/ui/theme-toggle"` and a new `<section>`:
 
@@ -918,7 +918,7 @@ In `apps/web/app/dev-ui-kit/page.tsx`, add the import `import { ThemeToggle } fr
       </section>
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-theme-toggle.spec.ts`:
 
@@ -945,12 +945,12 @@ test('clicking the theme toggle flips dark mode and the page background color ch
 });
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-theme-toggle.spec.ts`
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/theme-toggle.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-theme-toggle.spec.ts
@@ -970,7 +970,7 @@ git commit -m "feat(web): add ThemeToggle component (visual control only, no per
 - Consumes: `cn`; `Avatar` from `@/components/ui/avatar` (Task 4: `function Avatar({ initials, className, ...props }: ... & { initials: string })`).
 - Produces: `RowList` — `function RowList({ className, ...props }: React.ComponentProps<"div">)`; `Row` — `function Row({ initials, title, subtitle, children, className, ...props }: React.ComponentProps<"div"> & { initials: string; title: string; subtitle?: string })` (`children` renders trailing content, e.g. a `Badge`). Project 2 will use these to replace the four existing duplicated "avatar + name + meta + pill" row blocks across the app (provid, vykhovnyky, yunaky, hurtok members) — not this plan's job.
 
-- [ ] **Step 1: Write the RowList/Row component**
+- [x] **Step 1: Write the RowList/Row component**
 
 Create `apps/web/components/ui/row-list.tsx`:
 
@@ -1022,7 +1022,7 @@ function Row({
 export { RowList, Row }
 ```
 
-- [ ] **Step 2: Add a RowList section to the dev-ui-kit page**
+- [x] **Step 2: Add a RowList section to the dev-ui-kit page**
 
 In `apps/web/app/dev-ui-kit/page.tsx`, add the imports `import { RowList, Row } from "@/components/ui/row-list"` and `import { Badge } from "@/components/ui/badge"` (if `Badge` is not already imported from Task 3), and a new `<section>`:
 
@@ -1040,7 +1040,7 @@ In `apps/web/app/dev-ui-kit/page.tsx`, add the imports `import { RowList, Row } 
       </section>
 ```
 
-- [ ] **Step 3: Write the Playwright test**
+- [x] **Step 3: Write the Playwright test**
 
 Create `apps/web/e2e/dev-ui-kit-row-list.spec.ts`:
 
@@ -1060,12 +1060,12 @@ test('renders rows with avatar initials, name, subtitle, and trailing content', 
 });
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `cd apps/web && npx playwright test e2e/dev-ui-kit-row-list.spec.ts`
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/components/ui/row-list.tsx apps/web/app/dev-ui-kit/page.tsx apps/web/e2e/dev-ui-kit-row-list.spec.ts
@@ -1083,17 +1083,17 @@ git commit -m "feat(web): add RowList/Row primitive"
 - Consumes: nothing new.
 - Produces: nothing new — this task only verifies static correctness across everything built so far before the final regression task.
 
-- [ ] **Step 1: Run the TypeScript check**
+- [x] **Step 1: Run the TypeScript check**
 
 Run: `cd apps/web && npx tsc --noEmit`
 Expected: no errors. If there are errors, fix them in the relevant component file from Tasks 1-8 (not by changing the test files' expectations) and re-run until clean.
 
-- [ ] **Step 2: Run the linter**
+- [x] **Step 2: Run the linter**
 
 Run: `cd apps/web && npm run lint`
 Expected: no errors in any file this plan created or touched. Pre-existing warnings/errors in unrelated files (if any) are not this plan's responsibility to fix.
 
-- [ ] **Step 3: Commit (only if Step 1 or 2 required a fix)**
+- [x] **Step 3: Commit (only if Step 1 or 2 required a fix)**
 
 ```bash
 git add -A
@@ -1110,28 +1110,28 @@ If no fixes were needed, skip this step — there is nothing to commit.
 
 **Interfaces:** none — this is the plan's final confirmation gate.
 
-- [ ] **Step 1: Confirm no existing page or component's public file changed**
+- [x] **Step 1: Confirm no existing page or component's public file changed**
 
 Run: `git diff --stat $(git merge-base main HEAD) HEAD -- apps/web/app apps/web/components`
 Expected: every listed path under `apps/web/app/` is either `globals.css`, `layout.tsx`, or something under `app/dev-ui-kit/`; every listed path under `apps/web/components/` is a brand-new file under `components/ui/` (badge.tsx, avatar.tsx, accordion.tsx, select.tsx, theme-toggle.tsx, row-list.tsx) — no existing component file (`button.tsx`, `card.tsx`, `dialog.tsx`, `input.tsx`, `label.tsx`, `nav.tsx`, `hurtok-settings-dialog.tsx`, `kurin-*.tsx`, etc.) appears in this diff. If one does, stop and investigate — this plan is specified as additive-only and a change here means a constraint was violated somewhere in Tasks 1-9.
 
-- [ ] **Step 2: Run the full existing Playwright suite (not just this plan's new specs)**
+- [x] **Step 2: Run the full existing Playwright suite (not just this plan's new specs)**
 
 Restore the sandbox-local Chromium path in `apps/web/playwright.config.ts` if needed (see Global Constraints).
 
 Run: `cd apps/web && npx playwright test`
 Expected: every pre-existing spec still passes, plus the 8 new specs from Tasks 3-8 (1 + 1 + 3 + 1 + 1 + 1 = 8 new tests across those 6 files). Total pass count should be the prior full-suite count (confirm via `git log`/the ledger for the last known total, e.g. the kurin-consolidation plan's final count) plus 8.
 
-- [ ] **Step 3: Run the full API e2e suite**
+- [x] **Step 3: Run the full API e2e suite**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: the same suite/test counts as before this plan started (this plan touched zero files under `apps/api`) — confirms the "API is unaffected by a frontend-only change" claim from the spec's Testing section is actually true, not just assumed.
 
-- [ ] **Step 4: Open `/dev-ui-kit` manually one more time as a sanity check**
+- [x] **Step 4: Open `/dev-ui-kit` manually one more time as a sanity check**
 
 Run: `cd apps/web && npm run dev &`, then once ready, `curl -s http://localhost:3000/dev-ui-kit | grep -c 'data-slot='`
 Expected: a number greater than 0 (confirms the page renders server-side without crashing). Stop the dev server afterward.
 
-- [ ] **Step 5: Update the plan's own checklist and report**
+- [x] **Step 5: Update the plan's own checklist and report**
 
 No code change — this step is just confirming every checkbox above (Tasks 1-10) is now checked before considering Project 1 done. If following subagent-driven-development, this is also the point to update `.superpowers/sdd/progress.md` with a final "Project 1 complete" line and to decide, per that skill's own process, whether this branch gets reviewed/merged now or held until Project 2 is also ready (recommended: merge now — Project 1 is additive and complete on its own, and holding it only delays the token/font change from reaching `main`).

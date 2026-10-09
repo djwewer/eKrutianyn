@@ -64,7 +64,7 @@ Copied verbatim from the backend source so no task needs to re-derive them:
 **Interfaces:**
 - Produces: the `apps/web` workspace itself, Tailwind configured, shadcn/ui initialized with `Button`, `Card`, `Input`, `Label` components available at `@/components/ui/*`. Every later task imports from these.
 
-- [ ] **Step 1: Scaffold the app**
+- [x] **Step 1: Scaffold the app**
 
 Run from the repo root (`/Users/user/Documents/Cowork Playground/eKrutianyn`):
 
@@ -72,12 +72,12 @@ Run from the repo root (`/Users/user/Documents/Cowork Playground/eKrutianyn`):
 npx create-next-app@latest apps/web --typescript --tailwind --eslint --app --no-src-dir --import-alias "@/*" --use-npm --yes
 ```
 
-- [ ] **Step 2: Verify the workspace is picked up**
+- [x] **Step 2: Verify the workspace is picked up**
 
 Run: `cat package.json` (repo root)
 Expected: `"workspaces": ["apps/*"]` is already present — no edit needed. Run `npm install` from the repo root once to confirm `apps/web` resolves as a workspace member (no errors).
 
-- [ ] **Step 3: Initialize shadcn/ui**
+- [x] **Step 3: Initialize shadcn/ui**
 
 Run from `apps/web`:
 
@@ -86,7 +86,7 @@ npx shadcn@latest init -d
 npx shadcn@latest add button card input label
 ```
 
-- [ ] **Step 4: Install TanStack Query**
+- [x] **Step 4: Install TanStack Query**
 
 Run from `apps/web`:
 
@@ -94,7 +94,7 @@ Run from `apps/web`:
 npm install @tanstack/react-query
 ```
 
-- [ ] **Step 5: Add the env example**
+- [x] **Step 5: Add the env example**
 
 Create `apps/web/.env.local.example`:
 
@@ -104,12 +104,12 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ADMIN_API_KEY=dev-admin-key
 ```
 
-- [ ] **Step 6: Verify the app builds**
+- [x] **Step 6: Verify the app builds**
 
 Run: `cd apps/web && npm run build`
 Expected: build succeeds with the default Next.js starter page.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web package-lock.json
@@ -130,7 +130,7 @@ git commit -m "chore: scaffold Next.js frontend app"
 - Consumes: `process.env.API_URL` (set in `.env.local`, defaults to `http://localhost:3001`).
 - Produces: `apiFetch<T>(path: string, options?: RequestInit): Promise<T>` and `class ApiError extends Error { status: number; body: unknown }` from `lib/api-client.ts` — every later task's data-fetching code uses this. `Role` type and `CurrentUserPayload` type from `lib/types.ts` — every later task importing role/session types uses these exact names.
 
-- [ ] **Step 1: Create shared types**
+- [x] **Step 1: Create shared types**
 
 Create `apps/web/lib/types.ts`:
 
@@ -250,7 +250,7 @@ export interface Kurin {
 }
 ```
 
-- [ ] **Step 2: Create the API client**
+- [x] **Step 2: Create the API client**
 
 Create `apps/web/lib/api-client.ts`:
 
@@ -289,7 +289,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 }
 ```
 
-- [ ] **Step 3: Create the BFF proxy route**
+- [x] **Step 3: Create the BFF proxy route**
 
 Create `apps/web/app/api/backend/[...path]/route.ts`:
 
@@ -345,7 +345,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 }
 ```
 
-- [ ] **Step 4: Create the session route**
+- [x] **Step 4: Create the session route**
 
 Create `apps/web/app/api/session/route.ts`:
 
@@ -376,7 +376,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 5: Verify manually**
+- [x] **Step 5: Verify manually**
 
 Run: `cd apps/web && npm run build`
 Expected: build succeeds, no TypeScript errors.
@@ -389,7 +389,7 @@ curl -s http://localhost:3000/api/session
 ```
 Expected: `null` (no cookie set yet).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/app/api apps/web/lib
@@ -416,7 +416,7 @@ git commit -m "feat: add BFF proxy, session endpoint, and API client"
 - Consumes: `apiFetch` is NOT used here (auth route handlers talk to NestJS directly, not through the proxy, since they're the ones setting the cookie the proxy later reads).
 - Produces: `seedKurin(prisma-free, via admin API)` helpers in `e2e/helpers/seed.ts` — `seedProbyProgram(page_or_request)`, `seedKurinWithZvyazkovyi(...)`, `createUserAs(...)` — every later task's e2e test imports these. `loginAs(page, email, password)` from `e2e/helpers/auth.ts` — every later task's e2e test uses this to log in before exercising a screen.
 
-- [ ] **Step 1: Install Playwright**
+- [x] **Step 1: Install Playwright**
 
 Run from `apps/web`:
 
@@ -425,7 +425,7 @@ npm install -D @playwright/test
 npx playwright install chromium
 ```
 
-- [ ] **Step 2: Create the login page**
+- [x] **Step 2: Create the login page**
 
 Create `apps/web/app/login/page.tsx`:
 
@@ -508,7 +508,7 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 3: Create the Google sign-in button**
+- [x] **Step 3: Create the Google sign-in button**
 
 Create `apps/web/components/google-signin-button.tsx`:
 
@@ -577,7 +577,7 @@ export function GoogleSignInButton() {
 
 Note: Google SSO is not exercised by any Playwright test in this plan — it requires a real Google account and cannot be automated without live credentials. This is a documented limitation, not a gap in this task.
 
-- [ ] **Step 4: Create the auth route handlers**
+- [x] **Step 4: Create the auth route handlers**
 
 Create `apps/web/app/api/auth/login/route.ts`:
 
@@ -655,7 +655,7 @@ export async function POST() {
 }
 ```
 
-- [ ] **Step 5: Create the middleware**
+- [x] **Step 5: Create the middleware**
 
 Create `apps/web/middleware.ts`:
 
@@ -688,7 +688,7 @@ export const config = {
 };
 ```
 
-- [ ] **Step 6: Create the Playwright config**
+- [x] **Step 6: Create the Playwright config**
 
 Create `apps/web/playwright.config.ts`:
 
@@ -735,7 +735,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 7: Create the seed helper**
+- [x] **Step 7: Create the seed helper**
 
 Create `apps/web/e2e/helpers/seed.ts`:
 
@@ -801,7 +801,7 @@ export async function seedKurinWithZvyazkovyi(probyProgramId: string) {
 }
 ```
 
-- [ ] **Step 8: Create the login helper**
+- [x] **Step 8: Create the login helper**
 
 Create `apps/web/e2e/helpers/auth.ts`:
 
@@ -817,7 +817,7 @@ export async function loginAs(page: Page, email: string, password: string) {
 }
 ```
 
-- [ ] **Step 9: Write the login e2e test**
+- [x] **Step 9: Write the login e2e test**
 
 Create `apps/web/e2e/login.spec.ts`:
 
@@ -851,12 +851,12 @@ test('redirects an unauthenticated visitor to /login', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 10: Run the tests**
+- [x] **Step 10: Run the tests**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/login.spec.ts`
 Expected: 3 tests pass. (At this point in the plan, `/` still serves the default starter page `create-next-app` generated in Task 1 — Task 4 replaces it with the real role-based redirect. The login tests only assert the URL is no longer `/login` after a successful submit, which holds regardless of what `/` currently renders, so all 3 tests pass now and continue to pass unchanged after Task 4 replaces the page content.)
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add apps/web/app/login apps/web/app/api/auth apps/web/components/google-signin-button.tsx apps/web/middleware.ts apps/web/playwright.config.ts apps/web/e2e package.json package-lock.json
@@ -879,7 +879,7 @@ git commit -m "feat: add login, Google SSO, logout, and auth middleware"
 - Consumes: `apiFetch`, `CurrentUserPayload`, `Role` (Task 2); `loginAs`, `seedProbyProgram`, `seedKurinWithZvyazkovyi` (Task 3).
 - Produces: `useSession(): { data: CurrentUserPayload | null | undefined, isLoading: boolean }` from `lib/session-client.ts` — every later task's role-aware component uses this. `<QueryProvider>` wraps the whole app — no later task needs to re-wrap anything.
 
-- [ ] **Step 1: Create the QueryClientProvider with global 401 handling**
+- [x] **Step 1: Create the QueryClientProvider with global 401 handling**
 
 Create `apps/web/components/query-provider.tsx`:
 
@@ -913,7 +913,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-- [ ] **Step 2: Create the session hook**
+- [x] **Step 2: Create the session hook**
 
 Create `apps/web/lib/session-client.ts`:
 
@@ -936,7 +936,7 @@ export function useSession() {
 }
 ```
 
-- [ ] **Step 3: Create the nav component**
+- [x] **Step 3: Create the nav component**
 
 Create `apps/web/components/nav.tsx`:
 
@@ -996,7 +996,7 @@ export function Nav() {
 }
 ```
 
-- [ ] **Step 4: Wire the layout**
+- [x] **Step 4: Wire the layout**
 
 Replace the contents of `apps/web/app/layout.tsx` with:
 
@@ -1025,7 +1025,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 5: Replace the home page with the role-based redirect**
+- [x] **Step 5: Replace the home page with the role-based redirect**
 
 Replace the full contents of `apps/web/app/page.tsx` (currently the `create-next-app` starter page) with:
 
@@ -1057,7 +1057,7 @@ export default function HomePage() {
 }
 ```
 
-- [ ] **Step 6: Write the home-redirect e2e test**
+- [x] **Step 6: Write the home-redirect e2e test**
 
 Create `apps/web/e2e/home-redirect.spec.ts`:
 
@@ -1076,12 +1076,12 @@ test('redirects zvyazkovyi from / to /approval-requests', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/login.spec.ts e2e/home-redirect.spec.ts`
 Expected: all tests pass (the two Step-9-Task-3 tests that depended on `/` now correctly assert the final destination).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/components/query-provider.tsx apps/web/lib/session-client.ts apps/web/components/nav.tsx apps/web/app/layout.tsx apps/web/app/page.tsx apps/web/e2e/home-redirect.spec.ts
@@ -1102,7 +1102,7 @@ git commit -m "feat: add app shell, role-based nav, and home redirect"
 - Consumes: `apiFetch`, types from Task 2; `useSession` (Task 4); `seedProbyProgram`, `seedKurinWithZvyazkovyi` (Task 3).
 - Produces: `useProbyProgram()`, `useJunakProgress(junakId: string)` hooks — no later task in this plan depends on these directly, but Task 6's board reuses the same progress-rendering pattern.
 
-- [ ] **Step 1: Create the proby query hooks**
+- [x] **Step 1: Create the proby query hooks**
 
 Create `apps/web/lib/queries/proby.ts`:
 
@@ -1129,7 +1129,7 @@ export function useJunakProgress(junakId: string | undefined) {
 }
 ```
 
-- [ ] **Step 2: Create the proby page**
+- [x] **Step 2: Create the proby page**
 
 Create `apps/web/app/proby/page.tsx`:
 
@@ -1196,7 +1196,7 @@ export default function ProbyPage() {
 }
 ```
 
-- [ ] **Step 3: Add a proby-progress seed helper**
+- [x] **Step 3: Add a proby-progress seed helper**
 
 Create `apps/web/e2e/helpers/proby-seed.ts`:
 
@@ -1259,7 +1259,7 @@ export async function assignVykhovnyk(zvyazkovyiToken: string, vykhovnykId: stri
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/proby.spec.ts`:
 
@@ -1313,12 +1313,12 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
 
 Note: `createUserAs` requires the created JUNAK to have `password` set (the fixture already includes it) since the test needs to log in as that junak afterward.
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/proby.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/proby.ts apps/web/app/proby apps/web/e2e/helpers/proby-seed.ts apps/web/e2e/proby.spec.ts
@@ -1339,7 +1339,7 @@ git commit -m "feat: add proby progress screen for junak and kurinniy"
 - Consumes: `apiFetch`, types (Task 2); `useSession` (Task 4); seed/auth helpers (Tasks 3, 5).
 - Produces: `useHurtky()`, `useHurtokBoard(id)`, `useConfirmPoint()`, `useUnconfirmPoint()` — no later task depends on these directly.
 
-- [ ] **Step 1: Create the hurtky query hooks**
+- [x] **Step 1: Create the hurtky query hooks**
 
 Create `apps/web/lib/queries/hurtky.ts`:
 
@@ -1388,7 +1388,7 @@ export function useUnconfirmPoint(hurtokId: string) {
 }
 ```
 
-- [ ] **Step 2: Create the hurtky list page**
+- [x] **Step 2: Create the hurtky list page**
 
 Create `apps/web/app/hurtky/page.tsx`:
 
@@ -1427,7 +1427,7 @@ export default function HurtkyPage() {
 }
 ```
 
-- [ ] **Step 3: Create the board page**
+- [x] **Step 3: Create the board page**
 
 Create `apps/web/app/hurtky/[id]/page.tsx`:
 
@@ -1506,7 +1506,7 @@ export default function HurtokBoardPage({ params }: { params: Promise<{ id: stri
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/board.spec.ts`:
 
@@ -1548,12 +1548,12 @@ test('lets a vykhovnyk confirm a point on the hurtok board', async ({ page }) =>
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/board.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/hurtky.ts apps/web/app/hurtky apps/web/e2e/board.spec.ts
@@ -1574,7 +1574,7 @@ git commit -m "feat: add hurtky list and board with confirm/unconfirm"
 - Consumes: `apiFetch`, types (Task 2); `useSession` (Task 4).
 - Produces: `useUsers(filters)`, `useUser(id)`, `useUpdateContactInfo(id)` — Task 8 and Task 9 reuse `useUsers`/`useUser`.
 
-- [ ] **Step 1: Create the users query hooks**
+- [x] **Step 1: Create the users query hooks**
 
 Create `apps/web/lib/queries/users.ts`:
 
@@ -1620,7 +1620,7 @@ export function useUpdateContactInfo(id: string) {
 }
 ```
 
-- [ ] **Step 2: Create the users list page**
+- [x] **Step 2: Create the users list page**
 
 Create `apps/web/app/users/page.tsx`:
 
@@ -1662,7 +1662,7 @@ export default function UsersPage() {
 }
 ```
 
-- [ ] **Step 3: Create the user detail page**
+- [x] **Step 3: Create the user detail page**
 
 Create `apps/web/app/users/[id]/page.tsx`:
 
@@ -1748,7 +1748,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/users-detail.spec.ts`:
 
@@ -1783,12 +1783,12 @@ test('lets zvyazkovyi edit a junak\'s contact info directly', async ({ page }) =
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/users-detail.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/users.ts apps/web/app/users apps/web/e2e/users-detail.spec.ts
@@ -1809,7 +1809,7 @@ git commit -m "feat: add users list and detail with contact-info editing"
 - Consumes: `apiFetch`, types (Task 2); `useUser` (Task 7).
 - Produces: `useCreateApprovalRequest()` — Task 12 (zvyazkovyi's approve/reject screen) does NOT reuse this mutation (it uses its own approve/reject mutations), but reads the same `ApprovalRequest` type from Task 2.
 
-- [ ] **Step 1: Create the approval-request creation hook**
+- [x] **Step 1: Create the approval-request creation hook**
 
 Create `apps/web/lib/queries/approval-requests.ts`:
 
@@ -1831,7 +1831,7 @@ export function useCreateApprovalRequest() {
 }
 ```
 
-- [ ] **Step 2: Create the "add junak" page (kurinniy only — creates an approval-request, not a user directly)**
+- [x] **Step 2: Create the "add junak" page (kurinniy only — creates an approval-request, not a user directly)**
 
 Create `apps/web/app/users/new/page.tsx`:
 
@@ -1925,7 +1925,7 @@ export default function NewJunakRequestPage() {
 }
 ```
 
-- [ ] **Step 3: Add a key-field-change form to the user detail page**
+- [x] **Step 3: Add a key-field-change form to the user detail page**
 
 In `apps/web/app/users/[id]/page.tsx`, add the import `useCreateApprovalRequest` from `@/lib/queries/approval-requests`, and add a new card for changing the full name via approval-request, rendered only when `session?.role === 'KURINNYI' && user.role === 'JUNAK'`. Insert this new `<Card>` block right after the existing "Контакти" card, and add the needed state/hook calls at the top of the component alongside the existing `notes`/`phone` state:
 
@@ -1995,7 +1995,7 @@ Add this card after the "Контакти" `<Card>` block, before the closing `<
       )}
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/approval-request-create.spec.ts`:
 
@@ -2034,12 +2034,12 @@ test('lets kurinniy request a new junak via approval-request', async ({ page }) 
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/approval-request-create.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/approval-requests.ts apps/web/app/users/new apps/web/app/users/[id]/page.tsx apps/web/e2e/approval-request-create.spec.ts
@@ -2057,7 +2057,7 @@ git commit -m "feat: let kurinniy request junak creation and key-field changes"
 **Interfaces:**
 - Consumes: `useUsers` (Task 7).
 
-- [ ] **Step 1: Add a role filter to the users list page**
+- [x] **Step 1: Add a role filter to the users list page**
 
 Replace the contents of `apps/web/app/users/page.tsx` with:
 
@@ -2133,7 +2133,7 @@ export default function UsersPage() {
 
 Note: `useUsers({ role: undefined })` sends no `role` query param (the hook already omits falsy filters), matching each role's default list.
 
-- [ ] **Step 2: Write the e2e test**
+- [x] **Step 2: Write the e2e test**
 
 Create `apps/web/e2e/users-role-filter.spec.ts`:
 
@@ -2176,12 +2176,12 @@ test('lets kurinniy view vykhovnyk contacts read-only', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 3: Run the test**
+- [x] **Step 3: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/users-role-filter.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/app/users/page.tsx apps/web/e2e/users-role-filter.spec.ts
@@ -2203,7 +2203,7 @@ git commit -m "feat: add role filter for viewing vykhovnyk/zvyazkovyi contacts"
 - Consumes: `apiFetch`, types (Task 2); `useHurtky` (Task 6); `useUsers` (Task 7).
 - Produces: `useVykhovnykAssignments(filters)`, `useAssignVykhovnyk()`, `useUnassignVykhovnyk()` — no later task depends on these.
 
-- [ ] **Step 1: Create the vykhovnyk-assignments query hooks**
+- [x] **Step 1: Create the vykhovnyk-assignments query hooks**
 
 Create `apps/web/lib/queries/vykhovnyk-assignments.ts`:
 
@@ -2247,7 +2247,7 @@ export function useUnassignVykhovnyk() {
 }
 ```
 
-- [ ] **Step 2: Create the "new hurtok" page**
+- [x] **Step 2: Create the "new hurtok" page**
 
 Create `apps/web/app/hurtky/new/page.tsx`:
 
@@ -2313,7 +2313,7 @@ export default function NewHurtokPage() {
 }
 ```
 
-- [ ] **Step 3: Add a "new hurtok" link for zvyazkovyi**
+- [x] **Step 3: Add a "new hurtok" link for zvyazkovyi**
 
 In `apps/web/app/hurtky/page.tsx`, add the import `useSession` from `@/lib/session-client` and `Link` is already imported. Add this right after the `<h1>` element:
 
@@ -2327,7 +2327,7 @@ In `apps/web/app/hurtky/page.tsx`, add the import `useSession` from `@/lib/sessi
 
 And add `const { data: session } = useSession();` alongside the existing `useHurtky()` call, and import `Button` from `@/components/ui/button`.
 
-- [ ] **Step 4: Create the vykhovnyk-assignments management page**
+- [x] **Step 4: Create the vykhovnyk-assignments management page**
 
 Create `apps/web/app/vykhovnyk-assignments/page.tsx`:
 
@@ -2433,7 +2433,7 @@ export default function VykhovnykAssignmentsPage() {
 }
 ```
 
-- [ ] **Step 5: Write the e2e test**
+- [x] **Step 5: Write the e2e test**
 
 Create `apps/web/e2e/vykhovnyk-assignments.spec.ts`:
 
@@ -2469,12 +2469,12 @@ test('lets zvyazkovyi create a hurtok and assign a vykhovnyk to it', async ({ pa
 });
 ```
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/vykhovnyk-assignments.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/web/lib/queries/vykhovnyk-assignments.ts apps/web/app/hurtky apps/web/e2e/vykhovnyk-assignments.spec.ts
@@ -2492,7 +2492,7 @@ git commit -m "feat: add hurtok creation and vykhovnyk assignment management"
 **Interfaces:**
 - Consumes: `apiFetch`, types (Task 2); `useHurtky` (Task 6); `useSession` (Task 4).
 
-- [ ] **Step 1: Extend the "new user" page with a zvyazkovyi-only direct-creation path**
+- [x] **Step 1: Extend the "new user" page with a zvyazkovyi-only direct-creation path**
 
 Replace the contents of `apps/web/app/users/new/page.tsx` with:
 
@@ -2704,7 +2704,7 @@ export default function NewUserPage() {
 
 Note: this replaces Task 8's `NewJunakRequestPage` component with `KurinnyiApprovalRequestForm`, same behavior, now living alongside the zvyazkovyi form in one role-switched page. The e2e test from Task 8 (`approval-request-create.spec.ts`) continues to pass unchanged — the route and rendered form for a kurinniy are identical.
 
-- [ ] **Step 2: Write the e2e test**
+- [x] **Step 2: Write the e2e test**
 
 Create `apps/web/e2e/users-new-direct.spec.ts`:
 
@@ -2731,12 +2731,12 @@ test('lets zvyazkovyi create a vykhovnyk directly, no approval needed', async ({
 });
 ```
 
-- [ ] **Step 3: Run both tests to confirm no regression from Task 8**
+- [x] **Step 3: Run both tests to confirm no regression from Task 8**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/users-new-direct.spec.ts e2e/approval-request-create.spec.ts`
 Expected: both tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/app/users/new/page.tsx apps/web/e2e/users-new-direct.spec.ts
@@ -2757,7 +2757,7 @@ git commit -m "feat: add direct user creation for zvyazkovyi"
 - Consumes: `apiFetch`, types (Task 2).
 - Produces: `useApprovalRequests(status)`, `useApprovalRequest(id)`, `useApproveRequest()`, `useRejectRequest()` — no later task depends on these.
 
-- [ ] **Step 1: Create the approval-requests list/detail query hooks**
+- [x] **Step 1: Create the approval-requests list/detail query hooks**
 
 Create `apps/web/lib/queries/approval-requests-list.ts`:
 
@@ -2805,7 +2805,7 @@ export function useRejectRequest(id: string) {
 }
 ```
 
-- [ ] **Step 2: Create the approval-requests list page**
+- [x] **Step 2: Create the approval-requests list page**
 
 Create `apps/web/app/approval-requests/page.tsx`:
 
@@ -2852,7 +2852,7 @@ export default function ApprovalRequestsPage() {
 }
 ```
 
-- [ ] **Step 3: Create the approval-request detail page**
+- [x] **Step 3: Create the approval-request detail page**
 
 Create `apps/web/app/approval-requests/[id]/page.tsx`:
 
@@ -2931,7 +2931,7 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
 }
 ```
 
-- [ ] **Step 4: Write the e2e test**
+- [x] **Step 4: Write the e2e test**
 
 Create `apps/web/e2e/approval-request-decide.spec.ts`:
 
@@ -2982,12 +2982,12 @@ test('lets zvyazkovyi approve a pending request and the change takes effect', as
 });
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/approval-request-decide.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/web/lib/queries/approval-requests-list.ts apps/web/app/approval-requests apps/web/e2e/approval-request-decide.spec.ts
@@ -3006,7 +3006,7 @@ git commit -m "feat: add approval-requests queue and approve/reject"
 **Interfaces:**
 - Consumes: `apiFetch`, types (Task 2).
 
-- [ ] **Step 1: Create the kurin query hooks**
+- [x] **Step 1: Create the kurin query hooks**
 
 Create `apps/web/lib/queries/kurin.ts`:
 
@@ -3039,7 +3039,7 @@ export function useChangeProbyProgram(kurinId: string) {
 }
 ```
 
-- [ ] **Step 2: Create the kurin settings page**
+- [x] **Step 2: Create the kurin settings page**
 
 Create `apps/web/app/kurin/page.tsx`:
 
@@ -3103,7 +3103,7 @@ export default function KurinPage() {
 
 Note: the program picker is a raw ID input rather than a dropdown of program names, because `GET /proby-programs/current` only returns the *active* program (see the read-API spec's documented MVP limitation — comparing/browsing other programs isn't available through this API). A zvyazkovyi switching programs already knows the target program's id from the admin bootstrap step; a friendlier picker needs a new backend endpoint and is out of scope for this plan.
 
-- [ ] **Step 3: Write the e2e test**
+- [x] **Step 3: Write the e2e test**
 
 Create `apps/web/e2e/kurin-settings.spec.ts`:
 
@@ -3128,12 +3128,12 @@ test('lets zvyazkovyi view kurin settings and change the proby program', async (
 });
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test e2e/kurin-settings.spec.ts`
 Expected: 1 test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/lib/queries/kurin.ts apps/web/app/kurin apps/web/e2e/kurin-settings.spec.ts
@@ -3153,7 +3153,7 @@ git commit -m "feat: add kurin settings and proby-program switch"
 **Interfaces:**
 - None — this is a leaf task with no dependents.
 
-- [ ] **Step 1: Create the manifest**
+- [x] **Step 1: Create the manifest**
 
 Create `apps/web/public/manifest.json`:
 
@@ -3172,7 +3172,7 @@ Create `apps/web/public/manifest.json`:
 }
 ```
 
-- [ ] **Step 2: Generate placeholder icons**
+- [x] **Step 2: Generate placeholder icons**
 
 Run from `apps/web/public`:
 
@@ -3197,7 +3197,7 @@ for (const size of [192, 512]) {
 
 If the `canvas` package isn't available (it requires native build tools and is not worth adding as a project dependency just for two placeholder icons), skip the script and instead create two solid-color PNG placeholders by any available means (e.g. downloading a plain colored square, or using an existing image editor) named `icon-192.png` (192×192) and `icon-512.png` (512×512) and placing them in `apps/web/public/`. A real logo can replace these later — this step only needs to satisfy the manifest's icon references so the app is installable.
 
-- [ ] **Step 3: Link the manifest in the layout**
+- [x] **Step 3: Link the manifest in the layout**
 
 In `apps/web/app/layout.tsx`, add `manifest: '/manifest.json'` to the exported `metadata` object:
 
@@ -3209,12 +3209,12 @@ export const metadata: Metadata = {
 };
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `cd apps/web && npm run build`
 Expected: build succeeds. Manually verify in a browser dev tools "Application" tab (or Lighthouse) that the manifest is picked up and the install prompt is available — this is a visual/browser-level check, not something Playwright asserts in this plan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/public/manifest.json apps/web/public/icon-192.png apps/web/public/icon-512.png apps/web/app/layout.tsx

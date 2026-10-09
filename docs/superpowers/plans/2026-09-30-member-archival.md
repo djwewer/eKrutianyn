@@ -32,7 +32,7 @@
 - Produces: `hasAnyActivePosition(prisma: PrismaService, userId: string): Promise<boolean>` — consumed by Task 2's `UsersService.archiveUser`.
 - Produces: `User.archivedAt: DateTime?`, `User.archivedById: String?`, `Hurtok.archivedAt: DateTime?`, `Hurtok.archivedById: String?`, `ApprovalActionType.ARCHIVE_JUNAK` — consumed by every later task.
 
-- [ ] **Step 1: Write the failing unit test for the helper**
+- [x] **Step 1: Write the failing unit test for the helper**
 
 Create `apps/api/src/common/positions.util.spec.ts`:
 
@@ -61,12 +61,12 @@ describe('hasAnyActivePosition', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to confirm it fails**
+- [x] **Step 2: Run it to confirm it fails**
 
 Run: `cd apps/api && npx jest src/common/positions.util.spec.ts`
 Expected: FAIL — `hasAnyActivePosition is not a function` (or import error).
 
-- [ ] **Step 3: Add the schema fields**
+- [x] **Step 3: Add the schema fields**
 
 In `apps/api/prisma/schema.prisma`, add to the `User` model (right after the existing `updatedAt DateTime @updatedAt` line):
 
@@ -99,19 +99,19 @@ enum ApprovalActionType {
 }
 ```
 
-- [ ] **Step 4: Generate and run the migration against the dev database**
+- [x] **Step 4: Generate and run the migration against the dev database**
 
 Run: `cd apps/api && npx prisma migrate dev --name add_archival_fields`
 Expected: a new folder under `apps/api/prisma/migrations/` (e.g. `2026XXXXXXXXXX_add_archival_fields`) containing `migration.sql` with `ALTER TABLE "User" ADD COLUMN ...` and `ALTER TABLE "Hurtok" ADD COLUMN ...` and `ALTER TYPE "ApprovalActionType" ADD VALUE ...`; command exits 0. This applies the migration to `DATABASE_URL` (`plast_dev` per `apps/api/.env`).
 
-- [ ] **Step 4b: Apply the same migration to the test database**
+- [x] **Step 4b: Apply the same migration to the test database**
 
 `plast_test` (used by every `*.e2e-spec.ts` in `apps/api/test/`, via `DATABASE_URL_TEST`) is a SEPARATE database from `plast_dev` and does NOT get migrated by Step 4 — every e2e test written in Tasks 2 through 6 will fail with a "column does not exist" error until this runs.
 
 Run: `cd apps/api && DATABASE_URL="postgresql://plast:plast@localhost:5432/plast_test" npx prisma migrate deploy`
 Expected: `X migrations found... Applying migration add_archival_fields... The following migration have been applied: ... 20260930..._add_archival_fields`, exits 0. (`migrate deploy`, not `migrate dev` — it applies existing migration files as-is without prompting or generating anything new, which is what a non-primary database needs.)
 
-- [ ] **Step 5: Add the helper function**
+- [x] **Step 5: Add the helper function**
 
 In `apps/api/src/common/positions.util.ts`, append (below the existing `getActiveKurinPositions`):
 
@@ -122,17 +122,17 @@ export async function hasAnyActivePosition(prisma: PrismaService, userId: string
 }
 ```
 
-- [ ] **Step 6: Run the test to confirm it passes**
+- [x] **Step 6: Run the test to confirm it passes**
 
 Run: `cd apps/api && npx jest src/common/positions.util.spec.ts`
 Expected: PASS (2/2)
 
-- [ ] **Step 7: Regenerate the Prisma client and typecheck**
+- [x] **Step 7: Regenerate the Prisma client and typecheck**
 
 Run: `cd apps/api && npx prisma generate && npx tsc --noEmit -p tsconfig.json`
 Expected: both exit 0 (no type errors — nothing else references the new fields yet).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/common/positions.util.ts apps/api/src/common/positions.util.spec.ts
@@ -154,7 +154,7 @@ git commit -m "feat: add archival columns, ARCHIVE_JUNAK action type, and hasAny
 - Produces: `UsersService.archiveUser(userId: string, actor: CurrentUserPayload): Promise<UserDetail-shaped object>` — consumed by Task 6's approval flow.
 - Produces: `PATCH /users/:id/archive` (ZVYAZKOVYI only) — consumed by Task 7/8's frontend hook.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/users-archive.e2e-spec.ts`:
 
@@ -319,12 +319,12 @@ describe('User archival (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm the tests fail**
+- [x] **Step 2: Run to confirm the tests fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive.e2e-spec.ts`
 Expected: FAIL — `404 Not Found` (route doesn't exist yet) on every test.
 
-- [ ] **Step 3: Add `archivedAt` to `USER_SELECT`**
+- [x] **Step 3: Add `archivedAt` to `USER_SELECT`**
 
 In `apps/api/src/users/user-select.const.ts`, replace the whole file:
 
@@ -343,7 +343,7 @@ export const USER_SELECT = {
 } as const;
 ```
 
-- [ ] **Step 4: Add `archiveUser` to `UsersService`**
+- [x] **Step 4: Add `archiveUser` to `UsersService`**
 
 In `apps/api/src/users/users.service.ts`, add this import line alongside the existing ones at the top:
 
@@ -385,7 +385,7 @@ Then add this method to the class (anywhere among the other public methods, e.g.
   }
 ```
 
-- [ ] **Step 5: Add the controller route**
+- [x] **Step 5: Add the controller route**
 
 In `apps/api/src/users/users.controller.ts`, add this method to the class (after `updateHurtok`):
 
@@ -397,17 +397,17 @@ In `apps/api/src/users/users.controller.ts`, add this method to the class (after
   }
 ```
 
-- [ ] **Step 6: Run the tests to confirm they pass**
+- [x] **Step 6: Run the tests to confirm they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive.e2e-spec.ts`
 Expected: PASS (9/9)
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/users/user-select.const.ts apps/api/src/users/users.service.ts apps/api/src/users/users.controller.ts apps/api/test/users-archive.e2e-spec.ts
@@ -426,7 +426,7 @@ git commit -m "feat: add PATCH /users/:id/archive with precondition checks"
 **Interfaces:**
 - Produces: `HurtkyService.archiveHurtok(hurtokId: string, actor: CurrentUserPayload): Promise<Hurtok>` and `PATCH /hurtky/:id/archive` (ZVYAZKOVYI only) — consumed by Task 9's frontend hook.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/hurtky-archive.e2e-spec.ts`:
 
@@ -562,12 +562,12 @@ describe('Hurtok archival (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm the tests fail**
+- [x] **Step 2: Run to confirm the tests fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-archive.e2e-spec.ts`
 Expected: FAIL — `404 Not Found` on every test (route doesn't exist).
 
-- [ ] **Step 3: Add `archiveHurtok` to `HurtkyService`**
+- [x] **Step 3: Add `archiveHurtok` to `HurtkyService`**
 
 In `apps/api/src/hurtky/hurtky.service.ts`, change the import line to add `BadRequestException`:
 
@@ -605,7 +605,7 @@ Then add this method to the class (after `create`):
   }
 ```
 
-- [ ] **Step 4: Add the controller route**
+- [x] **Step 4: Add the controller route**
 
 In `apps/api/src/hurtky/hurtky.controller.ts`, add `Patch` to the import from `@nestjs/common`:
 
@@ -623,17 +623,17 @@ Then add this method to the class (after `create`):
   }
 ```
 
-- [ ] **Step 5: Run the tests to confirm they pass**
+- [x] **Step 5: Run the tests to confirm they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- hurtky-archive.e2e-spec.ts`
 Expected: PASS (6/6)
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/hurtky/hurtky.service.ts apps/api/src/hurtky/hurtky.controller.ts apps/api/test/hurtky-archive.e2e-spec.ts
@@ -654,7 +654,7 @@ git commit -m "feat: add PATCH /hurtky/:id/archive with precondition checks"
 - Consumes: `User.archivedAt` from Task 1.
 - No new exports — this task changes existing behavior only.
 
-- [ ] **Step 1: Update the existing JwtStrategy unit test and add the archived-rejection case**
+- [x] **Step 1: Update the existing JwtStrategy unit test and add the archived-rejection case**
 
 In `apps/api/src/auth/strategies/jwt.strategy.spec.ts`, replace the whole file:
 
@@ -713,12 +713,12 @@ describe('JwtStrategy', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to confirm the new tests fail**
+- [x] **Step 2: Run it to confirm the new tests fail**
 
 Run: `cd apps/api && npx jest src/auth/strategies/jwt.strategy.spec.ts`
 Expected: FAIL on the two new tests — `validate()` never calls `prisma.user.findUnique` yet, so an archived/missing user is never detected.
 
-- [ ] **Step 3: Update `JwtStrategy.validate()`**
+- [x] **Step 3: Update `JwtStrategy.validate()`**
 
 In `apps/api/src/auth/strategies/jwt.strategy.ts`, replace the `validate` method:
 
@@ -737,12 +737,12 @@ In `apps/api/src/auth/strategies/jwt.strategy.ts`, replace the `validate` method
   }
 ```
 
-- [ ] **Step 4: Run the unit tests to confirm they pass**
+- [x] **Step 4: Run the unit tests to confirm they pass**
 
 Run: `cd apps/api && npx jest src/auth/strategies/jwt.strategy.spec.ts`
 Expected: PASS (4/4)
 
-- [ ] **Step 5: Write the failing e2e test for login**
+- [x] **Step 5: Write the failing e2e test for login**
 
 Create `apps/api/test/users-archive-login.e2e-spec.ts`:
 
@@ -795,12 +795,12 @@ describe('Login blocked for archived accounts (e2e)', () => {
 });
 ```
 
-- [ ] **Step 6: Run to confirm it fails**
+- [x] **Step 6: Run to confirm it fails**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-login.e2e-spec.ts`
 Expected: FAIL — currently returns 201 with a valid token.
 
-- [ ] **Step 7: Block login for archived accounts in `AuthService`**
+- [x] **Step 7: Block login for archived accounts in `AuthService`**
 
 In `apps/api/src/auth/auth.service.ts`, in `loginWithPassword`, right after the existing `if (!user || !user.passwordHash) { throw new UnauthorizedException('Invalid credentials'); }` block, add:
 
@@ -818,22 +818,22 @@ In `loginWithGoogle`, right after the existing `if (!user) { throw new Unauthori
     }
 ```
 
-- [ ] **Step 8: Run the e2e test to confirm it passes**
+- [x] **Step 8: Run the e2e test to confirm it passes**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-login.e2e-spec.ts`
 Expected: PASS (1/1)
 
-- [ ] **Step 9: Run the full existing e2e suite for regressions**
+- [x] **Step 9: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass — no other spec relies on `JwtStrategy` skipping the DB lookup.
 
-- [ ] **Step 10: Typecheck**
+- [x] **Step 10: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add apps/api/src/auth/strategies/jwt.strategy.ts apps/api/src/auth/strategies/jwt.strategy.spec.ts apps/api/src/auth/auth.service.ts apps/api/test/users-archive-login.e2e-spec.ts
@@ -852,7 +852,7 @@ git commit -m "fix: reject login and revoke access for archived accounts"
 **Interfaces:**
 - No new exports — filters existing `list()` and `listForKurin()` query results.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/users-archive-lists.e2e-spec.ts`:
 
@@ -927,12 +927,12 @@ describe('Archived rows excluded from lists (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm the tests fail**
+- [x] **Step 2: Run to confirm the tests fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-lists.e2e-spec.ts`
 Expected: FAIL — the archived rows currently show up in both lists.
 
-- [ ] **Step 3: Filter `users.service.ts`'s `list()`**
+- [x] **Step 3: Filter `users.service.ts`'s `list()`**
 
 In `apps/api/src/users/users.service.ts`, in the `list()` method, add `archivedAt: null` to the `where` clause of EACH of the four `findMany` calls (the VYKHOVNYK-with-hurtokId-filter branch, the VYKHOVNYK-default branch, the `actor.isKurinniy` branch, and the final ZVYAZKOVYI-sees-everyone branch). For example, the final branch becomes:
 
@@ -952,7 +952,7 @@ In `apps/api/src/users/users.service.ts`, in the `list()` method, add `archivedA
 
 Apply the same `archivedAt: null,` addition to the `where` object of the other three `findMany` calls in this method (the two VYKHOVNYK branches and the `actor.isKurinniy` branch).
 
-- [ ] **Step 4: Filter `hurtky.service.ts`'s `listForKurin()`**
+- [x] **Step 4: Filter `hurtky.service.ts`'s `listForKurin()`**
 
 In `apps/api/src/hurtky/hurtky.service.ts`, replace:
 
@@ -970,22 +970,22 @@ with:
   }
 ```
 
-- [ ] **Step 5: Run the tests to confirm they pass**
+- [x] **Step 5: Run the tests to confirm they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- users-archive-lists.e2e-spec.ts`
 Expected: PASS (2/2)
 
-- [ ] **Step 6: Run the full existing e2e suite for regressions**
+- [x] **Step 6: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/users/users.service.ts apps/api/src/hurtky/hurtky.service.ts apps/api/test/users-archive-lists.e2e-spec.ts
@@ -1006,7 +1006,7 @@ git commit -m "fix: exclude archived users and hurtky from default lists"
 - Consumes: `UsersService.archiveUser(userId, actor)` from Task 2.
 - No new exports — extends the existing `create()`/`approve()` dispatch.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/api/test/approval-requests-archive-junak.e2e-spec.ts`:
 
@@ -1144,12 +1144,12 @@ describe('ARCHIVE_JUNAK approval flow (e2e)', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm the tests fail**
+- [x] **Step 2: Run to confirm the tests fail**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
 Expected: FAIL — `create()` rejects `ARCHIVE_JUNAK` as an unknown case in `extractRelevantFields`, and `approve()` has no branch for it.
 
-- [ ] **Step 3: Export `UsersService` and wire the module import**
+- [x] **Step 3: Export `UsersService` and wire the module import**
 
 In `apps/api/src/users/users.module.ts`, add `exports: [UsersService]`:
 
@@ -1188,7 +1188,7 @@ import { ApprovalRequestsService } from './approval-requests.service';
 export class ApprovalRequestsModule {}
 ```
 
-- [ ] **Step 4: Extend `approval-requests.service.ts`**
+- [x] **Step 4: Extend `approval-requests.service.ts`**
 
 In `apps/api/src/approval-requests/approval-requests.service.ts`:
 
@@ -1251,22 +1251,22 @@ In `extractRelevantFields()`, add a case (before the `default` line):
         return {};
 ```
 
-- [ ] **Step 5: Run the tests to confirm they pass**
+- [x] **Step 5: Run the tests to confirm they pass**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e -- approval-requests-archive-junak.e2e-spec.ts`
 Expected: PASS (4/4)
 
-- [ ] **Step 6: Run the full existing e2e suite for regressions**
+- [x] **Step 6: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npm run test:e2e`
 Expected: all pass
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/api/src/users/users.module.ts apps/api/src/approval-requests/approval-requests.module.ts apps/api/src/approval-requests/approval-requests.service.ts apps/api/test/approval-requests-archive-junak.e2e-spec.ts
@@ -1286,7 +1286,7 @@ git commit -m "feat: add ARCHIVE_JUNAK approval-request flow"
 - Consumes: backend `PATCH /users/:id/archive` (Task 2), `PATCH /hurtky/:id/archive` (Task 3), `USER_SELECT`'s new `archivedAt` field (Task 2).
 - Produces: `UserDetail.archivedAt: string | null`, `useArchiveUser(id: string)`, `useArchiveHurtok()` — consumed by Task 8 and Task 9.
 
-- [ ] **Step 1: Add `archivedAt` to the frontend types**
+- [x] **Step 1: Add `archivedAt` to the frontend types**
 
 In `apps/web/lib/types.ts`, update `UserSummary` (the backend's `USER_SELECT` — used by both `GET /users` and `GET /users/:id` — now includes `archivedAt`, so it belongs on the shared base type, not just `UserDetail`):
 
@@ -1318,7 +1318,7 @@ export type ApprovalActionType =
   | 'ARCHIVE_JUNAK';
 ```
 
-- [ ] **Step 2: Add `useArchiveUser` to `apps/web/lib/queries/users.ts`**
+- [x] **Step 2: Add `useArchiveUser` to `apps/web/lib/queries/users.ts`**
 
 Append to the file:
 
@@ -1335,7 +1335,7 @@ export function useArchiveUser(id: string) {
 }
 ```
 
-- [ ] **Step 3: Add `useArchiveHurtok` to `apps/web/lib/queries/hurtky.ts`**
+- [x] **Step 3: Add `useArchiveHurtok` to `apps/web/lib/queries/hurtky.ts`**
 
 Replace the whole file:
 
@@ -1373,12 +1373,12 @@ export function useArchiveHurtok(id: string, slug: string | undefined) {
 }
 ```
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/lib/queries/users.ts apps/web/lib/queries/hurtky.ts
@@ -1398,7 +1398,7 @@ git commit -m "feat: add frontend types and query hooks for archival"
 **Interfaces:**
 - Consumes: `useArchiveUser` and `useCreateApprovalRequest` (already used elsewhere on this page) from Task 7.
 
-- [ ] **Step 1: Write the failing e2e tests**
+- [x] **Step 1: Write the failing e2e tests**
 
 Create `apps/web/e2e/user-archive.spec.ts`:
 
@@ -1498,12 +1498,12 @@ test('kurinniy sends an archive request for a junak instead of archiving directl
 });
 ```
 
-- [ ] **Step 2: Run to confirm the tests fail**
+- [x] **Step 2: Run to confirm the tests fail**
 
 Run: `cd apps/web && npx playwright test e2e/user-archive.spec.ts --workers=1`
 Expected: FAIL — there is no "Архівувати" button on the page yet.
 
-- [ ] **Step 3: Add the archive UI to `/users/[id]/page.tsx`**
+- [x] **Step 3: Add the archive UI to `/users/[id]/page.tsx`**
 
 In `apps/web/app/users/[id]/page.tsx`, change the import line:
 
@@ -1617,7 +1617,7 @@ In the `UserDetailPage` component's returned JSX, add `<ArchiveUserCard user={us
 }
 ```
 
-- [ ] **Step 4: Update `ACTION_LABELS` in both approval-requests pages**
+- [x] **Step 4: Update `ACTION_LABELS` in both approval-requests pages**
 
 In `apps/web/app/approval-requests/[id]/page.tsx`, replace:
 
@@ -1648,22 +1648,22 @@ const ACTION_LABELS: Record<string, string> = {
 
 Apply the exact same change (add the `ARCHIVE_JUNAK: 'Архівація юнака',` line) to the identical `ACTION_LABELS` constant in `apps/web/app/approval-requests/page.tsx`.
 
-- [ ] **Step 5: Run the tests to confirm they pass**
+- [x] **Step 5: Run the tests to confirm they pass**
 
 Run: `cd apps/web && npx playwright test e2e/user-archive.spec.ts --workers=1`
 Expected: PASS (3/3)
 
-- [ ] **Step 6: Run the full existing e2e suite for regressions**
+- [x] **Step 6: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: all pass
 
-- [ ] **Step 7: Typecheck**
+- [x] **Step 7: Typecheck**
 
 Run: `cd apps/web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/app/users/[id]/page.tsx apps/web/app/approval-requests/[id]/page.tsx apps/web/app/approval-requests/page.tsx apps/web/e2e/user-archive.spec.ts
@@ -1684,7 +1684,7 @@ git commit -m "feat: add archive UI to the user detail page"
 - Consumes: `useArchiveHurtok(id, slug)` from Task 7, `PATCH /hurtky/:id/archive` from Task 3.
 - Modifies: `HurtkyService.getMembersBySlug()`'s returned `hurtok` object now includes `archivedAt`, so the frontend can show a banner after archiving without a page reload.
 
-- [ ] **Step 1: Add `archivedAt` to `getMembersBySlug`'s response**
+- [x] **Step 1: Add `archivedAt` to `getMembersBySlug`'s response**
 
 In `apps/api/src/hurtky/hurtky.service.ts`, in `getMembersBySlug`, replace:
 
@@ -1700,7 +1700,7 @@ with:
       hurtok: { id: hurtok.id, name: hurtok.name, slug: hurtok.slug, number: hurtok.number, archivedAt: hurtok.archivedAt },
 ```
 
-- [ ] **Step 2: Update the `HurtokMembers` frontend type**
+- [x] **Step 2: Update the `HurtokMembers` frontend type**
 
 In `apps/web/lib/types.ts`, replace:
 
@@ -1720,7 +1720,7 @@ export interface HurtokMembers {
 }
 ```
 
-- [ ] **Step 3: Write the failing e2e tests**
+- [x] **Step 3: Write the failing e2e tests**
 
 Create `apps/web/e2e/hurtok-archive.spec.ts`:
 
@@ -1792,12 +1792,12 @@ test('a vykhovnyk does not see the archive button', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 4: Run to confirm the tests fail**
+- [x] **Step 4: Run to confirm the tests fail**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-archive.spec.ts --workers=1`
 Expected: FAIL — there is no "Архівувати гурток" button yet, and `getMembersBySlug` doesn't return `archivedAt` yet.
 
-- [ ] **Step 5: Add the archive UI to the hurtok detail page**
+- [x] **Step 5: Add the archive UI to the hurtok detail page**
 
 Replace the entire contents of `apps/web/app/[kurinNumber]/hurtky/[slug]/page.tsx`:
 
@@ -1879,22 +1879,22 @@ export default function HurtokMembersPage({ params }: { params: Promise<{ kurinN
 }
 ```
 
-- [ ] **Step 6: Run the tests to confirm they pass**
+- [x] **Step 6: Run the tests to confirm they pass**
 
 Run: `cd apps/web && npx playwright test e2e/hurtok-archive.spec.ts --workers=1`
 Expected: PASS (3/3)
 
-- [ ] **Step 7: Run the full existing e2e suite for regressions**
+- [x] **Step 7: Run the full existing e2e suite for regressions**
 
 Run: `cd apps/web && npx playwright test --workers=1`
 Expected: all pass
 
-- [ ] **Step 8: Typecheck both apps**
+- [x] **Step 8: Typecheck both apps**
 
 Run: `cd apps/api && npx tsc --noEmit -p tsconfig.json && cd ../web && npx tsc --noEmit -p tsconfig.json`
 Expected: no errors
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/src/hurtky/hurtky.service.ts apps/web/lib/types.ts apps/web/app/\[kurinNumber\]/hurtky/\[slug\]/page.tsx apps/web/e2e/hurtok-archive.spec.ts

@@ -34,7 +34,7 @@
 - Consumes: nothing from other tasks (foundation task).
 - Produces: `Hurtok.slug: String | null` (schema field). `slugify(name: string): string` and `generateUniqueSlug(prisma: PrismaClient, kurinId: string, name: string): Promise<string>` from `apps/api/src/hurtky/slug.util.ts` — Task 2 does not need these directly, but the by-slug lookup Task 2 builds depends on this field being populated. `HurtkyService.create()` now includes `slug` in its returned object.
 
-- [ ] **Step 1: Add the schema field**
+- [x] **Step 1: Add the schema field**
 
 In `apps/api/prisma/schema.prisma`, add `slug` to the `Hurtok` model, right after the existing `name` line:
 
@@ -53,7 +53,7 @@ model Hurtok {
 }
 ```
 
-- [ ] **Step 2: Generate and apply the migration**
+- [x] **Step 2: Generate and apply the migration**
 
 Run (from `apps/api/`, against your local dev database):
 
@@ -63,7 +63,7 @@ npx prisma migrate dev --name add_hurtok_slug
 
 Expected: it prints `Your database is now in sync with your schema`, and the generated `migration.sql` contains only `ALTER TABLE "Hurtok" ADD COLUMN "slug" TEXT` — nullable, no default, no data touched. If you see anything else, stop — Step 1 was applied incorrectly.
 
-- [ ] **Step 3: Write the slug utility**
+- [x] **Step 3: Write the slug utility**
 
 Create `apps/api/src/hurtky/slug.util.ts`:
 
@@ -109,7 +109,7 @@ export async function generateUniqueSlug(
 }
 ```
 
-- [ ] **Step 4: Wire slug generation into `HurtkyService.create`**
+- [x] **Step 4: Wire slug generation into `HurtkyService.create`**
 
 In `apps/api/src/hurtky/hurtky.service.ts`, add the import:
 
@@ -134,7 +134,7 @@ to:
   }
 ```
 
-- [ ] **Step 5: Write the e2e test for slug generation**
+- [x] **Step 5: Write the e2e test for slug generation**
 
 Create `apps/api/test/hurtky-slug.e2e-spec.ts`:
 
@@ -231,7 +231,7 @@ describe('Hurtok slug generation (e2e)', () => {
 });
 ```
 
-- [ ] **Step 6: Update the existing create test's assertion**
+- [x] **Step 6: Update the existing create test's assertion**
 
 In `apps/api/test/hurtky.e2e-spec.ts`, in the test `'lets zvyazkovyi create a hurtok in their own kurin'`, add this line right after the existing `expect(response.body.number).toBe('3');`:
 
@@ -239,7 +239,7 @@ In `apps/api/test/hurtky.e2e-spec.ts`, in the test `'lets zvyazkovyi create a hu
     expect(response.body.slug).toBe('orlyky');
 ```
 
-- [ ] **Step 7: Write the backfill script**
+- [x] **Step 7: Write the backfill script**
 
 Create `apps/api/src/scripts/backfill-hurtok-slugs.ts`:
 
@@ -269,14 +269,14 @@ main()
   });
 ```
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand hurtky`
 Expected: all hurtky-related test files pass (`hurtky.e2e-spec.ts`, `hurtky-slug.e2e-spec.ts`, `hurtky-board.e2e-spec.ts` — the last one is untouched by this task and should still pass; Task 2 will replace it).
 
 Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/api/prisma/schema.prisma apps/api/prisma/migrations apps/api/src/hurtky/slug.util.ts apps/api/src/hurtky/hurtky.service.ts apps/api/src/scripts/backfill-hurtok-slugs.ts apps/api/test/hurtky-slug.e2e-spec.ts apps/api/test/hurtky.e2e-spec.ts
@@ -297,7 +297,7 @@ git commit -m "feat: add Hurtok.slug with transliterated, collision-safe generat
 - Consumes: `Hurtok.slug` (Task 1), `KurinPosition` model and its `scope`/`positionType`/`hurtokId` fields (existing, from the Діловоди subproject), `USER_SELECT` (existing).
 - Produces: `GET /hurtky/by-slug/:slug` (200 → `{ hurtok: { id, name, slug, number }, members: [{ id, firstName, lastName, nickname, email, role, birthDate, kurinId, hurtokId, positions: [{ positionType, scope, hurtokId }] }] }`, ordered by `lastName`/`firstName`; 404 if no hurtok in actor's kurin has that slug, or actor is a VYKHOVNYK not assigned to it). No later task in this plan depends on backend internals beyond this one HTTP route — Task 4 (frontend) consumes only the HTTP contract above.
 
-- [ ] **Step 1: Replace `getBoard` with `getMembersBySlug`**
+- [x] **Step 1: Replace `getBoard` with `getMembersBySlug`**
 
 In `apps/api/src/hurtky/hurtky.service.ts`, remove the `getBoard` method entirely and add this in its place:
 
@@ -358,7 +358,7 @@ In `apps/api/src/hurtky/hurtky.service.ts`, remove the `getBoard` method entirel
 
 Add `Role` and `USER_SELECT` imports if not already present at the top of the file (`Role` is already imported from `@prisma/client`; `USER_SELECT` is already imported from `'../users/user-select.const'` — both were already used by the removed `getBoard`, so no new imports needed).
 
-- [ ] **Step 2: Replace the controller route**
+- [x] **Step 2: Replace the controller route**
 
 In `apps/api/src/hurtky/hurtky.controller.ts`, change:
 
@@ -382,13 +382,13 @@ to:
 
 (Note: placing this route ABOVE the existing `@Get()` `list` method in the file doesn't matter for NestJS routing since `by-slug/:slug` and the bare `@Get()` don't overlap — but do NOT place it below a hypothetical `@Get(':id')` if one existed, since `:id` would greedily match `by-slug` as a param value. This controller currently has no `@Get(':id')` route, only `@Get()` and the one being replaced, so ordering is not a concern here — just replace the method in place.)
 
-- [ ] **Step 3: Delete the old test file**
+- [x] **Step 3: Delete the old test file**
 
 ```bash
 git rm apps/api/test/hurtky-board.e2e-spec.ts
 ```
 
-- [ ] **Step 4: Write the new e2e test**
+- [x] **Step 4: Write the new e2e test**
 
 Create `apps/api/test/hurtky-members.e2e-spec.ts`:
 
@@ -540,7 +540,7 @@ describe('GET /hurtky/by-slug/:slug (e2e)', () => {
 });
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand hurtky`
 Expected: `hurtky.e2e-spec.ts`, `hurtky-slug.e2e-spec.ts`, `hurtky-members.e2e-spec.ts` all pass; `hurtky-board.e2e-spec.ts` no longer exists.
@@ -549,7 +549,7 @@ Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
 Run the full e2e suite to confirm nothing else broke: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/hurtky/hurtky.controller.ts apps/api/src/hurtky/hurtky.service.ts apps/api/test/hurtky-members.e2e-spec.ts
@@ -569,7 +569,7 @@ git commit -m "refactor: replace GET /hurtky/:id/board with GET /hurtky/by-slug/
 - Consumes: nothing from other tasks in this plan (independent of Tasks 1-2).
 - Produces: `POST /junaky/:junakId/progress/:pointId/confirm` and `.../unconfirm` now also accept `Role.ZVYAZKOVYI`, in addition to the existing `Role.VYKHOVNYK`. No later task in this plan depends on backend internals here beyond these two routes accepting ZVYAZKOVYI — Task 5 (frontend) consumes only this HTTP contract.
 
-- [ ] **Step 1: Widen the `@Roles()` decorators**
+- [x] **Step 1: Widen the `@Roles()` decorators**
 
 In `apps/api/src/proby-progress/proby-progress.controller.ts`, change both occurrences of:
 
@@ -585,7 +585,7 @@ to:
 
 (There are two occurrences — one above `confirm`, one above `unconfirm`. Change both.)
 
-- [ ] **Step 2: Exempt ZVYAZKOVYI from the hurtok-assignment check**
+- [x] **Step 2: Exempt ZVYAZKOVYI from the hurtok-assignment check**
 
 In `apps/api/src/proby-progress/proby-progress.service.ts`, the full `assertAssignedVykhovnyk` method (lines 80-93, the last method in the file) currently reads:
 
@@ -628,7 +628,7 @@ Replace it with:
 
 Rename its two call sites — at line 40 (inside `confirm`) and line 60 (inside `unconfirm`), change `await this.assertAssignedVykhovnyk(junakId, actor);` to `await this.assertCanConfirm(junakId, actor);` (both call sites already discard the return value, so no other change is needed at either call site).
 
-- [ ] **Step 3: Extend the e2e test**
+- [x] **Step 3: Extend the e2e test**
 
 `apps/api/test/proby-progress-confirm.e2e-spec.ts` already has a local `setup()` helper (defined near the top of the `describe` block) that returns `{ kurin, hurtok, junak, points }` via `createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1'])` + `createKurin` + a manually-created `hurtok` + a `junak` created with that `hurtokId`. Add this new test, using that existing `setup()` helper, as a new `it(...)` block alongside the file's existing tests:
 
@@ -647,7 +647,7 @@ Rename its two call sites — at line 40 (inside `confirm`) and line 60 (inside 
   });
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand proby-progress-confirm`
 Expected: all tests pass, including the new one.
@@ -656,7 +656,7 @@ Run: `cd apps/api && npx tsc --noEmit` — expect clean.
 
 Run the full e2e suite: `cd apps/api && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" npx jest --config ./test/jest-e2e.json --runInBand`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/proby-progress/proby-progress.controller.ts apps/api/src/proby-progress/proby-progress.service.ts apps/api/test/proby-progress-confirm.e2e-spec.ts
@@ -679,7 +679,7 @@ git commit -m "feat: let zvyazkovyi confirm/unconfirm proby points, not just vyk
 - Consumes: `GET /hurtky/by-slug/:slug` (Task 2), `useSession` (existing, for `session.kurinId`), `ROLE_LABELS`/`POSITION_LABELS` (existing, `apps/web/lib/role-labels.ts`).
 - Produces: `HurtokMembers` type (`apps/web/lib/types.ts`). `useHurtokBySlug(slug)` hook (`apps/web/lib/queries/hurtky.ts`). No later task in this plan depends on these beyond this task's own page.
 
-- [ ] **Step 1: Update types**
+- [x] **Step 1: Update types**
 
 In `apps/web/lib/types.ts`, change:
 
@@ -717,7 +717,7 @@ export interface HurtokMembers {
 }
 ```
 
-- [ ] **Step 2: Update the query hooks**
+- [x] **Step 2: Update the query hooks**
 
 In `apps/web/lib/queries/hurtky.ts`, replace the full file content:
 
@@ -746,7 +746,7 @@ export function useHurtokBySlug(slug: string | undefined) {
 
 (This removes `useHurtokBoard`, `useConfirmPoint`, and `useUnconfirmPoint` from this file — the confirm/unconfirm mutations move to `apps/web/lib/queries/proby.ts` in Task 5, since they're used from the junak detail page now, not the hurtok page. `useHurtokBoard` is deleted outright, replaced by `useHurtokBySlug`.)
 
-- [ ] **Step 3: Write the new hurtok page**
+- [x] **Step 3: Write the new hurtok page**
 
 Create `apps/web/app/[kurinId]/hurtky/[slug]/page.tsx`:
 
@@ -797,13 +797,13 @@ export default function HurtokMembersPage({ params }: { params: Promise<{ kurinI
 }
 ```
 
-- [ ] **Step 4: Delete the old page**
+- [x] **Step 4: Delete the old page**
 
 ```bash
 git rm apps/web/app/hurtky/[id]/page.tsx
 ```
 
-- [ ] **Step 5: Update the hurtky list page's links**
+- [x] **Step 5: Update the hurtky list page's links**
 
 In `apps/web/app/hurtky/page.tsx`, change:
 
@@ -819,7 +819,7 @@ to:
           <Link key={h.id} href={`/${session?.kurinId}/hurtky/${h.slug}`}>
 ```
 
-- [ ] **Step 6: Write the e2e test**
+- [x] **Step 6: Write the e2e test**
 
 Create `apps/web/e2e/hurtok-members.spec.ts`:
 
@@ -858,7 +858,7 @@ test('lets zvyazkovyi navigate from the hurtok list to a human-readable hurtok U
 
 (`createHurtok` and `createUserAs` in `apps/web/e2e/helpers/proby-seed.ts` both return the raw created-resource JSON from their respective `POST` responses, so `hurtok.id` and the created junak's `.lastName`/`.firstName` above are valid.)
 
-- [ ] **Step 7: Run the tests**
+- [x] **Step 7: Run the tests**
 
 Run: `cd apps/web && npx tsc --noEmit` — expect clean.
 
@@ -873,7 +873,7 @@ The capability it tested (confirming a point from a page, as a VYKHOVNYK) is not
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test`
 Expected: the full suite passes, including the new `hurtok-members.spec.ts`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/web/lib/types.ts apps/web/lib/queries/hurtky.ts apps/web/app/[kurinId] apps/web/app/hurtky/page.tsx apps/web/e2e/hurtok-members.spec.ts apps/web/e2e/board.spec.ts
@@ -893,7 +893,7 @@ git commit -m "feat: human-readable hurtok URL with a people-list page"
 - Consumes: `POST /junaky/:id/progress/:pointId/confirm|unconfirm` (Task 3, now also ZVYAZKOVYI-accessible), `useProbyProgram`/`useJunakProgress` (existing, `apps/web/lib/queries/proby.ts`), `ProbyStage`/`ProbyCategory`/`ProbyPoint`/`JunakProgress` types (existing).
 - Produces: `useConfirmPoint(junakId)`/`useUnconfirmPoint(junakId)` in `apps/web/lib/queries/proby.ts` — no later task in this plan depends on these.
 
-- [ ] **Step 1: Move confirm/unconfirm hooks to `proby.ts`**
+- [x] **Step 1: Move confirm/unconfirm hooks to `proby.ts`**
 
 In `apps/web/lib/queries/proby.ts`, add these two exports (keep the existing `useProbyProgram`/`useJunakProgress` as-is, just add to the file):
 
@@ -927,7 +927,7 @@ export function useUnconfirmPoint(junakId: string) {
 }
 ```
 
-- [ ] **Step 2: Add the collapsible category component and the "Проба" card**
+- [x] **Step 2: Add the collapsible category component and the "Проба" card**
 
 Open `apps/web/app/users/[id]/page.tsx`. Add these imports alongside the existing ones:
 
@@ -1047,7 +1047,7 @@ Add this new `<Card>` right after the "Опікуни" `<Card>` block (before th
       )}
 ```
 
-- [ ] **Step 3: Write the e2e test**
+- [x] **Step 3: Write the e2e test**
 
 Create `apps/web/e2e/junak-proba-detail.spec.ts`:
 
@@ -1084,14 +1084,14 @@ test('lets zvyazkovyi expand a proba category and confirm a point from the junak
 
 (`seedProbyProgram()` with no arguments, per `apps/web/e2e/helpers/seed.ts`, seeds exactly one stage named `'Ступінь 1'` containing one category named `'Категорія 1'` with one point described `'Точка 1'` — the assertions above use these exact literal names, not placeholders.)
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd apps/web && npx tsc --noEmit` — expect clean.
 
 Run: `cd apps/web && DATABASE_URL_TEST="postgresql://plast:plast@localhost:5432/plast_test" ADMIN_API_KEY="dev-admin-key" JWT_SECRET="dev-jwt-secret" npx playwright test`
 Expected: the full suite passes, including the new `junak-proba-detail.spec.ts` and every pre-existing spec (including whatever Task 4's Step 7 did with `board.spec.ts`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/lib/queries/proby.ts apps/web/app/users/[id]/page.tsx apps/web/e2e/junak-proba-detail.spec.ts

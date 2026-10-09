@@ -28,7 +28,7 @@
 - Consumes: `PrismaClient`, `ProbyProgramVersion` from `@prisma/client` (existing, generated from `apps/api/prisma/schema.prisma`). Existing model shape: `ProbyProgram { id, version, name, stages: ProbyStage[] }`, `ProbyStage { id, programId, order, name, categories: ProbyCategory[] }`, `ProbyCategory { id, stageId, name, points: ProbyPoint[] }`, `ProbyPoint { id, categoryId, order, description }`, `JunakProgress { pointId, transferredFromPointId, ... }`, `PointMapping { oldPointId, newPointId, ... }`.
 - Produces: nothing consumed by later tasks — this is the only task in this plan.
 
-- [ ] **Step 1: Write the seed data file**
+- [x] **Step 1: Write the seed data file**
 
 Create `apps/api/src/scripts/real-proby-content.data.ts`:
 
@@ -274,7 +274,7 @@ export const REAL_PROBY_CONTENT: ProbyStageData[] = [
 ];
 ```
 
-- [ ] **Step 2: Write the seed script**
+- [x] **Step 2: Write the seed script**
 
 Create `apps/api/src/scripts/seed-real-proby-content.ts`:
 
@@ -367,7 +367,7 @@ main()
   });
 ```
 
-- [ ] **Step 3: Run against the local dev database**
+- [x] **Step 3: Run against the local dev database**
 
 From `apps/api/`, export the local `DATABASE_URL` from `.env` and run the script with `ts-node`:
 
@@ -381,7 +381,7 @@ Expected output: `Seeded program <uuid> (<name>): 3 stages, 16 categories, 128 p
 
 If the script throws `Expected exactly one ProbyProgram with version=NEW, found 0` — the local dev database has no NEW program yet; this is a real environment-setup gap, not something to work around in the script. Report it rather than adjusting the script's assertion.
 
-- [ ] **Step 4: Spot-check the loaded content**
+- [x] **Step 4: Spot-check the loaded content**
 
 Run this quick verification query to confirm the three stage names and per-stage point counts:
 
@@ -413,7 +413,7 @@ Expected output (three lines):
 
 If any count doesn't match, the data file has an error — compare against this plan's Step 1 content directly (do not guess at a fix; the content in Step 1 is the verified source of truth).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/scripts/real-proby-content.data.ts apps/api/src/scripts/seed-real-proby-content.ts
