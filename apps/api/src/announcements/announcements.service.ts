@@ -44,7 +44,7 @@ export class AnnouncementsService {
       where: { kurinId },
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { firstName: true, lastName: true } },
+        author: { select: { id: true, firstName: true, lastName: true, nickname: true, photoUpdatedAt: true } },
         images: { select: { id: true } },
         reactions: { select: { userId: true, emoji: true } },
       },

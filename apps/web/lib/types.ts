@@ -374,7 +374,7 @@ export interface Announcement {
   content: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
-  author: { firstName: string; lastName: string };
+  author: { id: string; firstName: string; lastName: string; nickname: string | null; photoUpdatedAt: string | null };
   images: { id: string }[];
   reactions: { userId: string; emoji: ReactionEmoji }[];
 }
