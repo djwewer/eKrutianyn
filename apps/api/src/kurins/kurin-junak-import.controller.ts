@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -6,6 +7,7 @@ import {
   Logger,
   Param,
   Patch,
+  Post,
   Put,
   ServiceUnavailableException,
   UseGuards,
@@ -15,6 +17,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
+import { JudgeBookSyncService } from './judge-book-sync.service';
 import { SaveJunakImportMappingDto } from './dto/save-junak-import-mapping.dto';
 import { SetJunakImportSpreadsheetDto } from './dto/set-junak-import-spreadsheet.dto';
 
@@ -26,6 +29,7 @@ export class KurinJunakImportController {
   constructor(
     private readonly googleDrive: GoogleDriveService,
     private readonly prisma: PrismaService,
+    private readonly judgeBookSync: JudgeBookSyncService,
   ) {}
 
   @Get(':kurinId/junak-import/status')
@@ -101,6 +105,40 @@ export class KurinJunakImportController {
       const message = (error as Error).message;
       this.logger.error(`Failed to read Книга судді sheet for kurin ${kurinId}: ${message}`, (error as Error).stack);
       throw new ServiceUnavailableException(`Не вдалося прочитати таблицю з Google Sheets: ${message}`);
+    }
+  }
+
+  /**
+   * Manual run of the nightly write-back (degree dates, phone, email → the
+   * connected Книга судді) so the zvyazkovyi can verify it on demand. Returns
+   * what happened, including who was skipped and why.
+   */
+  @Post(':kurinId/junak-import/sync')
+  async syncNow(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
+    this.assertOwnKurin(kurinId, user);
+    this.assertZvyazkovyi(user);
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { judgeBookSpreadsheetId: true, driveRefreshToken: true },
+    });
+    if (!kurin?.judgeBookSpreadsheetId) {
+      throw new BadRequestException('Книга судді ще не підключена');
+    }
+    if (!kurin.driveRefreshToken) {
+      throw new ServiceUnavailableException('Курінь ще не підключив Google Drive');
+    }
+    const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
+    if (!mapping) {
+      throw new BadRequestException(
+        'Не налаштовано відповідність стовпців таблиці. Один раз пройдіть майстер імпорту, щоб її зберегти',
+      );
+    }
+    try {
+      return await this.judgeBookSync.syncKurinToSheet(kurinId);
+    } catch (error) {
+      const message = (error as Error).message;
+      this.logger.error(`Manual Книга судді sync failed for kurin ${kurinId}: ${message}`, (error as Error).stack);
+      throw new ServiceUnavailableException(`Не вдалося записати в таблицю Google Sheets: ${message}`);
     }
   }
 

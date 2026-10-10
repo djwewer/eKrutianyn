@@ -9,7 +9,7 @@ describe('JudgeBookSyncService', () => {
     prisma = {
       kurin: { findUnique: jest.fn(), findMany: jest.fn() },
       junakImportMapping: { findUnique: jest.fn() },
-      user: { findMany: jest.fn() },
+      user: { findMany: jest.fn(), count: jest.fn().mockResolvedValue(0) },
       probyStage: { findMany: jest.fn() },
       junakStageProgress: { findMany: jest.fn() },
     };
@@ -65,8 +65,11 @@ describe('JudgeBookSyncService', () => {
     ]);
     googleDrive.readSheetValues.mockResolvedValue(SHEET_ROWS);
 
-    await service.syncKurinToSheet('kurin-1');
+    prisma.user.count.mockResolvedValue(3);
 
+    const report = await service.syncKurinToSheet('kurin-1');
+
+    expect(report).toEqual({ linkedJunaky: 2, syncedJunaky: 2, updatedCells: 4, unlinkedJunaky: 3, skipped: [] });
     expect(googleDrive.updateCellValues).toHaveBeenCalledTimes(1);
     const [kurinId, spreadsheetId, updates] = googleDrive.updateCellValues.mock.calls[0];
     expect(kurinId).toBe('kurin-1');
@@ -134,11 +137,16 @@ describe('JudgeBookSyncService', () => {
       ['', 'Петро Сидоренко'],
     ]);
 
-    await service.syncKurinToSheet('kurin-1');
+    const report = await service.syncKurinToSheet('kurin-1');
 
     expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', [
       { row: 6, column: 'E', value: '0679998877' },
       { row: 6, column: 'F', value: 'junak2@example.com' },
+    ]);
+    expect(report.syncedJunaky).toBe(1);
+    expect(report.updatedCells).toBe(2);
+    expect(report.skipped).toEqual([
+      { junakName: 'Іван Петренко', row: 5, reason: expect.stringContaining('Зовсім Інший') },
     ]);
   });
 
@@ -165,8 +173,9 @@ describe('JudgeBookSyncService', () => {
   it('does nothing when the kurin has no judgeBookSpreadsheetId', async () => {
     prisma.kurin.findUnique.mockResolvedValue({ ...KURIN, judgeBookSpreadsheetId: null });
 
-    await service.syncKurinToSheet('kurin-1');
+    const report = await service.syncKurinToSheet('kurin-1');
 
+    expect(report).toEqual({ linkedJunaky: 0, syncedJunaky: 0, updatedCells: 0, unlinkedJunaky: 0, skipped: [] });
     expect(prisma.junakImportMapping.findUnique).not.toHaveBeenCalled();
     expect(googleDrive.updateCellValues).not.toHaveBeenCalled();
   });
@@ -175,7 +184,7 @@ describe('JudgeBookSyncService', () => {
     it('continues to the next kurin when one fails', async () => {
       prisma.kurin.findMany.mockResolvedValue([{ id: 'kurin-1' }, { id: 'kurin-2' }]);
       const spy = jest.spyOn(service, 'syncKurinToSheet');
-      spy.mockRejectedValueOnce(new Error('Drive token expired')).mockResolvedValueOnce(undefined);
+      spy.mockRejectedValueOnce(new Error('Drive token expired')).mockResolvedValueOnce({} as any);
 
       await service.syncAllKurins();
 

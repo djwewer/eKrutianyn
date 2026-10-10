@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import type { JunakImportStatus } from '@/lib/types';
+import type { JudgeBookSyncReport, JunakImportStatus } from '@/lib/types';
 
 export function useJunakImportStatus(kurinId: string | undefined) {
   return useQuery({
@@ -48,5 +48,11 @@ export function useSaveJunakImportMapping(kurinId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['junak-import-status', kurinId] });
     },
+  });
+}
+
+export function useSyncJudgeBookNow(kurinId: string) {
+  return useMutation({
+    mutationFn: () => apiFetch<JudgeBookSyncReport>(`/kurins/${kurinId}/junak-import/sync`, { method: 'POST' }),
   });
 }

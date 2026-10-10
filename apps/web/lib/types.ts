@@ -388,6 +388,14 @@ export interface JunakImportPositionValueMapping {
   positionType: string | null;
 }
 
+export interface JudgeBookSyncReport {
+  linkedJunaky: number;
+  syncedJunaky: number;
+  updatedCells: number;
+  unlinkedJunaky: number;
+  skipped: { junakName: string; row: number; reason: string }[];
+}
+
 export interface JunakImportRowResult {
   row: number;
   junakId?: string;

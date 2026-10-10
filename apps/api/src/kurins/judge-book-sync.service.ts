@@ -11,6 +11,19 @@ interface ColumnMappingEntry {
   field: string;
 }
 
+export interface JudgeBookSyncReport {
+  /** Active junaky linked to a sheet row (imported from, or appended to, the book). */
+  linkedJunaky: number;
+  /** Linked junaky that had at least one value written. */
+  syncedJunaky: number;
+  /** Total sheet cells written. */
+  updatedCells: number;
+  /** Active junaky with no known sheet row — nothing can be pushed for them. */
+  unlinkedJunaky: number;
+  /** Linked junaky left untouched, with the reason (shown to the zvyazkovyi). */
+  skipped: { junakName: string; row: number; reason: string }[];
+}
+
 interface CellUpdate {
   row: number;
   column: string;
@@ -124,12 +137,19 @@ export class JudgeBookSyncService {
     }
   }
 
-  async syncKurinToSheet(kurinId: string): Promise<void> {
+  async syncKurinToSheet(kurinId: string): Promise<JudgeBookSyncReport> {
+    const report: JudgeBookSyncReport = {
+      linkedJunaky: 0,
+      syncedJunaky: 0,
+      updatedCells: 0,
+      unlinkedJunaky: 0,
+      skipped: [],
+    };
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
-    if (!kurin?.judgeBookSpreadsheetId) return;
+    if (!kurin?.judgeBookSpreadsheetId) return report;
 
     const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
-    if (!mapping) return;
+    if (!mapping) return report;
 
     const fieldToColumn = new Map<string, string>();
     for (const entry of mapping.columnMapping as unknown as ColumnMappingEntry[]) {
@@ -148,6 +168,11 @@ export class JudgeBookSyncService {
       const stage = stages.find((s) => s.name.startsWith(prefix));
       if (stage) stageByDegreeKey.set(key, stage);
     }
+
+    report.linkedJunaky = junaky.length;
+    report.unlinkedJunaky = await this.prisma.user.count({
+      where: { kurinId, role: Role.JUNAK, archivedAt: null, judgeBookRowNumber: null },
+    });
 
     const junakIds = junaky.map((u) => u.id);
     const stageIds = [...stageByDegreeKey.values()].map((s) => s.id);
@@ -186,6 +211,13 @@ export class JudgeBookSyncService {
         const actualName = normalizeName(sheetRows[row - 1]?.[nameColIndex] ?? '');
         const expectedName = normalizeName(`${junak.firstName} ${junak.lastName}`);
         if (actualName !== expectedName) {
+          report.skipped.push({
+            junakName: `${junak.firstName} ${junak.lastName}`,
+            row,
+            reason: actualName
+              ? `у рядку ${row} зараз «${sheetRows[row - 1]?.[nameColIndex]?.trim()}» — рядок могли пересунути або змінити`
+              : `рядок ${row} порожній або видалений`,
+          });
           this.logger.warn(
             `Skipping Книга судді push for junak ${junak.id} (kurin ${kurinId}): row ${row} now shows "${actualName}", expected "${expectedName}" — the sheet row likely moved or was edited since import`,
           );
@@ -193,6 +225,7 @@ export class JudgeBookSyncService {
         }
       }
 
+      const updatesBefore = updates.length;
       for (const { key, field } of DEGREE_DATE_FIELDS) {
         const column = fieldToColumn.get(field);
         if (!column) continue;
@@ -212,9 +245,12 @@ export class JudgeBookSyncService {
       if (emailColumn && junak.email) {
         updates.push({ row, column: emailColumn, value: junak.email });
       }
+      if (updates.length > updatesBefore) report.syncedJunaky += 1;
     }
 
     await this.googleDrive.updateCellValues(kurinId, kurin.judgeBookSpreadsheetId, updates);
+    report.updatedCells = updates.length;
+    return report;
   }
 
   async syncAllKurins(): Promise<void> {
