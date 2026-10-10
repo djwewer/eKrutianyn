@@ -21,13 +21,14 @@ test('lets zvyazkovyi add and remove a guardian contact from the junak detail pa
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/users/${junak.id}`);
 
+  // Mother is the suggested first contact; the relation is chosen, not typed.
+  await expect(page.getByLabel('Хто це')).toHaveValue('MOTHER');
   await page.getByPlaceholder("Ім'я").fill('Марія Петренко');
-  await page.getByPlaceholder('Телефон').fill('+380501234567');
-  await page.getByPlaceholder('Роль (мама, тато...)').fill('Мама');
-  await page.getByRole('button', { name: 'Додати опікуна' }).click();
+  await page.getByPlaceholder('Телефон (можна додати пізніше)').fill('+380501234567');
+  await page.getByRole('button', { name: 'Додати контакт' }).click();
 
-  await expect(page.getByText('Марія Петренко (Мама)')).toBeVisible();
+  await expect(page.getByText('Мама: Марія Петренко')).toBeVisible();
 
   await page.getByRole('button', { name: 'Видалити' }).click();
-  await expect(page.getByText('Марія Петренко (Мама)')).not.toBeVisible();
+  await expect(page.getByText('Мама: Марія Петренко')).not.toBeVisible();
 });
