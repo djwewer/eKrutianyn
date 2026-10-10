@@ -173,9 +173,38 @@ describe('JunakImportRowProcessorService', () => {
     );
 
     expect(prisma.guardianContact.create).toHaveBeenCalledWith({
-      data: { junakId: 'user-1', name: 'Марія Петренко', phone: '0501234567', email: undefined },
+      data: { junakId: 'user-1', name: 'Марія Петренко', phone: '0501234567', email: undefined, relation: 'GUARDIAN' },
     });
     expect(result.succeededSteps).toContain('contacts');
+  });
+
+  it('matches a mother by relation (not by name) and refreshes her details', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.guardianContact.findFirst.mockResolvedValue({ id: 'contact-mom', name: 'Марія' });
+
+    await service.processRow(
+      'kurin-1',
+      baseRow({ guardians: [{ name: 'Марія Іванівна', phone: '0507777777', relation: 'MOTHER' }] }),
+      0,
+      ACTOR,
+    );
+
+    expect(prisma.guardianContact.findFirst).toHaveBeenCalledWith({ where: { junakId: 'user-1', relation: 'MOTHER' } });
+    expect(prisma.guardianContact.update).toHaveBeenCalledWith({
+      where: { id: 'contact-mom' },
+      data: { name: 'Марія Іванівна', phone: '0507777777', email: undefined },
+    });
+  });
+
+  it('creates a father with an empty phone when the sheet only has his name', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    prisma.guardianContact.findFirst.mockResolvedValue(null);
+
+    await service.processRow('kurin-1', baseRow({ guardians: [{ name: 'Петро', relation: 'FATHER' }] }), 0, ACTOR);
+
+    expect(prisma.guardianContact.create).toHaveBeenCalledWith({
+      data: { junakId: 'user-1', name: 'Петро', phone: '', email: undefined, relation: 'FATHER' },
+    });
   });
 
   it('updates an existing guardian contact matched by name instead of duplicating it', async () => {
@@ -191,7 +220,7 @@ describe('JunakImportRowProcessorService', () => {
 
     expect(prisma.guardianContact.update).toHaveBeenCalledWith({
       where: { id: 'contact-1' },
-      data: { phone: '0501234567', email: undefined },
+      data: { name: 'Марія Петренко', phone: '0501234567', email: undefined },
     });
     expect(prisma.guardianContact.create).not.toHaveBeenCalled();
   });

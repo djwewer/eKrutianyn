@@ -44,6 +44,26 @@ export async function seedProbyProgram(pointDescriptions: string[] = ['Точк�
   return { program, stage, category, points };
 }
 
+/** A program whose stages carry the real degree names, so closing them earns Прихильник / Учасник / Розвідувач. */
+export async function seedDegreeProbyProgram() {
+  const program = await adminPost<{ id: string; name: string }>('/admin/proby-programs', {
+    version: 'OLD',
+    name: `Програма ступенів ${Date.now()}`,
+  });
+  const stages: { id: string; name: string }[] = [];
+  const points: { id: string }[] = [];
+  const names = ['Проба прихильника (Відзнака)', 'Проба учасника (Скобине крило)', 'Проба розвідувача (Скобиний хват)'];
+  for (const [i, name] of names.entries()) {
+    const stage = await adminPost<{ id: string }>(`/admin/proby-programs/${program.id}/stages`, { order: i + 1, name });
+    const category = await adminPost<{ id: string }>(`/admin/proby-stages/${stage.id}/categories`, { name: 'Категорія' });
+    points.push(
+      await adminPost<{ id: string }>(`/admin/proby-categories/${category.id}/points`, { order: 1, description: `Точка ${i + 1}` }),
+    );
+    stages.push({ id: stage.id, name });
+  }
+  return { program, stages, points };
+}
+
 export async function seedKurinWithZvyazkovyi(
   probyProgramId: string,
   options?: { driveFolderId?: string; driveRefreshToken?: string; driveConnectedEmail?: string },

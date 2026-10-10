@@ -15,6 +15,7 @@ import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import {
   JUNAK_IMPORT_FIELD_LABELS,
   type JunakImportField,
+  type GuardianRelation,
   type JunakImportColumnMapping,
   type JunakImportPositionValueMapping,
   type JunakImportRowResult,
@@ -213,21 +214,22 @@ export default function JunakImportPage() {
       const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
       const email = rowOverrides[row.rowIndex]?.email || emailFromSheet;
 
-      const guardians: { name: string; phone?: string; email?: string }[] = [];
-      const guardian1Name = cellFor(row.cells, 'GUARDIAN_1_NAME');
-      if (guardian1Name) {
+      // Father and mother are the standard two; anything else is a generic guardian.
+      const guardians: { name: string; phone?: string; email?: string; relation: GuardianRelation }[] = [];
+      const guardianSlots: { relation: GuardianRelation; prefix: string }[] = [
+        { relation: 'FATHER', prefix: 'FATHER' },
+        { relation: 'MOTHER', prefix: 'MOTHER' },
+        { relation: 'GUARDIAN', prefix: 'GUARDIAN_1' },
+        { relation: 'GUARDIAN', prefix: 'GUARDIAN_2' },
+      ];
+      for (const { relation, prefix } of guardianSlots) {
+        const name = cellFor(row.cells, `${prefix}_NAME` as JunakImportField);
+        if (!name) continue;
         guardians.push({
-          name: guardian1Name,
-          phone: cellFor(row.cells, 'GUARDIAN_1_PHONE') || undefined,
-          email: cellFor(row.cells, 'GUARDIAN_1_EMAIL') || undefined,
-        });
-      }
-      const guardian2Name = cellFor(row.cells, 'GUARDIAN_2_NAME');
-      if (guardian2Name) {
-        guardians.push({
-          name: guardian2Name,
-          phone: cellFor(row.cells, 'GUARDIAN_2_PHONE') || undefined,
-          email: cellFor(row.cells, 'GUARDIAN_2_EMAIL') || undefined,
+          name,
+          phone: cellFor(row.cells, `${prefix}_PHONE` as JunakImportField) || undefined,
+          email: cellFor(row.cells, `${prefix}_EMAIL` as JunakImportField) || undefined,
+          relation,
         });
       }
 
@@ -240,6 +242,7 @@ export default function JunakImportPage() {
       if (rozviduvachRaw) degreeDates.ROZVIDUVACH = parseUkrainianDate(rozviduvachRaw);
 
       const birthDateRaw = cellFor(row.cells, 'BIRTH_DATE');
+      const skobDateRaw = cellFor(row.cells, 'DEGREE_SKOB_DATE');
 
       return {
         rowIndex: row.rowIndex,
@@ -250,6 +253,9 @@ export default function JunakImportPage() {
         birthDate: birthDateRaw ? parseUkrainianDate(birthDateRaw) : undefined,
         email,
         phone: cellFor(row.cells, 'PHONE') || undefined,
+        residence: cellFor(row.cells, 'RESIDENCE') || undefined,
+        studyPlace: cellFor(row.cells, 'STUDY_PLACE') || undefined,
+        skobDate: skobDateRaw ? parseUkrainianDate(skobDateRaw) : undefined,
         hurtokName: row.hurtokName || undefined,
         kurinPositionTypes: resolvePositionTypes(row.cells, 'KURIN_POSITION'),
         hurtokPositionTypes: resolvePositionTypes(row.cells, 'HURTOK_POSITION'),

@@ -12,6 +12,7 @@ import { VykhovnykAssignmentsModule } from './vykhovnyk-assignments/vykhovnyk-as
 import { ProbyProgressModule } from './proby-progress/proby-progress.module';
 import { KurinsModule } from './kurins/kurins.module';
 import { ApprovalRequestsModule } from './approval-requests/approval-requests.module';
+import { JunakDegreesModule } from './junak-degrees/junak-degrees.module';
 import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
@@ -39,6 +40,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     ProbyProgressModule,
     KurinsModule,
     ApprovalRequestsModule,
+    JunakDegreesModule,
     ProbyCatalogModule,
     KurinPositionsModule,
     GuardianContactsModule,

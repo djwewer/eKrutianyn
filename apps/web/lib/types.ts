@@ -27,6 +27,8 @@ export interface UserSummary {
 export interface UserDetail extends UserSummary {
   notes: string | null;
   phone: string | null;
+  residence: string | null;
+  studyPlace: string | null;
 }
 
 export interface Hurtok {
@@ -107,12 +109,25 @@ export interface KurinCalendarEvent {
   endDate: string | null;
 }
 
+export type GuardianRelation = 'MOTHER' | 'FATHER' | 'GUARDIAN';
+
 export interface GuardianContact {
   id: string;
   name: string;
   phone: string;
+  relation: GuardianRelation;
+  /** Free-text clarification, only meaningful for relation GUARDIAN ("бабуся"). */
   role: string | null;
   email: string | null;
+}
+
+export type DegreeKey = 'PRYHYLNYK' | 'UCHASNYK' | 'ROZVIDUVACH' | 'SKOB';
+
+export interface JunakDegrees {
+  /** YYYY-MM-DD per degree, null when not earned yet. */
+  dates: Record<DegreeKey, string | null>;
+  current: DegreeKey | null;
+  currentLabel: string | null;
 }
 
 export interface ProbyPoint {
@@ -288,6 +303,9 @@ export interface MatchedJunakSummary {
   nickname: string | null;
   email: string;
   phone: string | null;
+  residence: string | null;
+  studyPlace: string | null;
+  skobDate: string | null;
   birthDate: string | null;
   hurtokName: string | null;
   kurinPositionTypes: PositionType[];
@@ -307,7 +325,10 @@ export interface BulkImportRow {
   hurtokName?: string;
   kurinPositionTypes?: PositionType[];
   hurtokPositionTypes?: PositionType[];
-  guardians?: { name: string; phone?: string; email?: string }[];
+  residence?: string;
+  studyPlace?: string;
+  skobDate?: string;
+  guardians?: { name: string; phone?: string; email?: string; relation?: GuardianRelation }[];
   degreeDates?: { PRYHYLNYK?: string; UCHASNYK?: string; ROZVIDUVACH?: string };
 }
 
@@ -348,6 +369,16 @@ export type JunakImportField =
   | 'DEGREE_PRYHYLNYK_DATE'
   | 'DEGREE_UCHASNYK_DATE'
   | 'DEGREE_ROZVIDUVACH_DATE'
+  | 'DEGREE_SKOB_DATE'
+  | 'CURRENT_DEGREE'
+  | 'RESIDENCE'
+  | 'STUDY_PLACE'
+  | 'FATHER_NAME'
+  | 'FATHER_PHONE'
+  | 'FATHER_EMAIL'
+  | 'MOTHER_NAME'
+  | 'MOTHER_PHONE'
+  | 'MOTHER_EMAIL'
   | 'HURTOK_POSITION'
   | 'KURIN_POSITION'
   | 'GUARDIAN_1_NAME'
@@ -367,14 +398,24 @@ export const JUNAK_IMPORT_FIELD_LABELS: Record<JunakImportField, string> = {
   DEGREE_PRYHYLNYK_DATE: 'Дата здобуття ступеня "Прихильник"',
   DEGREE_UCHASNYK_DATE: 'Дата здобуття ступеня "Учасник"',
   DEGREE_ROZVIDUVACH_DATE: 'Дата здобуття ступеня "Розвідувач"',
+  DEGREE_SKOB_DATE: 'Дата здобуття ступеня "Скоб"',
+  CURRENT_DEGREE: 'Поточний ступінь (записується з застосунку)',
+  RESIDENCE: 'Місце проживання',
+  STUDY_PLACE: 'Місце навчання',
+  FATHER_NAME: "Тато — ім'я",
+  FATHER_PHONE: 'Тато — телефон',
+  FATHER_EMAIL: 'Тато — email',
+  MOTHER_NAME: "Мама — ім'я",
+  MOTHER_PHONE: 'Мама — телефон',
+  MOTHER_EMAIL: 'Мама — email',
   HURTOK_POSITION: 'Діловодство в гуртку',
   KURIN_POSITION: 'Діловодство в курені',
-  GUARDIAN_1_NAME: "Контакт 1 — ім'я",
-  GUARDIAN_1_PHONE: 'Контакт 1 — телефон',
-  GUARDIAN_1_EMAIL: 'Контакт 1 — email',
-  GUARDIAN_2_NAME: "Контакт 2 — ім'я",
-  GUARDIAN_2_PHONE: 'Контакт 2 — телефон',
-  GUARDIAN_2_EMAIL: 'Контакт 2 — email',
+  GUARDIAN_1_NAME: "Опікун 1 — ім'я",
+  GUARDIAN_1_PHONE: 'Опікун 1 — телефон',
+  GUARDIAN_1_EMAIL: 'Опікун 1 — email',
+  GUARDIAN_2_NAME: "Опікун 2 — ім'я",
+  GUARDIAN_2_PHONE: 'Опікун 2 — телефон',
+  GUARDIAN_2_EMAIL: 'Опікун 2 — email',
 };
 
 export interface JunakImportColumnMapping {

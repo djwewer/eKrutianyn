@@ -15,6 +15,7 @@ import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { USER_SELECT } from './user-select.const';
 import { hasAnyActivePosition } from '../common/positions.util';
 import { detectSafeImageMimeType } from '../common/image-sniff.util';
+import { canEditBookData } from '../common/book-access.util';
 
 @Injectable()
 export class UsersService {
@@ -79,7 +80,7 @@ export class UsersService {
   }
 
   async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actor: CurrentUserPayload) {
-    if (actor.role !== Role.ZVYAZKOVYI && !actor.isKurinniy) {
+    if (!canEditBookData(actor)) {
       throw new ForbiddenException('Insufficient role');
     }
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
@@ -88,7 +89,13 @@ export class UsersService {
     }
     return this.prisma.user.update({
       where: { id: junakId },
-      data: { notes: dto.notes, phone: dto.phone },
+      // An emptied field is stored as null so the book sync treats it as "nothing to push".
+      data: {
+        notes: dto.notes,
+        phone: dto.phone,
+        residence: dto.residence === undefined ? undefined : dto.residence.trim() || null,
+        studyPlace: dto.studyPlace === undefined ? undefined : dto.studyPlace.trim() || null,
+      },
       select: {
         id: true,
         firstName: true,
@@ -101,6 +108,8 @@ export class UsersService {
         hurtokId: true,
         notes: true,
         phone: true,
+        residence: true,
+        studyPlace: true,
       },
     });
   }
@@ -162,7 +171,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { ...USER_SELECT, notes: true, phone: true },
+      select: { ...USER_SELECT, notes: true, phone: true, residence: true, studyPlace: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -257,7 +266,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { ...USER_SELECT, notes: true, phone: true },
+      select: { ...USER_SELECT, notes: true, phone: true, residence: true, studyPlace: true },
     });
     if (!user || user.kurinId !== actor.kurinId) {
       throw new NotFoundException('User not found');

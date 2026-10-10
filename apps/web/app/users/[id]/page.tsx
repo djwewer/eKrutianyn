@@ -19,24 +19,72 @@ import {
   useCloseStage,
   useReopenStage,
 } from '@/lib/queries/proby';
-import type { GuardianContact, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
+import type { GuardianContact, GuardianRelation, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
+import { JunakDegreesCard } from '@/components/junak-degrees-card';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
+import { ApiError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const RELATION_LABELS: Record<GuardianRelation, string> = {
+  MOTHER: 'Мама',
+  FATHER: 'Тато',
+  GUARDIAN: 'Опікун',
+};
+
+function GuardianRelationSelect({
+  value,
+  onChange,
+  taken = [],
+  id,
+}: {
+  value: GuardianRelation;
+  onChange: (relation: GuardianRelation) => void;
+  /** Relations already used by another contact (mother/father can each be used once). */
+  taken?: GuardianRelation[];
+  id?: string;
+}) {
+  return (
+    <select
+      id={id}
+      aria-label="Хто це"
+      value={value}
+      onChange={(e) => onChange(e.target.value as GuardianRelation)}
+      className="w-full rounded-md border px-3 py-2 text-sm"
+    >
+      {(Object.keys(RELATION_LABELS) as GuardianRelation[]).map((relation) => (
+        <option key={relation} value={relation} disabled={relation !== value && taken.includes(relation)}>
+          {RELATION_LABELS[relation]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function guardianErrorText(error: unknown): string {
+  if (error instanceof ApiError && error.status !== 403) {
+    const message = (error.body as { message?: unknown } | null)?.message;
+    if (typeof message === 'string' && message) return message;
+  }
+  return accessErrorMessage(error) ?? 'Не вдалося зберегти контакт.';
+}
+
 function GuardianContactRow({
   contact,
   junakId,
+  takenByOthers,
 }: {
   contact: GuardianContact;
   junakId: string;
+  takenByOthers: GuardianRelation[];
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(contact.name);
   const [phone, setPhone] = useState(contact.phone);
+  const [relation, setRelation] = useState<GuardianRelation>(contact.relation);
   const [role, setRole] = useState(contact.role ?? '');
   const [email, setEmail] = useState(contact.email ?? '');
   const update = useUpdateGuardianContact(junakId);
@@ -45,17 +93,27 @@ function GuardianContactRow({
   if (isEditing) {
     return (
       <div className="space-y-2 border-b py-2 last:border-b-0">
+        <GuardianRelationSelect value={relation} onChange={setRelation} taken={takenByOthers} />
+        {relation === 'GUARDIAN' && (
+          <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Хто саме (бабуся, тітка...)" />
+        )}
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ім'я" />
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон" />
-        <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Роль (мама, тато...)" />
         <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
         <div className="flex gap-2">
           <Button
             size="sm"
-            disabled={!name || !phone || update.isPending}
+            disabled={!name || update.isPending}
             onClick={() =>
               update.mutate(
-                { id: contact.id, name, phone, role: role || null, email: email || null },
+                {
+                  id: contact.id,
+                  name,
+                  phone,
+                  relation,
+                  role: relation === 'GUARDIAN' ? role || null : null,
+                  email: email || null,
+                },
                 { onSuccess: () => setIsEditing(false) },
               )
             }
@@ -66,21 +124,20 @@ function GuardianContactRow({
             Скасувати
           </Button>
         </div>
+        {update.isError && <p className="text-sm text-destructive">{guardianErrorText(update.error)}</p>}
       </div>
     );
   }
 
+  const contactLine = [contact.phone, contact.email].filter(Boolean).join(' · ');
   return (
-    <div className="flex items-center justify-between border-b py-2 text-sm last:border-b-0">
+    <div className="flex items-center justify-between border-b py-2 text-sm last:border-b-0" data-testid="guardian-row">
       <div>
         <p className="font-medium">
-          {contact.name}
-          {contact.role && ` (${contact.role})`}
+          {RELATION_LABELS[contact.relation]}
+          {contact.relation === 'GUARDIAN' && contact.role && ` (${contact.role})`}: {contact.name}
         </p>
-        <p className="text-muted-foreground">
-          {contact.phone}
-          {contact.email && ` · ${contact.email}`}
-        </p>
+        <p className="text-muted-foreground">{contactLine || 'Телефон і email ще не вказані'}</p>
       </div>
       <div className="flex gap-2">
         <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
@@ -99,37 +156,80 @@ function GuardianContactRow({
   );
 }
 
-function AddGuardianContactForm({ junakId }: { junakId: string }) {
+function AddGuardianContactForm({ junakId, existing }: { junakId: string; existing: GuardianContact[] }) {
+  const takenRelations = existing
+    .map((c) => c.relation)
+    .filter((relation): relation is GuardianRelation => relation === 'MOTHER' || relation === 'FATHER');
+  // The usual case is mother, then father — preselect whichever is still missing.
+  const suggested: GuardianRelation = !takenRelations.includes('MOTHER')
+    ? 'MOTHER'
+    : !takenRelations.includes('FATHER')
+      ? 'FATHER'
+      : 'GUARDIAN';
+  const [relation, setRelation] = useState<GuardianRelation | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
   const [email, setEmail] = useState('');
   const add = useAddGuardianContact(junakId);
+  const effectiveRelation = relation ?? suggested;
 
   return (
     <div className="space-y-2 pt-2">
+      <GuardianRelationSelect value={effectiveRelation} onChange={setRelation} taken={takenRelations} />
+      {effectiveRelation === 'GUARDIAN' && (
+        <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Хто саме (бабуся, тітка...)" />
+      )}
       <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ім'я" />
-      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон" />
-      <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Роль (мама, тато...)" />
-      <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон (можна додати пізніше)" />
+      <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (можна додати пізніше)" />
       <Button
         size="sm"
-        disabled={!name || !phone || add.isPending}
+        disabled={!name || add.isPending}
         onClick={() =>
           add.mutate(
-            { name, phone, role: role || undefined, email: email || undefined },
+            {
+              name,
+              phone: phone || undefined,
+              relation: effectiveRelation,
+              role: effectiveRelation === 'GUARDIAN' ? role || undefined : undefined,
+              email: email || undefined,
+            },
             {
               onSuccess: () => {
                 setName('');
                 setPhone('');
                 setRole('');
                 setEmail('');
+                setRelation(null);
               },
             },
           )
         }
       >
-        Додати опікуна
+        Додати контакт
+      </Button>
+      {add.isError && <p className="text-sm text-destructive">{guardianErrorText(add.error)}</p>}
+    </div>
+  );
+}
+
+/** "Закрити пробу" with the date the degree was actually earned (defaults to today). */
+function CloseStageControl({ onClose, disabled }: { onClose: (date: string) => void; disabled: boolean }) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(todayIso);
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="date"
+        aria-label="Дата здобуття ступеня"
+        value={date}
+        max={todayIso}
+        onChange={(e) => setDate(e.target.value)}
+        className="w-40"
+      />
+      <Button size="sm" variant="outline" disabled={disabled || !date} onClick={() => onClose(date)}>
+        Закрити пробу
       </Button>
     </div>
   );
@@ -298,13 +398,16 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const createRequest = useCreateApprovalRequest();
   const [notes, setNotes] = useState('');
   const [phone, setPhone] = useState('');
+  const [residence, setResidence] = useState('');
+  const [studyPlace, setStudyPlace] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [nameRequestSent, setNameRequestSent] = useState(false);
   const [hurtokRequestSent, setHurtokRequestSent] = useState(false);
 
+  // Whoever keeps the Книга судді: zvyazkovyi, kurinniy and the kurin's суддя.
   const canEditContactInfo =
-    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy) &&
+    (session?.role === 'ZVYAZKOVYI' || session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA')) &&
     user?.role === 'JUNAK' &&
     !user?.archivedAt;
   const {
@@ -342,6 +445,8 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     if (user) {
       setNotes(user.notes ?? '');
       setPhone(user.phone ?? '');
+      setResidence(user.residence ?? '');
+      setStudyPlace(user.studyPlace ?? '');
     }
   }, [user]);
 
@@ -435,6 +540,24 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="residence">Місце проживання</Label>
+            <Input
+              id="residence"
+              value={residence}
+              onChange={(e) => setResidence(e.target.value)}
+              disabled={!canEditContactInfo}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="studyPlace">Місце навчання</Label>
+            <Input
+              id="studyPlace"
+              value={studyPlace}
+              onChange={(e) => setStudyPlace(e.target.value)}
+              disabled={!canEditContactInfo}
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="notes">Нотатки</Label>
             <Input
               id="notes"
@@ -444,7 +567,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             />
           </div>
           {canEditContactInfo && (
-            <Button onClick={() => updateContactInfo.mutate({ notes, phone })}>
+            <Button onClick={() => updateContactInfo.mutate({ notes, phone, residence, studyPlace })}>
               Зберегти
             </Button>
           )}
@@ -453,18 +576,31 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       {canEditContactInfo && (
         <Card>
           <CardHeader>
-            <CardTitle>Опікуни</CardTitle>
+            <CardTitle>Батьки та опікуни</CardTitle>
           </CardHeader>
           <CardContent>
             {isError && (
               <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження опікунів.'}</p>
             )}
             {(guardianContacts ?? []).map((contact) => (
-              <GuardianContactRow key={contact.id} contact={contact} junakId={id} />
+              <GuardianContactRow
+                key={contact.id}
+                contact={contact}
+                junakId={id}
+                takenByOthers={(guardianContacts ?? [])
+                  .filter((other) => other.id !== contact.id)
+                  .map((other) => other.relation)}
+              />
             ))}
-            <AddGuardianContactForm junakId={id} />
+            <AddGuardianContactForm junakId={id} existing={guardianContacts ?? []} />
           </CardContent>
         </Card>
+      )}
+      {isJunak && !user.archivedAt && (
+        <JunakDegreesCard
+          junakId={id}
+          canEdit={!!canEditContactInfo || session?.role === 'VYKHOVNYK'}
+        />
       )}
       {isJunak && probyProgram && (
         <Card>
@@ -520,9 +656,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                 Закрито (є непідтверджені точки)
                               </span>
                             ) : (
-                              <Button size="sm" variant="outline" onClick={() => closeStage.mutate(stage.id)}>
-                                Закрити пробу
-                              </Button>
+                              <CloseStageControl
+                                disabled={closeStage.isPending}
+                                onClose={(date) => closeStage.mutate({ stageId: stage.id, date })}
+                              />
                             ))}
                         </div>
                         {stage.categories.map((category) => (

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import type { GuardianContact } from '@/lib/types';
+import type { GuardianContact, GuardianRelation } from '@/lib/types';
 
 export function useGuardianContacts(junakId: string, options?: { enabled?: boolean }) {
   return useQuery({
@@ -15,7 +15,7 @@ export function useGuardianContacts(junakId: string, options?: { enabled?: boole
 export function useAddGuardianContact(junakId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; phone: string; role?: string; email?: string }) =>
+    mutationFn: (data: { name: string; phone?: string; relation?: GuardianRelation; role?: string; email?: string }) =>
       apiFetch<GuardianContact>(`/users/${junakId}/guardian-contacts`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -36,6 +36,7 @@ export function useUpdateGuardianContact(junakId: string) {
       id: string;
       name?: string;
       phone?: string;
+      relation?: GuardianRelation;
       role?: string | null;
       email?: string | null;
     }) =>

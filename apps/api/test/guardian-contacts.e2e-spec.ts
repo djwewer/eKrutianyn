@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as request from 'supertest';
-import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
@@ -166,5 +166,79 @@ describe('guardian-contacts (e2e)', () => {
       .delete(`/users/${junak2.id}/guardian-contacts/${created.body.id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  describe('relation (мама / тато / опікун)', () => {
+    async function setup() {
+      const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+      const kurin = await createKurin(prisma, { probyProgramId: program.id });
+      const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+      const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+      return { kurin, junak, token: issueTokenFor(jwtService, zvyazkovyi) };
+    }
+    const add = (junakId: string, token: string, body: object) =>
+      request(app.getHttpServer()).post(`/users/${junakId}/guardian-contacts`).set('Authorization', `Bearer ${token}`).send(body);
+
+    it('defaults to GUARDIAN and keeps the free-text role only for guardians', async () => {
+      const { junak, token } = await setup();
+
+      const guardian = await add(junak.id, token, { name: 'Ольга', phone: '1', role: 'бабуся' }).expect(201);
+      expect(guardian.body).toMatchObject({ relation: 'GUARDIAN', role: 'бабуся' });
+
+      const mother = await add(junak.id, token, { name: 'Марія', phone: '2', relation: 'MOTHER', role: 'ігнорується' }).expect(201);
+      expect(mother.body).toMatchObject({ relation: 'MOTHER', role: null });
+    });
+
+    it('lets contacts be added without a phone — the judge often does not have it yet', async () => {
+      const { junak, token } = await setup();
+      const res = await add(junak.id, token, { name: 'Іван', relation: 'FATHER', email: 'dad@example.com' }).expect(201);
+      expect(res.body).toMatchObject({ relation: 'FATHER', phone: '', email: 'dad@example.com' });
+    });
+
+    it('allows only one mother and one father per junak, but any number of guardians', async () => {
+      const { junak, token } = await setup();
+      await add(junak.id, token, { name: 'Марія', relation: 'MOTHER' }).expect(201);
+      const dup = await add(junak.id, token, { name: 'Інша мама', relation: 'MOTHER' }).expect(409);
+      expect(dup.body.message).toContain('Мама');
+      await add(junak.id, token, { name: 'Іван', relation: 'FATHER' }).expect(201);
+      await add(junak.id, token, { name: 'Тітка 1' }).expect(201);
+      await add(junak.id, token, { name: 'Тітка 2' }).expect(201);
+    });
+
+    it('guards the same rule when an existing contact is switched to MOTHER', async () => {
+      const { junak, token } = await setup();
+      await add(junak.id, token, { name: 'Марія', relation: 'MOTHER' }).expect(201);
+      const other = await add(junak.id, token, { name: 'Ольга', role: 'бабуся' }).expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`/users/${junak.id}/guardian-contacts/${other.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ relation: 'MOTHER' })
+        .expect(409);
+
+      const ok = await request(app.getHttpServer())
+        .patch(`/users/${junak.id}/guardian-contacts/${other.body.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ relation: 'FATHER' })
+        .expect(200);
+      expect(ok.body).toMatchObject({ relation: 'FATHER', role: null });
+    });
+
+    it('rejects an unknown relation', async () => {
+      const { junak, token } = await setup();
+      await add(junak.id, token, { name: 'Х', relation: 'UNCLE' }).expect(400);
+    });
+
+    it('lets the kurin judge manage contacts, but not a plain junak', async () => {
+      const { kurin, junak } = await setup();
+      const suddya = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+      await prisma.kurinPosition.create({
+        data: { kurinId: kurin.id, scope: PositionScope.KURIN, positionType: PositionType.SUDDIA, userId: suddya.id, assignedById: suddya.id },
+      });
+      const plain = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+
+      await add(junak.id, issueTokenFor(jwtService, suddya), { name: 'Марія', relation: 'MOTHER' }).expect(201);
+      await add(junak.id, issueTokenFor(jwtService, plain), { name: 'Х' }).expect(403);
+    });
   });
 });

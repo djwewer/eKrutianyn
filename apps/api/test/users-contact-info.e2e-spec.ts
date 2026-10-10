@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
@@ -92,5 +92,54 @@ describe('Users contact-info update (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ phone: '+380501234567' })
       .expect(404);
+  });
+
+  it('stores residence and study place, trims them, and clears them when emptied', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const set = await request(app.getHttpServer())
+      .patch(`/users/${junak.id}/contact-info`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ residence: '  м. Львів, вул. Зелена 5 ', studyPlace: 'Ліцей №3' })
+      .expect(200);
+    expect(set.body).toMatchObject({ residence: 'м. Львів, вул. Зелена 5', studyPlace: 'Ліцей №3' });
+
+    const untouched = await request(app.getHttpServer())
+      .patch(`/users/${junak.id}/contact-info`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ phone: '+380501234567' })
+      .expect(200);
+    expect(untouched.body).toMatchObject({ residence: 'м. Львів, вул. Зелена 5', studyPlace: 'Ліцей №3' });
+
+    const cleared = await request(app.getHttpServer())
+      .patch(`/users/${junak.id}/contact-info`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ residence: '   ', studyPlace: '' })
+      .expect(200);
+    expect(cleared.body).toMatchObject({ residence: null, studyPlace: null });
+  });
+
+  it('lets the kurin judge edit contact info and returns the new fields on the junak profile', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const suddya = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.kurinPosition.create({
+      data: { kurinId: kurin.id, scope: PositionScope.KURIN, positionType: PositionType.SUDDIA, userId: suddya.id, assignedById: suddya.id },
+    });
+    const token = issueTokenFor(jwtService, suddya);
+
+    await request(app.getHttpServer())
+      .patch(`/users/${junak.id}/contact-info`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ residence: 'Київ', studyPlace: 'Школа 12' })
+      .expect(200);
+
+    const profile = await request(app.getHttpServer()).get(`/users/${junak.id}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(profile.body).toMatchObject({ residence: 'Київ', studyPlace: 'Школа 12' });
   });
 });

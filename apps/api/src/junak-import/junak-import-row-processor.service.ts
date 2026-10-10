@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PositionScope, PositionType, Role } from '@prisma/client';
+import { GuardianRelation, PositionScope, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HurtkyService } from '../hurtky/hurtky.service';
 import { KurinPositionsService } from '../kurin-positions/kurin-positions.service';
@@ -93,6 +93,10 @@ export class JunakImportRowProcessorService {
         if (row.birthDate) updateData.birthDate = new Date(row.birthDate);
         if (row.email && !target.email) updateData.email = row.email;
         if (row.phone && !target.phone) updateData.phone = row.phone;
+        // Same rule as email/phone: what the app already has wins over the sheet.
+        if (row.residence && !target.residence) updateData.residence = row.residence;
+        if (row.studyPlace && !target.studyPlace) updateData.studyPlace = row.studyPlace;
+        if (row.skobDate && !target.skobDate) updateData.skobDate = new Date(row.skobDate);
         if (hurtokId) updateData.hurtokId = hurtokId;
         const judgeBookRowNumber = toJudgeBookRowNumber(rowIndex);
         if (judgeBookRowNumber !== undefined) updateData.judgeBookRowNumber = judgeBookRowNumber;
@@ -108,6 +112,9 @@ export class JunakImportRowProcessorService {
             birthDate: row.birthDate ? new Date(row.birthDate) : undefined,
             email: row.email,
             phone: row.phone,
+            residence: row.residence,
+            studyPlace: row.studyPlace,
+            skobDate: row.skobDate ? new Date(row.skobDate) : undefined,
             role: Role.JUNAK,
             kurinId,
             hurtokId,
@@ -119,15 +126,22 @@ export class JunakImportRowProcessorService {
       }
 
       for (const guardian of row.guardians ?? []) {
-        const existingContact = await tx.guardianContact.findFirst({ where: { junakId: userId, name: guardian.name } });
+        const relation = guardian.relation ?? GuardianRelation.GUARDIAN;
+        // A junak has one mother and one father, so those are matched by relation
+        // (re-importing refreshes them even if the name was spelled differently);
+        // other guardians are matched by name.
+        const existingContact =
+          relation === GuardianRelation.GUARDIAN
+            ? await tx.guardianContact.findFirst({ where: { junakId: userId, relation, name: guardian.name } })
+            : await tx.guardianContact.findFirst({ where: { junakId: userId, relation } });
         if (existingContact) {
           await tx.guardianContact.update({
             where: { id: existingContact.id },
-            data: { phone: guardian.phone, email: guardian.email },
+            data: { name: guardian.name, phone: guardian.phone, email: guardian.email },
           });
         } else {
           await tx.guardianContact.create({
-            data: { junakId: userId, name: guardian.name, phone: guardian.phone ?? '', email: guardian.email },
+            data: { junakId: userId, name: guardian.name, phone: guardian.phone ?? '', email: guardian.email, relation },
           });
         }
       }

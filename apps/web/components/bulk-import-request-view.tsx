@@ -2,7 +2,13 @@
 
 import { Badge } from '@/components/ui/badge';
 import { POSITION_LABELS } from '@/lib/role-labels';
-import type { ApprovalRequest, BulkImportRow, MatchedJunakSummary, PositionType } from '@/lib/types';
+import type { ApprovalRequest, BulkImportRow, GuardianRelation, MatchedJunakSummary, PositionType } from '@/lib/types';
+
+const RELATION_LABELS: Record<GuardianRelation, string> = {
+  MOTHER: 'Мама',
+  FATHER: 'Тато',
+  GUARDIAN: 'Опікун',
+};
 
 const DEGREE_LABELS: Record<string, string> = {
   PRYHYLNYK: 'Прихильник',
@@ -42,6 +48,9 @@ function newJunakFields(row: BulkImportRow): FieldChange[] {
   if (row.birthDate) fields.push({ label: 'Дата народження', after: formatDate(row.birthDate) });
   if (row.phone) fields.push({ label: 'Телефон', after: row.phone });
   if (row.hurtokName) fields.push({ label: 'Гурток', after: row.hurtokName });
+  if (row.residence) fields.push({ label: 'Місце проживання', after: row.residence });
+  if (row.studyPlace) fields.push({ label: 'Місце навчання', after: row.studyPlace });
+  if (row.skobDate) fields.push({ label: 'Дата ступеня «Скоб»', after: formatDate(row.skobDate) });
   return fields;
 }
 
@@ -78,6 +87,21 @@ function updateFields(row: BulkImportRow, current: MatchedJunakSummary): FieldCh
   }
   if (row.hurtokName && row.hurtokName !== current.hurtokName) {
     fields.push({ label: 'Гурток', before: current.hurtokName ?? '—', after: row.hurtokName });
+  }
+  // Residence, study place and the Скоб date only fill an empty value (the app's own data wins).
+  if (row.residence && row.residence !== current.residence) {
+    fields.push({ label: 'Місце проживання', before: current.residence || '—', after: row.residence, ignored: !!current.residence });
+  }
+  if (row.studyPlace && row.studyPlace !== current.studyPlace) {
+    fields.push({ label: 'Місце навчання', before: current.studyPlace || '—', after: row.studyPlace, ignored: !!current.studyPlace });
+  }
+  if (row.skobDate && formatDate(row.skobDate) !== formatDate(current.skobDate)) {
+    fields.push({
+      label: 'Дата ступеня «Скоб»',
+      before: formatDate(current.skobDate),
+      after: formatDate(row.skobDate),
+      ignored: !!current.skobDate,
+    });
   }
   return fields;
 }
@@ -161,8 +185,10 @@ function RowCard({ row, matched, isUpdate }: { row: BulkImportRow; matched?: Mat
       )}
       {guardians.length > 0 && (
         <p>
-          <span className="font-medium">Контакти опікунів:</span>{' '}
-          {guardians.map((g) => [g.name, g.phone, g.email].filter(Boolean).join(', ')).join('; ')}
+          <span className="font-medium">Батьки та опікуни:</span>{' '}
+          {guardians
+            .map((g) => `${RELATION_LABELS[g.relation ?? 'GUARDIAN']}: ${[g.name, g.phone, g.email].filter(Boolean).join(', ')}`)
+            .join('; ')}
         </p>
       )}
     </li>

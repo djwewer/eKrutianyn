@@ -144,6 +144,13 @@ model User {
   birthDate          DateTime?
   notes              String?
   phone              String?
+  // Книга судді fields the book tracks per junak.
+  residence          String?
+  studyPlace         String?
+  // Date the junak earned the "Скоб" degree. Unlike the three proby degrees
+  // (derived from closed ProbyStages) there is no proby behind it, so the
+  // date is entered by hand.
+  skobDate           DateTime?
   judgeBookRowNumber Int?
   photoData          Bytes?
   photoMimeType      String?
@@ -283,13 +290,23 @@ model JunakActivityEntry {
   @@index([junakId, occurredAt])
 }
 
+enum GuardianRelation {
+  MOTHER
+  FATHER
+  GUARDIAN
+}
+
 model GuardianContact {
   id        String   @id @default(uuid())
   junakId   String
   junak     User     @relation("JunakGuardians", fields: [junakId], references: [id])
   name      String
   phone     String
+  // Free-text clarification, meaningful for relation = GUARDIAN ("бабуся",
+  // "тітка"...). MOTHER / FATHER are the standard two; anything else is a
+  // GUARDIAN.
   role      String?
+  relation  GuardianRelation @default(GUARDIAN)
   email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -44,10 +44,15 @@ export function useUnconfirmPoint(junakId: string) {
 export function useCloseStage(junakId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (stageId: string) =>
-      apiFetch(`/junaky/${junakId}/progress/stages/${stageId}/close`, { method: 'POST' }),
+    // `date` (YYYY-MM-DD) is when the degree was actually earned; omitted means today.
+    mutationFn: ({ stageId, date }: { stageId: string; date?: string }) =>
+      apiFetch(`/junaky/${junakId}/progress/stages/${stageId}/close`, {
+        method: 'POST',
+        body: JSON.stringify(date ? { date } : {}),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['junaky', junakId, 'progress'] });
+      queryClient.invalidateQueries({ queryKey: ['junak-degrees', junakId] });
     },
   });
 }

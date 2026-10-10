@@ -137,12 +137,10 @@ describe('Книга судді — new junak write-back and row linkage (e2e)',
     await sync.syncKurinToSheet(kurin.id);
 
     expect(fakeGoogleDrive.updateCellValues).toHaveBeenCalledTimes(1);
-    const updates = fakeGoogleDrive.updateCellValues.mock.calls[0][2];
-    expect(updates).toEqual(
-      expect.arrayContaining([
-        { row: 12, column: 'C', value: '0671112233' },
-        { row: 12, column: 'B', value: email },
-      ]),
-    );
+    // The email is already in the sheet (it was written when the row was appended),
+    // so only the phone added since then is pushed.
+    expect(fakeGoogleDrive.updateCellValues.mock.calls[0][2]).toEqual([
+      { row: 12, column: 'C', value: '0671112233' },
+    ]);
   });
 });

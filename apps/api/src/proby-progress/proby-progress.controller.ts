@@ -1,10 +1,12 @@
-import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { ProbyProgressService } from './proby-progress.service';
+import { CloseStageDto } from './dto/close-stage.dto';
+import { parseNotFutureDate } from '../common/date.util';
 
 @UseGuards(JwtAuthGuard)
 @Controller('junaky/:junakId/progress')
@@ -44,9 +46,10 @@ export class ProbyProgressController {
   closeStage(
     @Param('junakId') junakId: string,
     @Param('stageId') stageId: string,
+    @Body() dto: CloseStageDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.service.closeStage(junakId, stageId, user);
+    return this.service.closeStage(junakId, stageId, user, dto.date ? parseNotFutureDate(dto.date) : undefined);
   }
 
   @UseGuards(RolesGuard)

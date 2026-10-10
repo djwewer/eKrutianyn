@@ -28,7 +28,7 @@ export function useUser(id: string | undefined) {
 export function useUpdateContactInfo(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { notes?: string; phone?: string }) =>
+    mutationFn: (data: { notes?: string; phone?: string; residence?: string; studyPlace?: string }) =>
       apiFetch<UserDetail>(`/users/${id}/contact-info`, {
         method: 'PATCH',
         body: JSON.stringify(data),

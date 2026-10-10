@@ -10,6 +10,7 @@ describe('JudgeBookSyncService', () => {
       kurin: { findUnique: jest.fn(), findMany: jest.fn() },
       junakImportMapping: { findUnique: jest.fn() },
       user: { findMany: jest.fn(), count: jest.fn().mockResolvedValue(0) },
+      guardianContact: { findMany: jest.fn().mockResolvedValue([]) },
       probyStage: { findMany: jest.fn() },
       junakStageProgress: { findMany: jest.fn() },
     };
@@ -139,10 +140,14 @@ describe('JudgeBookSyncService', () => {
 
     const report = await service.syncKurinToSheet('kurin-1');
 
-    expect(googleDrive.updateCellValues).toHaveBeenCalledWith('kurin-1', 'sheet-1', [
-      { row: 6, column: 'E', value: '0679998877' },
-      { row: 6, column: 'F', value: 'junak2@example.com' },
-    ]);
+    const updates = googleDrive.updateCellValues.mock.calls[0][2];
+    expect(updates).toHaveLength(2);
+    expect(updates).toEqual(
+      expect.arrayContaining([
+        { row: 6, column: 'E', value: '0679998877' },
+        { row: 6, column: 'F', value: 'junak2@example.com' },
+      ]),
+    );
     expect(report.syncedJunaky).toBe(1);
     expect(report.updatedCells).toBe(2);
     expect(report.skipped).toEqual([

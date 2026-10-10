@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
-import { DEGREE_STAGE_PREFIXES, DegreeStageKey } from '../common/degree-stages.util';
 import { columnLetterToIndex } from '../common/sheet-column.util';
+import { loadDegreeDates } from '../common/degrees.util';
+import { PUSHED_FIELDS, buildJunakBookValues } from '../common/judge-book-fields.util';
 
 interface ColumnMappingEntry {
   column: string;
@@ -30,58 +31,27 @@ interface CellUpdate {
   value: string;
 }
 
-const DEGREE_DATE_FIELDS: { key: DegreeStageKey; field: string }[] = [
-  { key: 'PRYHYLNYK', field: 'DEGREE_PRYHYLNYK_DATE' },
-  { key: 'UCHASNYK', field: 'DEGREE_UCHASNYK_DATE' },
-  { key: 'ROZVIDUVACH', field: 'DEGREE_ROZVIDUVACH_DATE' },
-];
-
-const PHONE_FIELD = 'PHONE';
-const EMAIL_FIELD = 'EMAIL';
 const NAME_FIELD = 'FIRST_LAST_NAME';
 
-interface NewJunakRowSource {
-  firstName: string;
-  lastName: string;
-  nickname: string | null;
-  birthDate: Date | null;
-  email: string;
-  phone: string | null;
-  hurtokName?: string;
-}
-
-/** Builds a sheet row (array indexed by column) for a junak, honouring the kurin's column mapping. */
-function buildSheetRow(columnMapping: { column: string; field: string }[], junak: NewJunakRowSource): string[] {
-  const values: string[] = [];
+/** Builds a sheet row (array indexed by column) from a junak's values, honouring the kurin's column mapping. */
+function buildSheetRow(columnMapping: { column: string; field: string }[], values: Map<string, string>): string[] {
+  const row: string[] = [];
   for (const { column, field } of columnMapping) {
     const idx = columnLetterToIndex(column);
-    let value = '';
-    if (field === NAME_FIELD) value = `${junak.firstName} ${junak.lastName}`;
-    else if (field === 'NICKNAME') value = junak.nickname ?? '';
-    else if (field === 'BIRTH_DATE') value = junak.birthDate ? formatDate(junak.birthDate) : '';
-    else if (field === EMAIL_FIELD) value = junak.email;
-    else if (field === PHONE_FIELD) value = junak.phone ?? '';
-    else if (field === 'HURTOK') value = junak.hurtokName ?? '';
-    while (values.length <= idx) values.push('');
-    values[idx] = value;
+    while (row.length <= idx) row.push('');
+    row[idx] = values.get(field) ?? '';
   }
-  return values;
+  return row;
 }
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/** Matches the sheet's own date convention (DD.MM.YYYY) — the same format `parseUkrainianDate` on the import side expects, so a pushed date stays human-readable and round-trips correctly on the next import. */
-function formatDate(date: Date): string {
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  return `${day}.${month}.${date.getUTCFullYear()}`;
-}
-
 /**
- * Nightly write-back sync: pushes data the app already has (degree dates,
- * phone, email) into the kurin's connected Книга судді Google Sheet, for
+ * Nightly write-back sync: pushes data the app already has (degree dates and
+ * current degree, phone, email, residence, study place, parents/guardians)
+ * into the kurin's connected Книга судді Google Sheet, for
  * every JUNAK that was actually imported from that sheet (has a known
  * judgeBookRowNumber). This is the mirror image of the import flow — it
  * never invents a column and never blanks out a cell the app has no value
@@ -110,9 +80,10 @@ export class JudgeBookSyncService {
     try {
       const kurin = await this.prisma.kurin.findUnique({
         where: { id: kurinId },
-        select: { judgeBookSpreadsheetId: true },
+        select: { judgeBookSpreadsheetId: true, probyProgramId: true },
       });
       if (!kurin?.judgeBookSpreadsheetId) return;
+      const kurinProbyProgramId = kurin.probyProgramId;
       const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
       if (!mapping) return;
 
@@ -122,10 +93,15 @@ export class JudgeBookSyncService {
       });
       if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== kurinId) return;
 
-      const row = buildSheetRow(mapping.columnMapping as unknown as { column: string; field: string }[], {
-        ...junak,
-        hurtokName: junak.hurtok?.name,
+      const guardians = await this.prisma.guardianContact.findMany({
+        where: { junakId },
+        orderBy: { createdAt: 'asc' },
       });
+      const degrees = (await loadDegreeDates(this.prisma, kurinProbyProgramId, [junak])).get(junak.id)!;
+      const row = buildSheetRow(
+        mapping.columnMapping as unknown as { column: string; field: string }[],
+        buildJunakBookValues({ ...junak, hurtokName: junak.hurtok?.name }, guardians, degrees),
+      );
       const rowNumber = await this.googleDrive.appendSheetRow(kurinId, kurin.judgeBookSpreadsheetId, row);
       if (rowNumber !== undefined) {
         await this.prisma.user.update({ where: { id: junakId }, data: { judgeBookRowNumber: rowNumber } });
@@ -158,16 +134,8 @@ export class JudgeBookSyncService {
 
     const junaky = await this.prisma.user.findMany({
       where: { kurinId, role: Role.JUNAK, judgeBookRowNumber: { not: null } },
+      include: { hurtok: { select: { name: true } } },
     });
-
-    const stages = await this.prisma.probyStage.findMany({
-      where: { programId: kurin.probyProgramId },
-    });
-    const stageByDegreeKey = new Map<DegreeStageKey, { id: string }>();
-    for (const { key, prefix } of DEGREE_STAGE_PREFIXES) {
-      const stage = stages.find((s) => s.name.startsWith(prefix));
-      if (stage) stageByDegreeKey.set(key, stage);
-    }
 
     report.linkedJunaky = junaky.length;
     report.unlinkedJunaky = await this.prisma.user.count({
@@ -175,18 +143,17 @@ export class JudgeBookSyncService {
     });
 
     const junakIds = junaky.map((u) => u.id);
-    const stageIds = [...stageByDegreeKey.values()].map((s) => s.id);
-    const progressEntries =
-      stageIds.length > 0
-        ? await this.prisma.junakStageProgress.findMany({
-            where: { junakId: { in: junakIds }, stageId: { in: stageIds } },
+    const degreesByJunak = await loadDegreeDates(this.prisma, kurin.probyProgramId, junaky);
+    const guardians =
+      junakIds.length > 0
+        ? await this.prisma.guardianContact.findMany({
+            where: { junakId: { in: junakIds } },
+            orderBy: { createdAt: 'asc' },
           })
         : [];
-    const firstClosedAtByJunakAndStage = new Map<string, Date>();
-    for (const entry of progressEntries) {
-      if (entry.firstClosedAt) {
-        firstClosedAtByJunakAndStage.set(`${entry.junakId}:${entry.stageId}`, entry.firstClosedAt);
-      }
+    const guardiansByJunak = new Map<string, typeof guardians>();
+    for (const guardian of guardians) {
+      guardiansByJunak.set(guardian.junakId, [...(guardiansByJunak.get(guardian.junakId) ?? []), guardian]);
     }
 
     // Humans maintain this sheet directly — they insert, sort, and delete
@@ -225,25 +192,22 @@ export class JudgeBookSyncService {
         }
       }
 
+      const values = buildJunakBookValues(
+        { ...junak, hurtokName: junak.hurtok?.name },
+        guardiansByJunak.get(junak.id) ?? [],
+        degreesByJunak.get(junak.id)!,
+      );
       const updatesBefore = updates.length;
-      for (const { key, field } of DEGREE_DATE_FIELDS) {
+      for (const [field, value] of values) {
+        if (!PUSHED_FIELDS.has(field)) continue;
         const column = fieldToColumn.get(field);
+        // A field this kurin's sheet has no column for is simply not pushed.
         if (!column) continue;
-        const stage = stageByDegreeKey.get(key);
-        if (!stage) continue;
-        const closedAt = firstClosedAtByJunakAndStage.get(`${junak.id}:${stage.id}`);
-        if (!closedAt) continue;
-        updates.push({ row, column, value: formatDate(closedAt) });
-      }
-
-      const phoneColumn = fieldToColumn.get(PHONE_FIELD);
-      if (phoneColumn && junak.phone) {
-        updates.push({ row, column: phoneColumn, value: junak.phone });
-      }
-
-      const emailColumn = fieldToColumn.get(EMAIL_FIELD);
-      if (emailColumn && junak.email) {
-        updates.push({ row, column: emailColumn, value: junak.email });
+        // Skip cells that already hold exactly this value, so a run with
+        // nothing new really writes nothing (and the report can say so).
+        const current = sheetRows?.[row - 1]?.[columnLetterToIndex(column)];
+        if (current !== undefined && String(current).trim() === value) continue;
+        updates.push({ row, column, value });
       }
       if (updates.length > updatesBefore) report.syncedJunaky += 1;
     }
