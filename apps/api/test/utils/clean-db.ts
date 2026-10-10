@@ -25,6 +25,12 @@ export async function cleanDatabase(prisma: PrismaClient) {
     prisma.treasuryTransaction.deleteMany(),
     prisma.kurinCalendarEvent.deleteMany(),
     prisma.junakActivityEntry.deleteMany(),
+    // Announcements and push subscriptions reference users (no cascade), so they
+    // must go first or one leftover row blocks every user deleteMany below.
+    prisma.announcementReaction.deleteMany(),
+    prisma.announcementImage.deleteMany(),
+    prisma.announcement.deleteMany(),
+    prisma.pushSubscription.deleteMany(),
     prisma.user.deleteMany(),
     prisma.hurtok.deleteMany(),
     prisma.kurin.deleteMany(),
