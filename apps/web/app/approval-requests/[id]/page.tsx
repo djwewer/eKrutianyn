@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { accessErrorMessage } from '@/lib/error-message';
+import { BulkImportRequestView } from '@/components/bulk-import-request-view';
 
 const ACTION_LABELS: Record<string, string> = {
   CHANGE_FULL_NAME: 'Зміна ПІБ',
@@ -31,15 +32,21 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
   if (isLoading) return <p>Завантаження...</p>;
   if (!request) return <p>Не знайдено.</p>;
 
+  const isBulkImport = request.actionType === 'BULK_IMPORT_JUNAKY';
+
   return (
-    <Card className="max-w-md">
+    <Card className={isBulkImport ? 'max-w-2xl' : 'max-w-md'}>
       <CardHeader>
         <CardTitle>{ACTION_LABELS[request.actionType] ?? request.actionType}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className="mb-1 font-semibold">Нові дані</h3>
-          <pre className="rounded bg-muted p-2 text-xs">{JSON.stringify(request.newData, null, 2)}</pre>
+          <h3 className="mb-1 font-semibold">{isBulkImport ? 'Що буде імпортовано' : 'Нові дані'}</h3>
+          {isBulkImport ? (
+            <BulkImportRequestView request={request} />
+          ) : (
+            <pre className="rounded bg-muted p-2 text-xs">{JSON.stringify(request.newData, null, 2)}</pre>
+          )}
         </div>
         {request.oldData && (
           <div>

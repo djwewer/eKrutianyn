@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ApprovalActionType, ApprovalStatus, PositionType, Role, User } from '@prisma/client';
+import { ApprovalActionType, ApprovalStatus, PositionScope, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
@@ -78,7 +78,65 @@ export class ApprovalRequestsService {
     if (!initiator || initiator.kurinId !== kurinId) {
       throw new NotFoundException('Request not found');
     }
+    if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
+      return { ...req, matchedJunaky: await this.resolveMatchedJunaky(req.newData, kurinId) };
+    }
     return req;
+  }
+
+  /**
+   * Resolves the opaque `matchedUserId`s inside a bulk-import payload to the
+   * junak's current data, so the approver sees WHO an "update" row targets and
+   * what it would change instead of a bare UUID. Scoped to the approver's own
+   * kurin and to JUNAK users — an id pointing anywhere else resolves to
+   * nothing (the processor rejects such rows too).
+   */
+  private async resolveMatchedJunaky(newData: unknown, kurinId: string) {
+    const rows = (newData as { rows?: unknown } | null)?.rows;
+    if (!Array.isArray(rows)) return {};
+    const ids = [
+      ...new Set(
+        rows
+          .map((r) => (r as { matchedUserId?: unknown } | null)?.matchedUserId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+    ];
+    if (ids.length === 0) return {};
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids }, kurinId, role: Role.JUNAK },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        email: true,
+        phone: true,
+        birthDate: true,
+        hurtok: { select: { name: true } },
+        positionsHeld: {
+          where: { removedAt: null },
+          select: { positionType: true, scope: true },
+        },
+      },
+    });
+
+    return Object.fromEntries(
+      users.map((u) => [
+        u.id,
+        {
+          firstName: u.firstName,
+          lastName: u.lastName,
+          nickname: u.nickname,
+          email: u.email,
+          phone: u.phone,
+          birthDate: u.birthDate,
+          hurtokName: u.hurtok?.name ?? null,
+          kurinPositionTypes: u.positionsHeld.filter((p) => p.scope === PositionScope.KURIN).map((p) => p.positionType),
+          hurtokPositionTypes: u.positionsHeld.filter((p) => p.scope === PositionScope.HURTOK).map((p) => p.positionType),
+        },
+      ]),
+    );
   }
 
   async approve(requestId: string, actor: CurrentUserPayload) {
@@ -155,10 +213,17 @@ export class ApprovalRequestsService {
         }
       }
 
-      return tx.approvalRequest.update({
-        where: { id: requestId },
+      // Conditional claim (not a plain update): a concurrent reject() may have
+      // decided this request after loadPendingRequestForKurin ran. Throwing
+      // here rolls back the side effects above (e.g. the created junak).
+      const claim = await tx.approvalRequest.updateMany({
+        where: { id: requestId, status: ApprovalStatus.PENDING },
         data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
       });
+      if (claim.count === 0) {
+        throw new BadRequestException('Request already decided');
+      }
+      return tx.approvalRequest.findUniqueOrThrow({ where: { id: requestId } });
     });
 
     if (createdJunak) {
@@ -169,6 +234,15 @@ export class ApprovalRequestsService {
   }
 
   private async approveBulkImport(req: { id: string; newData: unknown }, actor: CurrentUserPayload) {
+    // Validate the payload shape before claiming: a malformed request must
+    // fail with a clear 400 while still PENDING (so it can be rejected),
+    // not get stuck APPROVED with nothing processed.
+    const data = req.newData as { rows?: unknown } | null;
+    if (!data || !Array.isArray(data.rows)) {
+      throw new BadRequestException('Запит пошкоджений: відсутній список рядків для імпорту');
+    }
+    const rows = data.rows as ResolvedJunakRow[];
+
     const claim = await this.prisma.approvalRequest.updateMany({
       where: { id: req.id, status: ApprovalStatus.PENDING },
       data: { status: ApprovalStatus.APPROVED, approvedById: actor.userId, decidedAt: new Date() },
@@ -177,28 +251,48 @@ export class ApprovalRequestsService {
       throw new BadRequestException('Request already decided');
     }
 
-    const data = req.newData as unknown as { rows: ResolvedJunakRow[] };
     const results = [];
-    for (const row of data.rows) {
-      results.push(
-        await this.rowProcessor.processRow(actor.kurinId, row, row.rowIndex, actor, {
-          restrictProtectedTargets: true,
-        }),
+    let processingError: string | undefined;
+    try {
+      for (const row of rows) {
+        results.push(
+          await this.rowProcessor.processRow(actor.kurinId, row, row.rowIndex, actor, {
+            restrictProtectedTargets: true,
+          }),
+        );
+      }
+    } catch (error) {
+      // processRow catches its own per-row errors, so reaching here means
+      // something outside a single row failed (e.g. DB connection loss, a
+      // non-object row). The request is already APPROVED and some rows may
+      // have been applied — record that instead of leaving APPROVED with no
+      // results at all. The raw error goes to the log only, not to the client.
+      this.logger.error(
+        `Bulk import ${req.id} aborted after ${results.length}/${rows.length} rows: ${(error as Error).message}`,
+        (error as Error).stack,
       );
+      processingError = `Обробку перервано після ${results.length} з ${rows.length} рядків через внутрішню помилку. Частину рядків уже застосовано — перевірте результати.`;
     }
 
     return this.prisma.approvalRequest.update({
       where: { id: req.id },
-      data: { newData: { rows: data.rows, results } as any },
+      data: { newData: { rows, results, ...(processingError ? { processingError } : {}) } as any },
     });
   }
 
   async reject(requestId: string, actor: CurrentUserPayload) {
     await this.loadPendingRequestForKurin(requestId, actor.kurinId);
-    return this.prisma.approvalRequest.update({
-      where: { id: requestId },
+    // Conditional claim so a concurrent approve() can't be overwritten with
+    // REJECTED after it already applied its changes (same pattern as
+    // approveBulkImport / the ARCHIVE_JUNAK branch).
+    const claim = await this.prisma.approvalRequest.updateMany({
+      where: { id: requestId, status: ApprovalStatus.PENDING },
       data: { status: ApprovalStatus.REJECTED, approvedById: actor.userId, decidedAt: new Date() },
     });
+    if (claim.count === 0) {
+      throw new BadRequestException('Request already decided');
+    }
+    return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
   }
 
   private async loadPendingRequestForKurin(requestId: string, kurinId: string) {

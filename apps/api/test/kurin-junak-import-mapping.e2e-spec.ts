@@ -193,4 +193,55 @@ describe('Kurin Junak Import mapping (e2e)', () => {
       })
       .expect(400);
   });
+
+  async function connectSpreadsheetWithMappingAndRow() {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    await prisma.kurin.update({
+      where: { id: kurin.id },
+      data: { judgeBookSpreadsheetId: 'sheet-1', judgeBookSpreadsheetName: 'Стара книга' },
+    });
+    await prisma.junakImportMapping.create({
+      data: {
+        kurinId: kurin.id,
+        columnMapping: [{ column: 'B', header: 'ПІБ', field: 'FIRST_LAST_NAME' }],
+        positionValueMapping: [],
+      },
+    });
+    await prisma.user.update({ where: { id: junak.id }, data: { judgeBookRowNumber: 7 } });
+    return { kurin, junak, token: issueTokenFor(jwtService, zvyazkovyi) };
+  }
+
+  it('drops the saved mapping and every junak row number when a DIFFERENT spreadsheet is connected', async () => {
+    const { kurin, junak, token } = await connectSpreadsheetWithMappingAndRow();
+
+    await request(app.getHttpServer())
+      .patch(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ spreadsheetId: 'sheet-2', spreadsheetName: 'Нова книга' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(await prisma.junakImportMapping.findUnique({ where: { kurinId: kurin.id } })).toBeNull();
+    expect((await prisma.user.findUnique({ where: { id: junak.id } }))?.judgeBookRowNumber).toBeNull();
+    const status = await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/junak-import/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(status.body.connectedSpreadsheetId).toBe('sheet-2');
+    expect(status.body.mapping).toBeUndefined();
+  });
+
+  it('keeps the saved mapping and row numbers when the SAME spreadsheet is re-connected', async () => {
+    const { kurin, junak, token } = await connectSpreadsheetWithMappingAndRow();
+
+    await request(app.getHttpServer())
+      .patch(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ spreadsheetId: 'sheet-1', spreadsheetName: 'Стара книга (перейменована)' })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(await prisma.junakImportMapping.findUnique({ where: { kurinId: kurin.id } })).not.toBeNull();
+    expect((await prisma.user.findUnique({ where: { id: junak.id } }))?.judgeBookRowNumber).toBe(7);
+  });
 });

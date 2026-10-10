@@ -54,10 +54,32 @@ export class KurinJunakImportController {
   ) {
     this.assertOwnKurin(kurinId, user);
     this.assertZvyazkovyi(user);
-    await this.prisma.kurin.update({
+    const current = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
-      data: { judgeBookSpreadsheetId: dto.spreadsheetId, judgeBookSpreadsheetName: dto.spreadsheetName },
+      select: { judgeBookSpreadsheetId: true },
     });
+    const spreadsheetChanged = current?.judgeBookSpreadsheetId !== dto.spreadsheetId;
+
+    await this.prisma.$transaction([
+      this.prisma.kurin.update({
+        where: { id: kurinId },
+        data: { judgeBookSpreadsheetId: dto.spreadsheetId, judgeBookSpreadsheetName: dto.spreadsheetName },
+      }),
+      // A different spreadsheet has a different column layout and different
+      // row positions. The saved column mapping and every junak's
+      // judgeBookRowNumber describe the OLD file, so keeping them would make
+      // the write-back sync push values into the wrong columns/rows of the
+      // new one. Re-connecting the same file leaves both intact.
+      ...(spreadsheetChanged
+        ? [
+            this.prisma.junakImportMapping.deleteMany({ where: { kurinId } }),
+            this.prisma.user.updateMany({
+              where: { kurinId, judgeBookRowNumber: { not: null } },
+              data: { judgeBookRowNumber: null },
+            }),
+          ]
+        : []),
+    ]);
     return { success: true };
   }
 

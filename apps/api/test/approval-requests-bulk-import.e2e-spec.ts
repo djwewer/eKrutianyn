@@ -14,10 +14,12 @@ import {
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { JunakImportRowProcessorService } from '../src/junak-import/junak-import-row-processor.service';
 
 describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
   let app: INestApplication;
   let jwtService: JwtService;
+  let rowProcessor: JunakImportRowProcessorService;
   const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL_TEST } } });
 
   beforeAll(async () => {
@@ -26,6 +28,7 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
     jwtService = moduleRef.get(JwtService, { strict: false });
+    rowProcessor = moduleRef.get(JunakImportRowProcessorService, { strict: false });
   });
 
   afterAll(async () => {
@@ -36,6 +39,10 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
 
   beforeEach(async () => {
     await cleanDatabase(prisma);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   async function baseSetup() {
@@ -185,5 +192,97 @@ describe('Approval requests — BULK_IMPORT_JUNAKY (e2e)', () => {
       where: { userId: suddya.id, positionType: PositionType.KURINNYI, removedAt: null },
     });
     expect(suddyaKurinPosition).toBeNull();
+  });
+
+  it('rejects approving a request whose rows payload is corrupted, leaving it PENDING', async () => {
+    const { kurinnyi, zvyazkovyi } = await baseSetup();
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
+        newData: { rows: 'not-an-array' },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    const after = await prisma.approvalRequest.findUnique({ where: { id: pending.id } });
+    expect(after?.status).toBe(ApprovalStatus.PENDING);
+
+    // still decidable: the approver can reject the broken request
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/reject`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+  });
+
+  it('records partial results and a sanitized error when processing aborts mid-way', async () => {
+    const { zvyazkovyi, kurinnyi } = await baseSetup();
+    const rows = [
+      { rowIndex: 0, firstName: 'Перший', lastName: 'Рядок', email: `first-${Date.now()}@example.com` },
+      { rowIndex: 1, firstName: 'Другий', lastName: 'Рядок', email: `second-${Date.now()}@example.com` },
+    ];
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
+        newData: { rows },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const realProcessRow = rowProcessor.processRow.bind(rowProcessor);
+    jest
+      .spyOn(rowProcessor, 'processRow')
+      .mockImplementationOnce(realProcessRow)
+      .mockImplementationOnce(async () => {
+        throw new Error('connection to /var/lib/secret-host lost');
+      });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const response = await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    expect(response.body.status).toBe(ApprovalStatus.APPROVED);
+    expect(response.body.newData.results).toHaveLength(1);
+    expect(response.body.newData.processingError).toContain('після 1 з 2 рядків');
+    expect(JSON.stringify(response.body)).not.toContain('secret-host');
+  });
+
+  it('lets exactly one of two concurrent approve/reject decisions win, with a consistent outcome', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await baseSetup();
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const email = `race-${Date.now()}@example.com`;
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: { firstName: 'Гонка', lastName: 'Рішень', email, hurtokId: hurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const [approveRes, rejectRes] = await Promise.all([
+      request(app.getHttpServer()).post(`/approval-requests/${pending.id}/approve`).set('Authorization', `Bearer ${token}`),
+      request(app.getHttpServer()).post(`/approval-requests/${pending.id}/reject`).set('Authorization', `Bearer ${token}`),
+    ]);
+
+    const after = await prisma.approvalRequest.findUnique({ where: { id: pending.id } });
+    const junak = await prisma.user.findUnique({ where: { email } });
+    const successes = [approveRes, rejectRes].filter((r) => r.status === 200 || r.status === 201);
+    expect(successes).toHaveLength(1);
+    if (after?.status === ApprovalStatus.APPROVED) {
+      expect(junak).not.toBeNull();
+    } else {
+      expect(after?.status).toBe(ApprovalStatus.REJECTED);
+      expect(junak).toBeNull();
+    }
   });
 });

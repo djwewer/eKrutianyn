@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion, ApprovalActionType, ApprovalStatus } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, ApprovalActionType, ApprovalStatus, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
@@ -149,5 +149,81 @@ describe('GET /approval-requests/:id (e2e)', () => {
       .get('/approval-requests/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  it('resolves matchedUserId in a BULK_IMPORT_JUNAKY request to the junak\'s current data, scoped to the own kurin', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const otherKurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Орлики', kurinId: kurin.id } });
+    const target = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id, hurtokId: hurtok.id });
+    await prisma.kurinPosition.create({
+      data: {
+        kurinId: kurin.id,
+        scope: PositionScope.KURIN,
+        positionType: PositionType.INTENDANT,
+        userId: target.id,
+        assignedById: kurinniy.id,
+      },
+    });
+    const foreign = await createUser(prisma, { role: Role.JUNAK, kurinId: otherKurin.id });
+    const req = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinniy.id,
+        actionType: ApprovalActionType.BULK_IMPORT_JUNAKY,
+        newData: {
+          rows: [
+            { rowIndex: 0, matchedUserId: target.id, firstName: target.firstName, lastName: target.lastName, email: 'x@example.com' },
+            { rowIndex: 1, matchedUserId: foreign.id, firstName: 'Чужий', lastName: 'Юнак', email: 'y@example.com' },
+            { rowIndex: 2, firstName: 'Новий', lastName: 'Юнак', email: 'z@example.com' },
+          ],
+        },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const response = await request(app.getHttpServer())
+      .get(`/approval-requests/${req.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const resolved = response.body.matchedJunaky;
+    expect(Object.keys(resolved)).toEqual([target.id]);
+    expect(resolved[target.id]).toMatchObject({
+      firstName: target.firstName,
+      lastName: target.lastName,
+      email: target.email,
+      hurtokName: 'Орлики',
+      kurinPositionTypes: [PositionType.INTENDANT],
+      hurtokPositionTypes: [],
+    });
+  });
+
+  it('does not add matchedJunaky to non-bulk-import requests', async () => {
+    const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
+    const kurin = await createKurin(prisma, { probyProgramId: program.id });
+    const kurinniy = await createKurinniyUser(prisma, { kurinId: kurin.id });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const req = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinniy.id,
+        junakId: junak.id,
+        actionType: ApprovalActionType.CHANGE_EMAIL,
+        newData: { email: 'new@example.com' },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    const response = await request(app.getHttpServer())
+      .get(`/approval-requests/${req.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.matchedJunaky).toBeUndefined();
   });
 });

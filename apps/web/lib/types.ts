@@ -278,6 +278,37 @@ export interface ApprovalRequest {
   approvedById: string | null;
   decidedAt: string | null;
   createdAt: string;
+  /** Only present on BULK_IMPORT_JUNAKY: `matchedUserId` -> that junak's current data, resolved server-side. */
+  matchedJunaky?: Record<string, MatchedJunakSummary>;
+}
+
+export interface MatchedJunakSummary {
+  firstName: string;
+  lastName: string;
+  nickname: string | null;
+  email: string;
+  phone: string | null;
+  birthDate: string | null;
+  hurtokName: string | null;
+  kurinPositionTypes: PositionType[];
+  hurtokPositionTypes: PositionType[];
+}
+
+/** One row of a BULK_IMPORT_JUNAKY request's `newData.rows`, as built by the import wizard. */
+export interface BulkImportRow {
+  rowIndex: number;
+  matchedUserId?: string;
+  firstName: string;
+  lastName: string;
+  nickname?: string;
+  birthDate?: string;
+  email: string;
+  phone?: string;
+  hurtokName?: string;
+  kurinPositionTypes?: PositionType[];
+  hurtokPositionTypes?: PositionType[];
+  guardians?: { name: string; phone?: string; email?: string }[];
+  degreeDates?: { PRYHYLNYK?: string; UCHASNYK?: string; ROZVIDUVACH?: string };
 }
 
 export interface Kurin {
