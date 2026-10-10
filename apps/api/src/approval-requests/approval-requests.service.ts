@@ -5,9 +5,8 @@ import { CurrentUserPayload } from '../common/decorators/current-user.decorator'
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { JunakImportRowProcessorService } from '../junak-import/junak-import-row-processor.service';
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
-import { GoogleDriveService } from '../google-drive/google-drive.service';
+import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { UsersService } from '../users/users.service';
-import { columnLetterToIndex } from '../common/sheet-column.util';
 
 @Injectable()
 export class ApprovalRequestsService {
@@ -16,7 +15,7 @@ export class ApprovalRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rowProcessor: JunakImportRowProcessorService,
-    private readonly googleDrive: GoogleDriveService,
+    private readonly judgeBookSync: JudgeBookSyncService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -157,9 +156,7 @@ export class ApprovalRequestsService {
       return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
     }
 
-    let createdJunak:
-      | { firstName: string; lastName: string; nickname: string | null; birthDate: Date | null; email: string; phone: string | null; hurtokName?: string }
-      | undefined;
+    let createdJunakId: string | undefined;
 
     const updatedRequest = await this.prisma.$transaction(async (tx) => {
       if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
@@ -190,8 +187,7 @@ export class ApprovalRequestsService {
           }
           throw err;
         }
-        const hurtok = await tx.hurtok.findUnique({ where: { id: data.hurtokId }, select: { name: true } });
-        createdJunak = { ...created, hurtokName: hurtok?.name };
+        createdJunakId = created.id;
       } else {
         const updateData = this.buildUpdateData(req.actionType, req.newData as Record<string, unknown>);
         if (req.actionType === ApprovalActionType.CHANGE_HURTOK) {
@@ -226,8 +222,8 @@ export class ApprovalRequestsService {
       return tx.approvalRequest.findUniqueOrThrow({ where: { id: requestId } });
     });
 
-    if (createdJunak) {
-      await this.appendToJudgeBookIfConnected(actor.kurinId, createdJunak);
+    if (createdJunakId) {
+      await this.judgeBookSync.appendNewJunak(actor.kurinId, createdJunakId);
     }
 
     return updatedRequest;
@@ -345,71 +341,5 @@ export class ApprovalRequestsService {
       default:
         return undefined;
     }
-  }
-
-  private async appendToJudgeBookIfConnected(
-    kurinId: string,
-    junak: {
-      firstName: string;
-      lastName: string;
-      nickname: string | null;
-      birthDate: Date | null;
-      email: string;
-      phone: string | null;
-      hurtokName?: string;
-    },
-  ): Promise<void> {
-    const kurin = await this.prisma.kurin.findUnique({
-      where: { id: kurinId },
-      select: { judgeBookSpreadsheetId: true },
-    });
-    if (!kurin?.judgeBookSpreadsheetId) {
-      return;
-    }
-    const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
-    if (!mapping) {
-      return;
-    }
-    try {
-      const columnMapping = mapping.columnMapping as { column: string; field: string }[];
-      const row = this.buildSheetRow(columnMapping, junak);
-      await this.googleDrive.appendSheetRow(kurinId, kurin.judgeBookSpreadsheetId, row);
-    } catch (error) {
-      this.logger.warn(`Failed to append new junak to Книга судді for kurin ${kurinId}: ${(error as Error).message}`);
-    }
-  }
-
-  private buildSheetRow(
-    columnMapping: { column: string; field: string }[],
-    junak: {
-      firstName: string;
-      lastName: string;
-      nickname: string | null;
-      birthDate: Date | null;
-      email: string;
-      phone: string | null;
-      hurtokName?: string;
-    },
-  ): string[] {
-    const values: string[] = [];
-    for (const { column, field } of columnMapping) {
-      const idx = columnLetterToIndex(column);
-      let value = '';
-      if (field === 'FIRST_LAST_NAME') value = `${junak.firstName} ${junak.lastName}`;
-      else if (field === 'NICKNAME') value = junak.nickname ?? '';
-      else if (field === 'BIRTH_DATE') {
-        if (junak.birthDate) {
-          const d = junak.birthDate;
-          const day = String(d.getUTCDate()).padStart(2, '0');
-          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-          value = `${day}.${month}.${d.getUTCFullYear()}`;
-        }
-      } else if (field === 'EMAIL') value = junak.email;
-      else if (field === 'PHONE') value = junak.phone ?? '';
-      else if (field === 'HURTOK') value = junak.hurtokName ?? '';
-      while (values.length <= idx) values.push('');
-      values[idx] = value;
-    }
-    return values;
   }
 }

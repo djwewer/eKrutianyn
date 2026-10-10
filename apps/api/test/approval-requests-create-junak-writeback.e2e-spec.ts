@@ -138,4 +138,36 @@ describe('CREATE_JUNAK approval — Книга судді write-back (e2e)', () 
 
     expect(fakeGoogleDrive.appendSheetRow).toHaveBeenCalledWith(kurin.id, 'sheet-1', ['Іван Петренко', 'Орли']);
   });
+
+  it('remembers which sheet row the new junak was appended to, so later syncs can update it', async () => {
+    const { kurin, kurinnyi, zvyazkovyi } = await setup();
+    await prisma.kurin.update({ where: { id: kurin.id }, data: { judgeBookSpreadsheetId: 'sheet-1' } });
+    await prisma.junakImportMapping.create({
+      data: {
+        kurinId: kurin.id,
+        columnMapping: [{ column: 'A', header: 'ПІБ', field: 'FIRST_LAST_NAME' }],
+        positionValueMapping: [],
+      },
+    });
+    fakeGoogleDrive.appendSheetRow.mockResolvedValue(42);
+    const hurtok = await prisma.hurtok.create({ data: { name: 'Test Hurtok', kurinId: kurin.id } });
+    const email = `rownum-${Date.now()}@example.com`;
+    const pending = await prisma.approvalRequest.create({
+      data: {
+        initiatedById: kurinnyi.id,
+        actionType: ApprovalActionType.CREATE_JUNAK,
+        newData: { firstName: 'Олег', lastName: 'Мельник', email, hurtokId: hurtok.id },
+        status: ApprovalStatus.PENDING,
+      },
+    });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .post(`/approval-requests/${pending.id}/approve`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const created = await prisma.user.findUnique({ where: { email } });
+    expect(created?.judgeBookRowNumber).toBe(42);
+  });
 });

@@ -122,21 +122,33 @@ export class GoogleDriveService {
     return (res.data.values ?? []) as string[][];
   }
 
-  async appendSheetRow(kurinId: string, spreadsheetId: string, values: string[]): Promise<void> {
+  /**
+   * Appends a row and returns its 1-based sheet row number when it can be
+   * determined (callers store it so later write-back syncs know where the
+   * row lives), or `undefined` if the API response didn't say.
+   */
+  async appendSheetRow(kurinId: string, spreadsheetId: string, values: string[]): Promise<number | undefined> {
     const client = await this.getAuthorizedClient(kurinId);
     const mimeType = await this.getFileMimeType(client, spreadsheetId);
     if (mimeType === XLSX_MIME_TYPE) {
-      await this.appendXlsxRow(client, spreadsheetId, values);
-      return;
+      return this.appendXlsxRow(client, spreadsheetId, values);
     }
     const sheets = google.sheets({ version: 'v4', auth: client });
-    await sheets.spreadsheets.values.append({
+    const res = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: 'A:ZZ',
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: [values] },
     });
+    return this.rowNumberFromUpdatedRange(res?.data?.updates?.updatedRange);
+  }
+
+  /** Extracts the first row number from an A1 range such as "Sheet1!A12:F12" or "'Аркуш 1'!A12". */
+  private rowNumberFromUpdatedRange(range: string | null | undefined): number | undefined {
+    if (!range) return undefined;
+    const match = /([A-Z]+)(\d+)(?::[A-Z]+\d+)?$/.exec(range);
+    return match ? Number(match[2]) : undefined;
   }
 
   async updateCellValues(
@@ -189,7 +201,7 @@ export class GoogleDriveService {
     return rows;
   }
 
-  private async appendXlsxRow(client: GoogleAuthClient, fileId: string, values: string[]): Promise<void> {
+  private async appendXlsxRow(client: GoogleAuthClient, fileId: string, values: string[]): Promise<number> {
     const buffer = await this.downloadFileBuffer(client, fileId);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
@@ -197,13 +209,14 @@ export class GoogleDriveService {
     if (!worksheet) {
       throw new Error('Книга судді не містить жодного аркуша');
     }
-    worksheet.addRow(values);
+    const addedRow = worksheet.addRow(values);
     const updatedBuffer = await workbook.xlsx.writeBuffer();
     const drive = google.drive({ version: 'v3', auth: client });
     await drive.files.update({
       fileId,
       media: { mimeType: XLSX_MIME_TYPE, body: Readable.from(Buffer.from(updatedBuffer)) },
     });
+    return addedRow.number;
   }
 
   private async updateXlsxCells(

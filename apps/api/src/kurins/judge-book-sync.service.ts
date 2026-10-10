@@ -27,6 +27,34 @@ const PHONE_FIELD = 'PHONE';
 const EMAIL_FIELD = 'EMAIL';
 const NAME_FIELD = 'FIRST_LAST_NAME';
 
+interface NewJunakRowSource {
+  firstName: string;
+  lastName: string;
+  nickname: string | null;
+  birthDate: Date | null;
+  email: string;
+  phone: string | null;
+  hurtokName?: string;
+}
+
+/** Builds a sheet row (array indexed by column) for a junak, honouring the kurin's column mapping. */
+function buildSheetRow(columnMapping: { column: string; field: string }[], junak: NewJunakRowSource): string[] {
+  const values: string[] = [];
+  for (const { column, field } of columnMapping) {
+    const idx = columnLetterToIndex(column);
+    let value = '';
+    if (field === NAME_FIELD) value = `${junak.firstName} ${junak.lastName}`;
+    else if (field === 'NICKNAME') value = junak.nickname ?? '';
+    else if (field === 'BIRTH_DATE') value = junak.birthDate ? formatDate(junak.birthDate) : '';
+    else if (field === EMAIL_FIELD) value = junak.email;
+    else if (field === PHONE_FIELD) value = junak.phone ?? '';
+    else if (field === 'HURTOK') value = junak.hurtokName ?? '';
+    while (values.length <= idx) values.push('');
+    values[idx] = value;
+  }
+  return values;
+}
+
 function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -54,6 +82,47 @@ export class JudgeBookSyncService {
     private readonly prisma: PrismaService,
     private readonly googleDrive: GoogleDriveService,
   ) {}
+
+  /**
+   * Adds a junak who was just created in the app as a new row of the kurin's
+   * connected Книга судді, and remembers which row it landed on so the nightly
+   * write-back (degree dates, phone, email) keeps that row up to date later.
+   *
+   * Best-effort by design: creating the junak must never fail because Google
+   * is down or the book isn't connected, so every problem is logged and
+   * swallowed. A kurin with no connected book or no column mapping is a
+   * silent no-op.
+   */
+  async appendNewJunak(kurinId: string, junakId: string): Promise<void> {
+    try {
+      const kurin = await this.prisma.kurin.findUnique({
+        where: { id: kurinId },
+        select: { judgeBookSpreadsheetId: true },
+      });
+      if (!kurin?.judgeBookSpreadsheetId) return;
+      const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
+      if (!mapping) return;
+
+      const junak = await this.prisma.user.findUnique({
+        where: { id: junakId },
+        include: { hurtok: { select: { name: true } } },
+      });
+      if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== kurinId) return;
+
+      const row = buildSheetRow(mapping.columnMapping as unknown as { column: string; field: string }[], {
+        ...junak,
+        hurtokName: junak.hurtok?.name,
+      });
+      const rowNumber = await this.googleDrive.appendSheetRow(kurinId, kurin.judgeBookSpreadsheetId, row);
+      if (rowNumber !== undefined) {
+        await this.prisma.user.update({ where: { id: junakId }, data: { judgeBookRowNumber: rowNumber } });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to append new junak ${junakId} to Книга судді for kurin ${kurinId}: ${(error as Error).message}`,
+      );
+    }
+  }
 
   async syncKurinToSheet(kurinId: string): Promise<void> {
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });

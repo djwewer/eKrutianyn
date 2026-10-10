@@ -3,6 +3,7 @@ import { PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
+import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { generateToken } from '../common/token.util';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -21,6 +22,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly mailService: MailService,
+    private readonly judgeBookSync: JudgeBookSyncService,
   ) {}
 
   async create(dto: CreateUserDto, actorKurinId: string) {
@@ -37,8 +39,9 @@ export class UsersService {
       }
     }
     const passwordHash = dto.password ? await this.authService.hashPassword(dto.password) : undefined;
+    let created;
     try {
-      return await this.prisma.user.create({
+      created = await this.prisma.user.create({
         data: {
           firstName: dto.firstName,
           lastName: dto.lastName,
@@ -67,6 +70,12 @@ export class UsersService {
       }
       throw err;
     }
+    // A junak added directly by the zvyazkovyi must also show up in the
+    // kurin's Книга судді (best-effort; never fails the creation).
+    if (created.role === Role.JUNAK) {
+      await this.judgeBookSync.appendNewJunak(actorKurinId, created.id);
+    }
+    return created;
   }
 
   async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actor: CurrentUserPayload) {

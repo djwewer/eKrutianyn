@@ -234,8 +234,9 @@ describe('GoogleDriveService', () => {
       prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
       mockSheetsValuesAppend.mockResolvedValue({});
 
-      await service.appendSheetRow('kurin-1', 'sheet-id-1', ['Іван', 'Петренко']);
+      const rowNumber = await service.appendSheetRow('kurin-1', 'sheet-id-1', ['Іван', 'Петренко']);
 
+      expect(rowNumber).toBeUndefined();
       expect(mockSheetsValuesAppend).toHaveBeenCalledWith({
         spreadsheetId: 'sheet-id-1',
         range: 'A:ZZ',
@@ -243,6 +244,36 @@ describe('GoogleDriveService', () => {
         insertDataOption: 'INSERT_ROWS',
         requestBody: { values: [['Іван', 'Петренко']] },
       });
+    });
+
+    it.each([
+      ['Sheet1!A12:F12', 12],
+      ["'Аркуш 1'!A7:C7", 7],
+      ['A103', 103],
+    ])('returns the appended row number parsed from updatedRange %s', async (updatedRange, expected) => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockSheetsValuesAppend.mockResolvedValue({ data: { updates: { updatedRange } } });
+
+      await expect(service.appendSheetRow('kurin-1', 'sheet-id-1', ['x'])).resolves.toBe(expected);
+    });
+
+    it('returns undefined when the append response carries no usable range', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      mockSheetsValuesAppend.mockResolvedValue({ data: { updates: { updatedRange: 'garbage' } } });
+
+      await expect(service.appendSheetRow('kurin-1', 'sheet-id-1', ['x'])).resolves.toBeUndefined();
+    });
+
+    it('returns the new row number when appending to an uploaded .xlsx file', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', driveRefreshToken: 'refresh-abc' });
+      const buffer = await buildXlsxBuffer([['ПІБ'], ['Перший'], ['Другий']]);
+      mockFilesGet.mockImplementation((params: { fields?: string; alt?: string }) => {
+        if (params.fields === 'mimeType') return Promise.resolve({ data: { mimeType: XLSX_MIME_TYPE } });
+        return Promise.resolve({ data: buffer });
+      });
+      mockFilesUpdate.mockResolvedValue({});
+
+      await expect(service.appendSheetRow('kurin-1', 'file-id-1', ['Третій'])).resolves.toBe(4);
     });
 
     it('appends a row to an uploaded .xlsx file by re-uploading the modified workbook', async () => {
