@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
+import { AuditAction, ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -45,6 +45,8 @@ export class KurinsService {
     }
 
     const oldProgramId = kurin.probyProgramId;
+    const oldProgram = await this.prisma.probyProgram.findUnique({ where: { id: oldProgramId } });
+    let transferredPoints = 0;
     const junaky = await this.prisma.user.findMany({
       where: { kurinId, role: Role.JUNAK },
       select: { id: true },
@@ -70,6 +72,11 @@ export class KurinsService {
         const targetPointId =
           mapping.oldPointId === entry.pointId ? mapping.newPointId : mapping.oldPointId;
 
+        const existingTarget = await this.prisma.junakProgress.findUnique({
+          where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
+        });
+        if (!existingTarget) transferredPoints++;
+
         await this.prisma.junakProgress.upsert({
           where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
           update: {},
@@ -85,10 +92,18 @@ export class KurinsService {
       }
     }
 
-    return this.prisma.kurin.update({
+    const updated = await this.prisma.kurin.update({
       where: { id: kurinId },
       data: { probyProgramId: newProgram.id },
       select: KURIN_PUBLIC_SELECT,
     });
+    await this.audit.record({
+      kurinId,
+      actorId,
+      action: AuditAction.KURIN_PROBY_PROGRAM_CHANGED,
+      entityId: kurinId,
+      details: { from: oldProgram?.version ?? null, to: newProgram.version, transferredPoints },
+    });
+    return updated;
   }
 }

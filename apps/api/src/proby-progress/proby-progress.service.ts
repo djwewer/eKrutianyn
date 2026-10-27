@@ -129,7 +129,7 @@ export class ProbyProgressService {
       throw new BadRequestException('Cannot close a locked stage');
     }
 
-    return this.prisma.junakStageProgress.upsert({
+    const result = await this.prisma.junakStageProgress.upsert({
       where: { junakId_stageId: { junakId, stageId } },
       update: { closedAt, closedById: actor.userId },
       create: {
@@ -140,6 +140,15 @@ export class ProbyProgressService {
         firstClosedAt: closedAt,
       },
     });
+    await this.audit.record({
+      kurinId: junak.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.PROBY_STAGE_CLOSED,
+      subjectUserId: junak.id,
+      entityId: stageId,
+      details: { stageName: stage.name, subjectName: personLabel(junak), closedAt: closedAt.toISOString() },
+    });
+    return result;
   }
 
   async reopenStage(junakId: string, stageId: string, actor: CurrentUserPayload) {
@@ -157,10 +166,19 @@ export class ProbyProgressService {
       throw new BadRequestException('Only a closed stage can be reopened');
     }
 
-    return this.prisma.junakStageProgress.update({
+    const result = await this.prisma.junakStageProgress.update({
       where: { junakId_stageId: { junakId, stageId } },
       data: { closedAt: null },
     });
+    await this.audit.record({
+      kurinId: junak.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.PROBY_STAGE_REOPENED,
+      subjectUserId: junak.id,
+      entityId: stageId,
+      details: { stageName: stage.name, subjectName: personLabel(junak) },
+    });
+    return result;
   }
 
   private async getStageStatuses(

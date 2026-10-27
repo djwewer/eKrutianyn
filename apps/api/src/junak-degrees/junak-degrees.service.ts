@@ -1,8 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { UsersService } from '../users/users.service';
+import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 import { parseNotFutureDate } from '../common/date.util';
 import { canEditBookData } from '../common/book-access.util';
 import { DEGREE_STAGE_PREFIXES, DegreeStageKey } from '../common/degree-stages.util';
@@ -38,6 +40,7 @@ export class JunakDegreesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly audit: AuditService,
   ) {}
 
   async get(junakId: string, actor: CurrentUserPayload): Promise<JunakDegreesView> {
@@ -57,7 +60,17 @@ export class JunakDegreesService {
   async setDate(junakId: string, key: DegreeKey, date: string | null, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({
       where: { id: junakId },
-      select: { id: true, role: true, kurinId: true, hurtokId: true, archivedAt: true, kurin: { select: { probyProgramId: true } } },
+      select: {
+        id: true,
+        role: true,
+        kurinId: true,
+        hurtokId: true,
+        archivedAt: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        kurin: { select: { probyProgramId: true } },
+      },
     });
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
@@ -71,6 +84,13 @@ export class JunakDegreesService {
       await this.prisma.user.update({
         where: { id: junakId },
         data: { skobDate: date === null ? null : parseNotFutureDate(date) },
+      });
+      await this.audit.record({
+        kurinId: junak.kurinId,
+        actorId: actor.userId,
+        action: AuditAction.DEGREE_DATE_CHANGED,
+        subjectUserId: junakId,
+        details: { degree: key, subjectName: personLabel(junak), date },
       });
       return this.get(junakId, actor);
     }
@@ -101,6 +121,13 @@ export class JunakDegreesService {
         // date, but don't close a stage that's currently reopened.
         ...(progress.closedAt ? { closedAt: newDate } : {}),
       },
+    });
+    await this.audit.record({
+      kurinId: junak.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.DEGREE_DATE_CHANGED,
+      subjectUserId: junakId,
+      details: { degree: key, subjectName: personLabel(junak), date },
     });
     return this.get(junakId, actor);
   }
