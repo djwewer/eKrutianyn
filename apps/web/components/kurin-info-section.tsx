@@ -6,6 +6,7 @@ import { useSession } from '@/lib/session-client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ApiError } from '@/lib/api-client';
 import { accessErrorMessage } from '@/lib/error-message';
 import { useGoogleDriveStatus, useConnectGoogleDrive, useDisconnectGoogleDrive } from '@/lib/queries/google-drive';
 
@@ -99,8 +100,8 @@ export function KurinInfoSection() {
               </Button>
             )}
           </div>
-          <div className="space-y-2">
-            <Label>Програма проби</Label>
+          <fieldset className="m-0 min-w-0 space-y-2 border-0 p-0">
+            <legend className="mb-2 flex items-center gap-2 text-sm leading-none font-medium">Програма проби</legend>
             <div className="flex items-center gap-2">
               <input
                 type="radio"
@@ -123,7 +124,7 @@ export function KurinInfoSection() {
               />
               <Label htmlFor="programNew">Нова програма</Label>
             </div>
-          </div>
+          </fieldset>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -142,7 +143,11 @@ export function KurinInfoSection() {
             </Button>
           </div>
           {changeProgram.isError && (
-            <p className="text-sm text-destructive">{accessErrorMessage(changeProgram.error)}</p>
+            <p className="text-sm text-destructive">
+              {changeProgram.error instanceof ApiError && changeProgram.error.status === 404
+                ? 'Такої версії програми проби немає в каталозі. Зверніться до адміністратора.'
+                : accessErrorMessage(changeProgram.error)}
+            </p>
           )}
         </div>
       )}
