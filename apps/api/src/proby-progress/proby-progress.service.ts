@@ -16,16 +16,16 @@ export class ProbyProgressService {
     action: AuditAction,
     junak: { id: string; kurinId: string; firstName: string; lastName: string; nickname: string | null },
     pointId: string,
+    pointTitle: string,
     actor: CurrentUserPayload,
   ) {
-    const point = await this.prisma.probyPoint.findUnique({ where: { id: pointId }, select: { description: true } });
     await this.audit.record({
       kurinId: junak.kurinId,
       actorId: actor.userId,
       action,
       subjectUserId: junak.id,
       entityId: pointId,
-      details: { pointTitle: point?.description ?? null, subjectName: personLabel(junak) },
+      details: { pointTitle, subjectName: personLabel(junak) },
     });
   }
 
@@ -76,7 +76,7 @@ export class ProbyProgressService {
 
   async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     const junak = await this.assertCanConfirm(junakId, actor);
-    await this.assertPointExists(pointId);
+    const point = await this.assertPointExists(pointId);
     await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
@@ -89,20 +89,20 @@ export class ProbyProgressService {
         confirmedAt: new Date(),
       },
     });
-    await this.recordPointEvent(AuditAction.PROBY_POINT_CONFIRMED, junak, pointId, actor);
+    await this.recordPointEvent(AuditAction.PROBY_POINT_CONFIRMED, junak, pointId, point.description, actor);
     return progress;
   }
 
   async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
     const junak = await this.assertCanConfirm(junakId, actor);
-    await this.assertPointExists(pointId);
+    const point = await this.assertPointExists(pointId);
     await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
       where: { junakId_pointId: { junakId, pointId } },
       update: { status: ProgressStatus.NOT_DONE, confirmedById: null, confirmedAt: null },
       create: { junakId, pointId, status: ProgressStatus.NOT_DONE },
     });
-    await this.recordPointEvent(AuditAction.PROBY_POINT_UNCONFIRMED, junak, pointId, actor);
+    await this.recordPointEvent(AuditAction.PROBY_POINT_UNCONFIRMED, junak, pointId, point.description, actor);
     return progress;
   }
 
@@ -256,6 +256,7 @@ export class ProbyProgressService {
     if (!point) {
       throw new NotFoundException('Point not found');
     }
+    return point;
   }
 
   private async assertCanConfirm(junakId: string, actor: CurrentUserPayload) {

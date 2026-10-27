@@ -41,6 +41,16 @@ const DEGREE_LABELS: Record<string, string> = {
   SKOB: 'Скоб',
 };
 
+const REQUEST_TYPE_LABELS: Record<string, string> = {
+  CHANGE_FULL_NAME: 'Зміна ПІБ',
+  CHANGE_BIRTH_DATE: 'Зміна дати народження',
+  CHANGE_EMAIL: 'Зміна електронної пошти',
+  CHANGE_HURTOK: 'Зміна гуртка',
+  CREATE_JUNAK: 'Створення юнака',
+  BULK_IMPORT_JUNAKY: 'Масовий імпорт юнаків',
+  ARCHIVE_JUNAK: 'Архівація юнака',
+};
+
 const PROGRAM_LABELS: Record<string, string> = { OLD: 'стара', NEW: 'нова' };
 
 function s(details: Record<string, unknown> | null, key: string): string {
@@ -62,6 +72,17 @@ function money(cents: unknown): string {
 function positionSuffix(d: Record<string, unknown> | null): string {
   const hurtok = s(d, 'hurtokName');
   return hurtok === '—' ? '' : ` (гурток «${hurtok}»)`;
+}
+
+function describeDecision(verb: string, d: Record<string, unknown> | null): string {
+  const type = s(d, 'requestType');
+  const label = type === '—' ? null : REQUEST_TYPE_LABELS[type];
+  if (!label) return `${verb} запит на затвердження`;
+  const subject = s(d, 'subjectName');
+  const forPart = subject === '—' ? '' : ` для ${subject}`;
+  const counts =
+    type === 'BULK_IMPORT_JUNAKY' && d?.rows != null ? ` (рядків: ${s(d, 'rows')}, помилок: ${s(d, 'failed')})` : '';
+  return `${verb} запит «${label}»${forPart}${counts}`;
 }
 
 /** One place that turns a stored event into a sentence; unknown actions and odd details degrade gracefully. */
@@ -110,9 +131,9 @@ export function describeAuditEvent(item: AuditLogItem): string {
     case 'GUARDIAN_DELETED':
       return `Видалив контакт опікуна ${s(d, 'guardianName')} для ${s(d, 'subjectName')}`;
     case 'APPROVAL_APPROVED':
-      return 'Схвалив запит на затвердження';
+      return describeDecision('Схвалив', d);
     case 'APPROVAL_REJECTED':
-      return 'Відхилив запит на затвердження';
+      return describeDecision('Відхилив', d);
     case 'TREASURY_TRANSACTION_CREATED':
       return `Додав у Скарбницю ${txKind} ${money(d?.amountCents)}: ${s(d, 'description')}`;
     case 'TREASURY_TRANSACTION_DELETED':

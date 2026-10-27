@@ -1,9 +1,9 @@
 import { Type } from 'class-transformer';
 import { IsDateString, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
-import { AuditGroup } from '../audit.constants';
+import { AUDIT_GROUPS, AuditGroup } from '../audit.constants';
 
 export class ListAuditLogDto {
-  @IsOptional() @IsIn(['PROBY', 'PEOPLE', 'MONEY', 'SETTINGS']) group?: AuditGroup;
+  @IsOptional() @IsIn(Object.keys(AUDIT_GROUPS)) group?: AuditGroup;
   @IsOptional() @IsUUID() actorId?: string;
   @IsOptional() @IsUUID() subjectUserId?: string;
   @IsOptional() @IsDateString() from?: string;

@@ -8,6 +8,7 @@ import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 
 interface ApprovalDecisionRef {
   id: string;
@@ -155,6 +156,8 @@ export class ApprovalRequestsService {
 
   async approve(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
+    // Resolved before the change is applied so a rename shows the name the request was about.
+    const subjectName = await this.decisionSubjectName(req);
 
     if (req.actionType === ApprovalActionType.BULK_IMPORT_JUNAKY) {
       return this.approveBulkImport(req, actor);
@@ -168,7 +171,7 @@ export class ApprovalRequestsService {
       if (claim.count === 0) {
         throw new BadRequestException('Request already decided');
       }
-      await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor);
+      await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, subjectName, {}, req.junakId);
       return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
     }
 
@@ -242,7 +245,7 @@ export class ApprovalRequestsService {
       await this.judgeBookSync.appendNewJunak(actor.kurinId, createdJunakId);
     }
 
-    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor);
+    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, subjectName, {}, createdJunakId ?? req.junakId);
     return updatedRequest;
   }
 
@@ -291,7 +294,7 @@ export class ApprovalRequestsService {
       where: { id: req.id },
       data: { newData: { rows, results, ...(processingError ? { processingError } : {}) } as any },
     });
-    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, {
+    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, null, {
       rows: rows.length,
       failed: results.filter((r) => r.error).length,
     });
@@ -300,6 +303,7 @@ export class ApprovalRequestsService {
 
   async reject(requestId: string, actor: CurrentUserPayload) {
     const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
+    const subjectName = await this.decisionSubjectName(req);
     // Conditional claim so a concurrent approve() can't be overwritten with
     // REJECTED after it already applied its changes (same pattern as
     // approveBulkImport / the ARCHIVE_JUNAK branch).
@@ -310,23 +314,51 @@ export class ApprovalRequestsService {
     if (claim.count === 0) {
       throw new BadRequestException('Request already decided');
     }
-    await this.recordDecision(AuditAction.APPROVAL_REJECTED, req, actor);
+    await this.recordDecision(AuditAction.APPROVAL_REJECTED, req, actor, subjectName);
     return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
+  }
+
+  /** Never throws: it runs after the decision is already committed. */
+  private async decisionSubjectName(req: ApprovalDecisionRef & { newData?: unknown }): Promise<string | null> {
+    try {
+      if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
+        const d = req.newData as { firstName?: unknown; lastName?: unknown } | null;
+        if (typeof d?.firstName === 'string' && typeof d?.lastName === 'string') {
+          return personLabel({ firstName: d.firstName, lastName: d.lastName });
+        }
+        return null;
+      }
+      if (!req.junakId) return null;
+      const junak = await this.prisma.user.findUnique({
+        where: { id: req.junakId },
+        select: { firstName: true, lastName: true, nickname: true },
+      });
+      return junak ? personLabel(junak) : null;
+    } catch {
+      return null;
+    }
   }
 
   private async recordDecision(
     action: AuditAction,
-    req: ApprovalDecisionRef,
+    req: ApprovalDecisionRef & { newData?: unknown },
     actor: CurrentUserPayload,
+    subjectName: string | null,
     extra: Record<string, unknown> = {},
+    subjectUserId: string | null = req.junakId,
   ) {
     await this.audit.record({
       kurinId: actor.kurinId,
       actorId: actor.userId,
       action,
-      subjectUserId: req.junakId,
+      subjectUserId,
       entityId: req.id,
-      details: { requestType: req.actionType, requestedBy: req.initiatedById, ...extra },
+      details: {
+        requestType: req.actionType,
+        requestedBy: req.initiatedById,
+        ...(subjectName ? { subjectName } : {}),
+        ...extra,
+      },
     });
   }
 

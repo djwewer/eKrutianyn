@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaClient, Role, ProbyProgramVersion, AuditAction } from '@prisma/client';
 import { cleanDatabase } from './utils/clean-db';
 import { bootApp } from './utils/boot-app';
+import { personLabel } from '../src/audit/audit.util';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
 
 describe('Audit events — Люди й ролі group (e2e)', () => {
@@ -299,7 +300,11 @@ describe('Audit events — Люди й ролі group (e2e)', () => {
       const approved = await entriesOf(kurin.id, AuditAction.APPROVAL_APPROVED);
       expect(approved).toHaveLength(1);
       expect(approved[0]).toMatchObject({ actorId: zvyazkovyi.id, subjectUserId: junak.id, entityId: req.id });
-      expect(approved[0].details).toEqual({ requestType: 'ARCHIVE_JUNAK', requestedBy: kurinniy.id });
+      expect(approved[0].details).toEqual({
+        requestType: 'ARCHIVE_JUNAK',
+        requestedBy: kurinniy.id,
+        subjectName: personLabel(junak),
+      });
       expect(await entriesOf(kurin.id, AuditAction.USER_ARCHIVED)).toHaveLength(1);
     });
 
@@ -312,8 +317,13 @@ describe('Audit events — Люди й ролі group (e2e)', () => {
       await decide(req.id, 'approve').expect(201);
       const approved = await entriesOf(kurin.id, AuditAction.APPROVAL_APPROVED);
       expect(approved).toHaveLength(1);
-      expect(approved[0]).toMatchObject({ actorId: zvyazkovyi.id, subjectUserId: null, entityId: req.id });
-      expect(approved[0].details).toEqual({ requestType: 'CREATE_JUNAK', requestedBy: kurinniy.id });
+      const created = await prisma.user.findUniqueOrThrow({ where: { email: 'new.junak@example.com' } });
+      expect(approved[0]).toMatchObject({ actorId: zvyazkovyi.id, subjectUserId: created.id, entityId: req.id });
+      expect(approved[0].details).toEqual({
+        requestType: 'CREATE_JUNAK',
+        requestedBy: kurinniy.id,
+        subjectName: 'Новий Юнак',
+      });
     });
 
     it('logs approving a CHANGE_FULL_NAME request', async () => {
@@ -328,7 +338,11 @@ describe('Audit events — Люди й ролі group (e2e)', () => {
       const approved = await entriesOf(kurin.id, AuditAction.APPROVAL_APPROVED);
       expect(approved).toHaveLength(1);
       expect(approved[0]).toMatchObject({ actorId: zvyazkovyi.id, subjectUserId: junak.id, entityId: req.id });
-      expect(approved[0].details).toEqual({ requestType: 'CHANGE_FULL_NAME', requestedBy: kurinniy.id });
+      expect(approved[0].details).toEqual({
+        requestType: 'CHANGE_FULL_NAME',
+        requestedBy: kurinniy.id,
+        subjectName: personLabel(junak),
+      });
     });
 
     it('logs approving a BULK_IMPORT_JUNAKY request with row and failure counts', async () => {
@@ -368,7 +382,11 @@ describe('Audit events — Люди й ролі group (e2e)', () => {
       const rejected = await entriesOf(kurin.id, AuditAction.APPROVAL_REJECTED);
       expect(rejected).toHaveLength(1);
       expect(rejected[0]).toMatchObject({ actorId: zvyazkovyi.id, subjectUserId: junak.id, entityId: req.id });
-      expect(rejected[0].details).toEqual({ requestType: 'ARCHIVE_JUNAK', requestedBy: kurinniy.id });
+      expect(rejected[0].details).toEqual({
+        requestType: 'ARCHIVE_JUNAK',
+        requestedBy: kurinniy.id,
+        subjectName: personLabel(junak),
+      });
       expect(await entriesOf(kurin.id, AuditAction.APPROVAL_APPROVED)).toHaveLength(0);
     });
 
