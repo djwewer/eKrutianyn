@@ -148,7 +148,7 @@ describe('JunakImportRowProcessorService', () => {
 
     const result = await service.processRow('kurin-1', baseRow({ hurtokName: 'Орли' }), 0, ACTOR);
 
-    expect(hurtky.create).toHaveBeenCalledWith({ name: 'Орли', number: undefined }, 'kurin-1');
+    expect(hurtky.create).toHaveBeenCalledWith({ name: 'Орли', number: undefined }, ACTOR);
     expect(result.succeededSteps).toContain('hurtok');
   });
 

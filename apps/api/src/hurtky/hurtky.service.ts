@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateHurtokDto } from './dto/create-hurtok.dto';
 import { UpdateHurtokDto } from './dto/update-hurtok.dto';
@@ -9,11 +10,23 @@ import { generateUniqueSlug } from './slug.util';
 
 @Injectable()
 export class HurtkyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async create(dto: CreateHurtokDto, kurinId: string) {
+  async create(dto: CreateHurtokDto, actor: CurrentUserPayload) {
+    const kurinId = actor.kurinId;
     const slug = await generateUniqueSlug(this.prisma, kurinId, dto.name);
-    return this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId, slug } });
+    const hurtok = await this.prisma.hurtok.create({ data: { name: dto.name, number: dto.number, kurinId, slug } });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.HURTOK_CREATED,
+      entityId: hurtok.id,
+      details: { hurtokName: hurtok.name },
+    });
+    return hurtok;
   }
 
   async update(hurtokId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload) {
@@ -24,10 +37,18 @@ export class HurtkyService {
     if (!hurtok || hurtok.kurinId !== actor.kurinId) {
       throw new NotFoundException('Hurtok not found in this kurin');
     }
-    return this.prisma.hurtok.update({
+    const updated = await this.prisma.hurtok.update({
       where: { id: hurtokId },
       data: { foundedAt: dto.foundedAt ? new Date(dto.foundedAt) : null },
     });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.HURTOK_UPDATED,
+      entityId: hurtokId,
+      details: { hurtokName: updated.name, foundedAt: updated.foundedAt },
+    });
+    return updated;
   }
 
   async archiveHurtok(hurtokId: string, actor: CurrentUserPayload) {
@@ -53,10 +74,18 @@ export class HurtkyService {
     if (activePosition) {
       throw new BadRequestException('У гуртку є активна посада');
     }
-    return this.prisma.hurtok.update({
+    const archived = await this.prisma.hurtok.update({
       where: { id: hurtokId },
       data: { archivedAt: new Date(), archivedById: actor.userId },
     });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.HURTOK_ARCHIVED,
+      entityId: hurtokId,
+      details: { hurtokName: archived.name },
+    });
+    return archived;
   }
 
   listForKurin(kurinId: string) {

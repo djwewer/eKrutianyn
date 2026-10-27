@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PositionScope, PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionScope, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { USER_SELECT_PUBLIC } from '../users/user-select.const';
 import { AssignPositionDto } from './dto/assign-position.dto';
@@ -8,7 +10,10 @@ import { KURIN_POSITIONS, HURTOK_POSITIONS } from './position-rules';
 
 @Injectable()
 export class KurinPositionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   list(kurinId: string) {
     return this.prisma.kurinPosition.findMany({
@@ -48,6 +53,7 @@ export class KurinPositionsService {
         }
       }
     }
+    let hurtok: { id: string; kurinId: string; name: string } | null = null;
     if (dto.scope === PositionScope.KURIN) {
       if (!KURIN_POSITIONS.includes(dto.positionType)) {
         throw new BadRequestException('This position is not valid at kurin scope');
@@ -62,7 +68,7 @@ export class KurinPositionsService {
       if (!dto.hurtokId) {
         throw new BadRequestException('hurtokId is required for a hurtok-scoped position');
       }
-      const hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });
+      hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });
       if (!hurtok || hurtok.kurinId !== actor.kurinId) {
         throw new NotFoundException('Hurtok not found in this kurin');
       }
@@ -79,19 +85,25 @@ export class KurinPositionsService {
       throw new BadRequestException('This junak does not belong to that hurtok');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const replacedWhere = {
+      kurinId: actor.kurinId,
+      scope: dto.scope,
+      removedAt: null,
+      OR: [
+        // the slot being filled, in case someone else currently holds it
+        { positionType: dto.positionType, hurtokId: dto.hurtokId ?? null },
+        // any other active position this junak holds in this scope
+        { userId: dto.userId },
+      ],
+    };
+    const replaced = await this.prisma.kurinPosition.findMany({
+      where: replacedWhere,
+      include: { user: true, hurtok: { select: { name: true } } },
+    });
+
+    const created = await this.prisma.$transaction(async (tx) => {
       await tx.kurinPosition.updateMany({
-        where: {
-          kurinId: actor.kurinId,
-          scope: dto.scope,
-          removedAt: null,
-          OR: [
-            // the slot being filled, in case someone else currently holds it
-            { positionType: dto.positionType, hurtokId: dto.hurtokId ?? null },
-            // any other active position this junak holds in this scope
-            { userId: dto.userId },
-          ],
-        },
+        where: replacedWhere,
         data: { removedAt: new Date(), removedById: actor.userId },
       });
       return tx.kurinPosition.create({
@@ -113,6 +125,36 @@ export class KurinPositionsService {
         },
       });
     });
+
+    for (const old of replaced) {
+      await this.audit.record({
+        kurinId: actor.kurinId,
+        actorId: actor.userId,
+        action: AuditAction.POSITION_REMOVED,
+        subjectUserId: old.userId,
+        entityId: old.id,
+        details: {
+          subjectName: personLabel(old.user),
+          positionType: old.positionType,
+          scope: old.scope,
+          hurtokName: old.hurtok?.name ?? null,
+        },
+      });
+    }
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.POSITION_ASSIGNED,
+      subjectUserId: dto.userId,
+      entityId: created.id,
+      details: {
+        subjectName: personLabel(target),
+        positionType: dto.positionType,
+        scope: dto.scope,
+        hurtokName: hurtok?.name ?? null,
+      },
+    });
+    return created;
   }
 
   async remove(id: string, actor: CurrentUserPayload) {
@@ -131,9 +173,26 @@ export class KurinPositionsService {
         }
       }
     }
+    const holder = await this.prisma.user.findUnique({ where: { id: position.userId } });
+    const hurtok = position.hurtokId
+      ? await this.prisma.hurtok.findUnique({ where: { id: position.hurtokId }, select: { name: true } })
+      : null;
     await this.prisma.kurinPosition.update({
       where: { id },
       data: { removedAt: new Date(), removedById: actor.userId },
+    });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.POSITION_REMOVED,
+      subjectUserId: position.userId,
+      entityId: position.id,
+      details: {
+        subjectName: holder ? personLabel(holder) : null,
+        positionType: position.positionType,
+        scope: position.scope,
+        hurtokName: hurtok?.name ?? null,
+      },
     });
     return { success: true };
   }

@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
@@ -24,9 +26,11 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly mailService: MailService,
     private readonly judgeBookSync: JudgeBookSyncService,
+    private readonly audit: AuditService,
   ) {}
 
-  async create(dto: CreateUserDto, actorKurinId: string) {
+  async create(dto: CreateUserDto, actor: CurrentUserPayload) {
+    const actorKurinId = actor.kurinId;
     if (dto.role === Role.ZVYAZKOVYI) {
       throw new BadRequestException('Cannot self-service create another zvyazkovyi');
     }
@@ -76,6 +80,13 @@ export class UsersService {
     if (created.role === Role.JUNAK) {
       await this.judgeBookSync.appendNewJunak(actorKurinId, created.id);
     }
+    await this.audit.record({
+      kurinId: actorKurinId,
+      actorId: actor.userId,
+      action: AuditAction.USER_CREATED,
+      subjectUserId: created.id,
+      details: { subjectName: personLabel(created), role: created.role },
+    });
     return created;
   }
 
@@ -87,7 +98,7 @@ export class UsersService {
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: junakId },
       // An emptied field is stored as null so the book sync treats it as "nothing to push".
       data: {
@@ -112,6 +123,17 @@ export class UsersService {
         studyPlace: true,
       },
     });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.USER_CONTACT_UPDATED,
+      subjectUserId: junakId,
+      details: {
+        subjectName: personLabel(junak),
+        changed: (['notes', 'phone', 'residence', 'studyPlace'] as const).filter((k) => dto[k] !== undefined),
+      },
+    });
+    return updated;
   }
 
   async updateHurtok(junakId: string, dto: UpdateHurtokDto, actor: CurrentUserPayload) {
@@ -125,17 +147,30 @@ export class UsersService {
     if (junak.archivedAt) {
       throw new BadRequestException('Юнак архівований');
     }
+    let toHurtokName: string | null = null;
     if (dto.hurtokId) {
       const hurtok = await this.prisma.hurtok.findUnique({ where: { id: dto.hurtokId } });
       if (!hurtok || hurtok.kurinId !== actor.kurinId) {
         throw new NotFoundException('Hurtok not found in this kurin');
       }
+      toHurtokName = hurtok.name;
     }
-    return this.prisma.user.update({
+    const fromHurtok = junak.hurtokId
+      ? await this.prisma.hurtok.findUnique({ where: { id: junak.hurtokId }, select: { name: true } })
+      : null;
+    const updated = await this.prisma.user.update({
       where: { id: junakId },
       data: { hurtokId: dto.hurtokId ?? null },
       select: USER_SELECT,
     });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.USER_HURTOK_CHANGED,
+      subjectUserId: junakId,
+      details: { subjectName: personLabel(junak), from: fromHurtok?.name ?? null, to: toHurtokName },
+    });
+    return updated;
   }
 
   async archiveUser(userId: string, actor: CurrentUserPayload) {
@@ -161,11 +196,19 @@ export class UsersService {
     } else {
       throw new BadRequestException('Цю роль не можна архівувати');
     }
-    return this.prisma.user.update({
+    const archived = await this.prisma.user.update({
       where: { id: userId },
       data: { archivedAt: new Date(), archivedById: actor.userId },
       select: USER_SELECT,
     });
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action: AuditAction.USER_ARCHIVED,
+      subjectUserId: userId,
+      details: { subjectName: personLabel(target), role: target.role },
+    });
+    return archived;
   }
 
   async findById(id: string) {

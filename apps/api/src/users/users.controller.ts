@@ -39,7 +39,7 @@ export class UsersController {
   @Roles(Role.ZVYAZKOVYI)
   @Post()
   create(@Body() dto: CreateUserDto, @CurrentUser() user: CurrentUserPayload) {
-    return this.service.create(dto, user.kurinId);
+    return this.service.create(dto, user);
   }
 
   @Get('me')

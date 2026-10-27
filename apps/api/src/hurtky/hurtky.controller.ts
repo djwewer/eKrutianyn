@@ -16,7 +16,7 @@ export class HurtkyController {
   @Roles(Role.ZVYAZKOVYI)
   @Post()
   create(@Body() dto: CreateHurtokDto, @CurrentUser() user: CurrentUserPayload) {
-    return this.service.create(dto, user.kurinId);
+    return this.service.create(dto, user);
   }
 
   @Patch(':id')

@@ -42,7 +42,7 @@ export class JunakImportRowProcessorService {
   ): Promise<JunakImportRowResult> {
     const result: JunakImportRowResult = { row: rowIndex, succeededSteps: [] };
     try {
-      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, rowIndex, result, options);
+      const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, rowIndex, result, options, actor);
       result.junakId = junakId;
 
       await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
@@ -59,12 +59,13 @@ export class JunakImportRowProcessorService {
     rowIndex: number,
     result: JunakImportRowResult,
     options: ProcessRowOptions,
+    actor: CurrentUserPayload,
   ): Promise<{ junakId: string; hurtokId?: string }> {
     let hurtokId: string | undefined;
     if (row.hurtokName) {
       const existing = await this.hurtky.listForKurin(kurinId);
       const match = existing.find((h) => h.name === row.hurtokName);
-      hurtokId = match ? match.id : (await this.hurtky.create({ name: row.hurtokName, number: undefined }, kurinId)).id;
+      hurtokId = match ? match.id : (await this.hurtky.create({ name: row.hurtokName, number: undefined }, actor)).id;
       result.succeededSteps.push('hurtok');
     }
 
