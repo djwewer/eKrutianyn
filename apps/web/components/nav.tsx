@@ -35,6 +35,7 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/approval-requests', label: 'Запити' },
     { href: '/calendar', label: 'Календар' },
     { href: '/kurin', label: 'Курінь' },
+    { href: '/audit-log', label: 'Журнал дій' },
     { href: '/settings', label: 'Налаштування' },
   ],
 };
