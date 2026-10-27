@@ -17,6 +17,7 @@ import { ProbyCatalogModule } from './proby-catalog/proby-catalog.module';
 import { KurinPositionsModule } from './kurin-positions/kurin-positions.module';
 import { GuardianContactsModule } from './guardian-contacts/guardian-contacts.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { PysarstvoModule } from './pysarstvo/pysarstvo.module';
 import { JunakImportModule } from './junak-import/junak-import.module';
 import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 import { ReferenceSourcesModule } from './reference-sources/reference-sources.module';
@@ -45,6 +46,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     KurinPositionsModule,
     GuardianContactsModule,
     InventoryModule,
+    PysarstvoModule,
     JunakImportModule,
     AiAssistantModule,
     ReferenceSourcesModule,

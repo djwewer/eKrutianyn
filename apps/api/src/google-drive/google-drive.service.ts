@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
+const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
+const GOOGLE_DOC_MIME_TYPE = 'application/vnd.google-apps.document';
 const XLSX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 type GoogleAuthClient = InstanceType<typeof google.auth.OAuth2>;
@@ -106,6 +108,58 @@ export class GoogleDriveService {
       requestBody: { role: 'reader', type: 'anyone' },
     });
     return { fileId, url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` };
+  }
+
+  /**
+   * Returns the id of the child folder `name` under `parentFolderId`,
+   * creating it when missing. Under the drive.file scope the lookup only sees
+   * folders this app created or was granted via the Picker, which is exactly
+   * the set we manage.
+   */
+  async ensureSubfolder(kurinId: string, parentFolderId: string, name: string): Promise<string> {
+    const client = await this.getAuthorizedClient(kurinId);
+    const drive = google.drive({ version: 'v3', auth: client });
+    const escape = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const existing = await drive.files.list({
+      q: `'${escape(parentFolderId)}' in parents and name = '${escape(name)}' and mimeType = '${FOLDER_MIME_TYPE}' and trashed = false`,
+      fields: 'files(id)',
+      pageSize: 1,
+    });
+    const found = existing.data.files?.[0]?.id;
+    if (found) return found;
+    const created = await drive.files.create({
+      requestBody: { name, mimeType: FOLDER_MIME_TYPE, parents: [parentFolderId] },
+      fields: 'id',
+    });
+    if (!created.data.id) {
+      throw new Error('Failed to create Drive folder');
+    }
+    return created.data.id;
+  }
+
+  /**
+   * Creates a Google Doc from HTML (Drive converts it on import) inside the
+   * folder. The doc stays private to the connected account — no public
+   * permission, unlike uploadFile.
+   */
+  async createDocFromHtml(
+    kurinId: string,
+    folderId: string,
+    title: string,
+    html: string,
+  ): Promise<{ id: string; url: string }> {
+    const client = await this.getAuthorizedClient(kurinId);
+    const drive = google.drive({ version: 'v3', auth: client });
+    const res = await drive.files.create({
+      requestBody: { name: title, mimeType: GOOGLE_DOC_MIME_TYPE, parents: [folderId] },
+      media: { mimeType: 'text/html', body: Readable.from(Buffer.from(html, 'utf-8')) },
+      fields: 'id,webViewLink',
+    });
+    const id = res.data.id;
+    if (!id) {
+      throw new Error('Failed to create Google Doc');
+    }
+    return { id, url: res.data.webViewLink ?? `https://docs.google.com/document/d/${id}/edit` };
   }
 
   async readSheetValues(kurinId: string, spreadsheetId: string): Promise<string[][]> {

@@ -9,6 +9,7 @@ const mockOAuth2Instance = {
   revokeToken: jest.fn(),
 };
 const mockFilesCreate = jest.fn();
+const mockFilesList = jest.fn();
 const mockFilesGet = jest.fn();
 const mockFilesUpdate = jest.fn();
 const mockPermissionsCreate = jest.fn();
@@ -21,7 +22,7 @@ jest.mock('googleapis', () => ({
   google: {
     auth: { OAuth2: jest.fn().mockImplementation(() => mockOAuth2Instance) },
     drive: jest.fn().mockImplementation(() => ({
-      files: { create: mockFilesCreate, get: mockFilesGet, update: mockFilesUpdate },
+      files: { create: mockFilesCreate, get: mockFilesGet, update: mockFilesUpdate, list: mockFilesList },
       permissions: { create: mockPermissionsCreate },
     })),
     oauth2: jest.fn().mockImplementation(() => ({
@@ -379,6 +380,62 @@ describe('GoogleDriveService', () => {
         ['ПІБ', 'Псевдо', 'Дата проби', 'Email'],
         ['Іван Петренко', 'Сокіл', '2024-01-15', 'ivan@example.com'],
       ]);
+    });
+  });
+
+  describe('ensureSubfolder', () => {
+    beforeEach(() => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: 'rt' });
+    });
+
+    it('returns the existing folder id without creating one', async () => {
+      mockFilesList.mockResolvedValue({ data: { files: [{ id: 'existing' }] } });
+      await expect(service.ensureSubfolder('k1', 'parent', 'Писарство')).resolves.toBe('existing');
+      expect(mockFilesCreate).not.toHaveBeenCalled();
+      expect(mockFilesList.mock.calls[0][0].q).toContain("'parent' in parents");
+      expect(mockFilesList.mock.calls[0][0].q).toContain("name = 'Писарство'");
+    });
+
+    it('creates the folder under the parent when missing', async () => {
+      mockFilesList.mockResolvedValue({ data: { files: [] } });
+      mockFilesCreate.mockResolvedValue({ data: { id: 'new-folder' } });
+      await expect(service.ensureSubfolder('k1', 'parent', 'АПД')).resolves.toBe('new-folder');
+      expect(mockFilesCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestBody: { name: 'АПД', mimeType: 'application/vnd.google-apps.folder', parents: ['parent'] },
+        }),
+      );
+    });
+
+    it('rejects when the kurin has not connected Drive', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: null });
+      await expect(service.ensureSubfolder('k1', 'parent', 'АПД')).rejects.toThrow(ServiceUnavailableException);
+    });
+  });
+
+  describe('createDocFromHtml', () => {
+    beforeEach(() => {
+      prisma.kurin.findUnique.mockResolvedValue({ driveRefreshToken: 'rt' });
+    });
+
+    it('imports HTML as a Google Doc in the folder and keeps it private', async () => {
+      mockFilesCreate.mockResolvedValue({ data: { id: 'doc1', webViewLink: 'https://docs.google.com/document/d/doc1/edit' } });
+      const result = await service.createDocFromHtml('k1', 'folder', 'АПД 1', '<h1>x</h1>');
+      expect(result).toEqual({ id: 'doc1', url: 'https://docs.google.com/document/d/doc1/edit' });
+      const call = mockFilesCreate.mock.calls[0][0];
+      expect(call.requestBody).toEqual({
+        name: 'АПД 1',
+        mimeType: 'application/vnd.google-apps.document',
+        parents: ['folder'],
+      });
+      expect(call.media.mimeType).toBe('text/html');
+      expect(mockPermissionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a constructed URL when webViewLink is missing', async () => {
+      mockFilesCreate.mockResolvedValue({ data: { id: 'doc2' } });
+      const result = await service.createDocFromHtml('k1', 'folder', 'T', '<h1>x</h1>');
+      expect(result.url).toBe('https://docs.google.com/document/d/doc2/edit');
     });
   });
 });
