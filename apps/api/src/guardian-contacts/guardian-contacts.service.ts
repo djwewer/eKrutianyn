@@ -1,16 +1,21 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { GuardianRelation, Role } from '@prisma/client';
+import { AuditAction, GuardianRelation, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateGuardianContactDto } from './dto/create-guardian-contact.dto';
 import { UpdateGuardianContactDto } from './dto/update-guardian-contact.dto';
 import { canEditBookData } from '../common/book-access.util';
+import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 
 @Injectable()
 export class GuardianContactsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
-  private async assertAccess(junakId: string, actor: CurrentUserPayload): Promise<void> {
+  private async assertAccess(junakId: string, actor: CurrentUserPayload): Promise<User> {
     if (!canEditBookData(actor)) {
       throw new ForbiddenException('Insufficient role');
     }
@@ -18,6 +23,7 @@ export class GuardianContactsService {
     if (!junak || junak.role !== Role.JUNAK || junak.kurinId !== actor.kurinId) {
       throw new NotFoundException('Junak not found');
     }
+    return junak;
   }
 
   async list(junakId: string, actor: CurrentUserPayload) {
@@ -42,10 +48,10 @@ export class GuardianContactsService {
   }
 
   async create(junakId: string, dto: CreateGuardianContactDto, actor: CurrentUserPayload) {
-    await this.assertAccess(junakId, actor);
+    const junak = await this.assertAccess(junakId, actor);
     const relation = dto.relation ?? GuardianRelation.GUARDIAN;
     await this.assertRelationFree(junakId, relation);
-    return this.prisma.guardianContact.create({
+    const created = await this.prisma.guardianContact.create({
       data: {
         junakId,
         name: dto.name,
@@ -56,10 +62,12 @@ export class GuardianContactsService {
         email: dto.email,
       },
     });
+    await this.record(AuditAction.GUARDIAN_CREATED, junak, created, actor);
+    return created;
   }
 
   async update(junakId: string, guardianId: string, dto: UpdateGuardianContactDto, actor: CurrentUserPayload) {
-    await this.assertAccess(junakId, actor);
+    const junak = await this.assertAccess(junakId, actor);
     const contact = await this.prisma.guardianContact.findUnique({ where: { id: guardianId } });
     if (!contact || contact.junakId !== junakId) {
       throw new NotFoundException('Guardian contact not found');
@@ -68,7 +76,7 @@ export class GuardianContactsService {
     if (dto.relation && dto.relation !== contact.relation) {
       await this.assertRelationFree(junakId, relation, guardianId);
     }
-    return this.prisma.guardianContact.update({
+    const updated = await this.prisma.guardianContact.update({
       where: { id: guardianId },
       data: {
         name: dto.name,
@@ -78,15 +86,35 @@ export class GuardianContactsService {
         email: dto.email,
       },
     });
+    await this.record(AuditAction.GUARDIAN_UPDATED, junak, updated, actor);
+    return updated;
   }
 
   async remove(junakId: string, guardianId: string, actor: CurrentUserPayload): Promise<{ success: true }> {
-    await this.assertAccess(junakId, actor);
+    const junak = await this.assertAccess(junakId, actor);
     const contact = await this.prisma.guardianContact.findUnique({ where: { id: guardianId } });
     if (!contact || contact.junakId !== junakId) {
       throw new NotFoundException('Guardian contact not found');
     }
     await this.prisma.guardianContact.delete({ where: { id: guardianId } });
+    await this.record(AuditAction.GUARDIAN_DELETED, junak, contact, actor);
     return { success: true };
+  }
+
+  /** Phone and email are deliberately kept out of the audit details. */
+  private record(
+    action: AuditAction,
+    junak: User,
+    contact: { id: string; name: string; relation: GuardianRelation },
+    actor: CurrentUserPayload,
+  ) {
+    return this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action,
+      subjectUserId: junak.id,
+      entityId: contact.id,
+      details: { subjectName: personLabel(junak), guardianName: contact.name, relation: contact.relation },
+    });
   }
 }

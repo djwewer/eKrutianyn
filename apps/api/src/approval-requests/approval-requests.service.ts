@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ApprovalActionType, ApprovalStatus, PositionScope, PositionType, Role, User } from '@prisma/client';
+import { ApprovalActionType, AuditAction, ApprovalStatus, PositionScope, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
@@ -7,6 +7,14 @@ import { JunakImportRowProcessorService } from '../junak-import/junak-import-row
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { UsersService } from '../users/users.service';
+import { AuditService } from '../audit/audit.service';
+
+interface ApprovalDecisionRef {
+  id: string;
+  actionType: ApprovalActionType;
+  junakId: string | null;
+  initiatedById: string;
+}
 
 @Injectable()
 export class ApprovalRequestsService {
@@ -17,6 +25,7 @@ export class ApprovalRequestsService {
     private readonly rowProcessor: JunakImportRowProcessorService,
     private readonly judgeBookSync: JudgeBookSyncService,
     private readonly usersService: UsersService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
@@ -159,6 +168,7 @@ export class ApprovalRequestsService {
       if (claim.count === 0) {
         throw new BadRequestException('Request already decided');
       }
+      await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor);
       return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
     }
 
@@ -232,10 +242,11 @@ export class ApprovalRequestsService {
       await this.judgeBookSync.appendNewJunak(actor.kurinId, createdJunakId);
     }
 
+    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor);
     return updatedRequest;
   }
 
-  private async approveBulkImport(req: { id: string; newData: unknown }, actor: CurrentUserPayload) {
+  private async approveBulkImport(req: ApprovalDecisionRef & { newData: unknown }, actor: CurrentUserPayload) {
     // Validate the payload shape before claiming: a malformed request must
     // fail with a clear 400 while still PENDING (so it can be rejected),
     // not get stuck APPROVED with nothing processed.
@@ -276,14 +287,19 @@ export class ApprovalRequestsService {
       processingError = `Обробку перервано після ${results.length} з ${rows.length} рядків через внутрішню помилку. Частину рядків уже застосовано — перевірте результати.`;
     }
 
-    return this.prisma.approvalRequest.update({
+    const updated = await this.prisma.approvalRequest.update({
       where: { id: req.id },
       data: { newData: { rows, results, ...(processingError ? { processingError } : {}) } as any },
     });
+    await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, {
+      rows: rows.length,
+      failed: results.filter((r) => r.error).length,
+    });
+    return updated;
   }
 
   async reject(requestId: string, actor: CurrentUserPayload) {
-    await this.loadPendingRequestForKurin(requestId, actor.kurinId);
+    const req = await this.loadPendingRequestForKurin(requestId, actor.kurinId);
     // Conditional claim so a concurrent approve() can't be overwritten with
     // REJECTED after it already applied its changes (same pattern as
     // approveBulkImport / the ARCHIVE_JUNAK branch).
@@ -294,7 +310,24 @@ export class ApprovalRequestsService {
     if (claim.count === 0) {
       throw new BadRequestException('Request already decided');
     }
+    await this.recordDecision(AuditAction.APPROVAL_REJECTED, req, actor);
     return this.prisma.approvalRequest.findUnique({ where: { id: requestId } });
+  }
+
+  private async recordDecision(
+    action: AuditAction,
+    req: ApprovalDecisionRef,
+    actor: CurrentUserPayload,
+    extra: Record<string, unknown> = {},
+  ) {
+    await this.audit.record({
+      kurinId: actor.kurinId,
+      actorId: actor.userId,
+      action,
+      subjectUserId: req.junakId,
+      entityId: req.id,
+      details: { requestType: req.actionType, requestedBy: req.initiatedById, ...extra },
+    });
   }
 
   private async loadPendingRequestForKurin(requestId: string, kurinId: string) {
