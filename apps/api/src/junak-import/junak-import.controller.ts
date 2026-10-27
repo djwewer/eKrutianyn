@@ -1,11 +1,12 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JunakImportRowProcessorService } from './junak-import-row-processor.service';
 import { ImportJunakRowsDto } from './dto/import-junak-rows.dto';
-import { ResolvedJunakRow } from './junak-import-row.types';
+import { JunakImportRowResult, ResolvedJunakRow } from './junak-import-row.types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('kurins')
@@ -13,6 +14,7 @@ export class JunakImportController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rowProcessor: JunakImportRowProcessorService,
+    private readonly audit: AuditService,
   ) {}
 
   @Get(':kurinId/junak-import/match-candidates')
@@ -44,10 +46,16 @@ export class JunakImportController {
   ) {
     this.assertOwnKurin(kurinId, user);
     this.assertZvyazkovyi(user);
-    const results = [];
+    const results: JunakImportRowResult[] = [];
     for (const row of dto.rows as ResolvedJunakRow[]) {
       results.push(await this.rowProcessor.processRow(kurinId, row, row.rowIndex, user));
     }
+    await this.audit.record({
+      kurinId,
+      actorId: user.userId,
+      action: AuditAction.JUDGE_BOOK_IMPORTED,
+      details: { rows: results.length, failed: results.filter((r) => r.error).length },
+    });
     return { results };
   }
 

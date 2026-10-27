@@ -65,6 +65,7 @@ describe('AnnouncementsService', () => {
     service = new AnnouncementsService(
       prisma as unknown as PrismaService,
       { sendToKurin: sendToKurinMock } as unknown as import('../push-notifications/push-notifications.service').PushNotificationsService,
+      { record: jest.fn() } as any,
     );
   });
 

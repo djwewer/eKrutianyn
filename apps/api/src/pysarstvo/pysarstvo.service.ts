@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -11,6 +12,7 @@ export class PysarstvoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly googleDrive: GoogleDriveService,
+    private readonly audit: AuditService,
   ) {}
 
   private assertKurinMatches(kurinId: string, actor: CurrentUserPayload) {
@@ -61,6 +63,14 @@ export class PysarstvoService {
 
     const pysarstvoFolderId = await this.googleDrive.ensureSubfolder(kurinId, kurin.driveFolderId, 'Писарство');
     const apdFolderId = await this.googleDrive.ensureSubfolder(kurinId, pysarstvoFolderId, 'АПД');
-    return this.googleDrive.createDocFromHtml(kurinId, apdFolderId, title, buildApdHtml(title, pseudos));
+    const doc = await this.googleDrive.createDocFromHtml(kurinId, apdFolderId, title, buildApdHtml(title, pseudos));
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.APD_CREATED,
+      entityId: doc.id,
+      details: { title, pseudoCount: pseudos.length, url: doc.url },
+    });
+    return doc;
   }
 }

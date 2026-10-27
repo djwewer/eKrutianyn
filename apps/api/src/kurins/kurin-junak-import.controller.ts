@@ -12,12 +12,13 @@ import {
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
-import { JudgeBookSyncService } from './judge-book-sync.service';
+import { JudgeBookSyncReport, JudgeBookSyncService } from './judge-book-sync.service';
 import { SaveJunakImportMappingDto } from './dto/save-junak-import-mapping.dto';
 import { SetJunakImportSpreadsheetDto } from './dto/set-junak-import-spreadsheet.dto';
 
@@ -30,6 +31,7 @@ export class KurinJunakImportController {
     private readonly googleDrive: GoogleDriveService,
     private readonly prisma: PrismaService,
     private readonly judgeBookSync: JudgeBookSyncService,
+    private readonly audit: AuditService,
   ) {}
 
   @Get(':kurinId/junak-import/status')
@@ -84,6 +86,12 @@ export class KurinJunakImportController {
           ]
         : []),
     ]);
+    await this.audit.record({
+      kurinId,
+      actorId: user.userId,
+      action: AuditAction.JUDGE_BOOK_CONNECTED,
+      details: { spreadsheetName: dto.spreadsheetName },
+    });
     return { success: true };
   }
 
@@ -133,13 +141,21 @@ export class KurinJunakImportController {
         'Не налаштовано відповідність стовпців таблиці. Один раз пройдіть майстер імпорту, щоб її зберегти',
       );
     }
+    let report: JudgeBookSyncReport;
     try {
-      return await this.judgeBookSync.syncKurinToSheet(kurinId);
+      report = await this.judgeBookSync.syncKurinToSheet(kurinId);
     } catch (error) {
       const message = (error as Error).message;
       this.logger.error(`Manual Книга судді sync failed for kurin ${kurinId}: ${message}`, (error as Error).stack);
       throw new ServiceUnavailableException(`Не вдалося записати в таблицю Google Sheets: ${message}`);
     }
+    await this.audit.record({
+      kurinId,
+      actorId: user.userId,
+      action: AuditAction.JUDGE_BOOK_SYNCED,
+      details: { updated: report.updatedCells, skipped: report.skipped.length },
+    });
+    return report;
   }
 
   @Put(':kurinId/junak-import/mapping')

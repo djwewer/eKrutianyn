@@ -4,6 +4,7 @@ describe('JudgeBookSyncService', () => {
   let service: JudgeBookSyncService;
   let prisma: any;
   let googleDrive: any;
+  let audit: { record: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -15,7 +16,8 @@ describe('JudgeBookSyncService', () => {
       junakStageProgress: { findMany: jest.fn() },
     };
     googleDrive = { updateCellValues: jest.fn(), readSheetValues: jest.fn() };
-    service = new JudgeBookSyncService(prisma, googleDrive);
+    audit = { record: jest.fn() };
+    service = new JudgeBookSyncService(prisma, googleDrive, audit as any);
   });
 
   const KURIN = {
@@ -186,10 +188,37 @@ describe('JudgeBookSyncService', () => {
   });
 
   describe('syncAllKurins', () => {
+    const EMPTY_REPORT = { linkedJunaky: 0, syncedJunaky: 0, updatedCells: 0, unlinkedJunaky: 0, skipped: [] };
+
+    it('records one nightly event per kurin with changes or skips, with a null actor, and none for idle kurins', async () => {
+      prisma.kurin.findMany.mockResolvedValue([{ id: 'kurin-1' }, { id: 'kurin-2' }, { id: 'kurin-3' }, { id: 'kurin-4' }]);
+      jest
+        .spyOn(service, 'syncKurinToSheet')
+        .mockResolvedValueOnce({ ...EMPTY_REPORT, linkedJunaky: 5, syncedJunaky: 3, updatedCells: 7 })
+        .mockResolvedValueOnce(EMPTY_REPORT)
+        .mockResolvedValueOnce({ ...EMPTY_REPORT, skipped: [{ junakName: 'Іван Петренко', row: 5, reason: 'x' }] })
+        .mockRejectedValueOnce(new Error('Drive token expired'));
+
+      await service.syncAllKurins();
+
+      expect(audit.record).toHaveBeenCalledTimes(2);
+      expect(audit.record).toHaveBeenCalledWith({
+        kurinId: 'kurin-1',
+        actorId: null,
+        action: 'JUDGE_BOOK_SYNCED_NIGHTLY',
+        details: { updated: 7, skipped: 0 },
+      });
+      expect(audit.record).toHaveBeenCalledWith({
+        kurinId: 'kurin-3',
+        actorId: null,
+        action: 'JUDGE_BOOK_SYNCED_NIGHTLY',
+        details: { updated: 0, skipped: 1 },
+      });
+    });
     it('continues to the next kurin when one fails', async () => {
       prisma.kurin.findMany.mockResolvedValue([{ id: 'kurin-1' }, { id: 'kurin-2' }]);
       const spy = jest.spyOn(service, 'syncKurinToSheet');
-      spy.mockRejectedValueOnce(new Error('Drive token expired')).mockResolvedValueOnce({} as any);
+      spy.mockRejectedValueOnce(new Error('Drive token expired')).mockResolvedValueOnce(EMPTY_REPORT);
 
       await service.syncAllKurins();
 

@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, PositionType, ReactionEmoji, Role } from '@prisma/client';
+import { AuditAction, Prisma, PositionType, ReactionEmoji, Role } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -12,6 +13,7 @@ export class AnnouncementsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushNotifications: PushNotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   private assertKurinMatches(kurinId: string, actor: CurrentUserPayload) {
@@ -72,6 +74,13 @@ export class AnnouncementsService {
         data: { announcementId: announcement.id },
       });
     }
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.ANNOUNCEMENT_PUBLISHED,
+      entityId: announcement.id,
+      details: { title: announcement.title },
+    });
     await this.pushNotifications.sendToKurin(kurinId, {
       title: 'Нове оголошення',
       body: announcement.title,
@@ -95,14 +104,28 @@ export class AnnouncementsService {
         data: { announcementId: id },
       });
     }
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.ANNOUNCEMENT_UPDATED,
+      entityId: id,
+      details: { title: updated.title },
+    });
     return updated;
   }
 
   async remove(kurinId: string, id: string, actor: CurrentUserPayload) {
     this.assertKurinMatches(kurinId, actor);
     this.assertCanWrite(actor);
-    await this.findOrThrow(kurinId, id);
+    const announcement = await this.findOrThrow(kurinId, id);
     await this.prisma.announcement.delete({ where: { id } });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.ANNOUNCEMENT_DELETED,
+      entityId: id,
+      details: { title: announcement.title },
+    });
     return { success: true };
   }
 

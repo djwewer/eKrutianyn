@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { AuditAction, Role } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { columnLetterToIndex } from '../common/sheet-column.util';
@@ -64,6 +65,7 @@ export class JudgeBookSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly googleDrive: GoogleDriveService,
+    private readonly audit: AuditService,
   ) {}
 
   /**
@@ -229,7 +231,17 @@ export class JudgeBookSyncService {
 
     for (const kurin of kuriny) {
       try {
-        await this.syncKurinToSheet(kurin.id);
+        const report = await this.syncKurinToSheet(kurin.id);
+        // One summary per kurin per run, and only when the night did or
+        // flagged something — never one event per junak.
+        if (report.updatedCells > 0 || report.skipped.length > 0) {
+          await this.audit.record({
+            kurinId: kurin.id,
+            actorId: null,
+            action: AuditAction.JUDGE_BOOK_SYNCED_NIGHTLY,
+            details: { updated: report.updatedCells, skipped: report.skipped.length },
+          });
+        }
       } catch (error) {
         this.logger.error(
           `Failed to push Книга судді sync for kurin ${kurin.id}: ${(error as Error).message}`,

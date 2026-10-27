@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, ForbiddenException, Get, Logger, Param, Patch, Query, Redirect, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PositionType, Role } from '@prisma/client';
+import { AuditAction, PositionType, Role } from '@prisma/client';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { SetGoogleDriveFolderDto } from './dto/set-google-drive-folder.dto';
 import { signGoogleDriveState, verifyGoogleDriveState } from './google-drive-state.util';
@@ -32,6 +33,7 @@ export class KurinGoogleDriveController {
     private readonly googleDrive: GoogleDriveService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -54,7 +56,7 @@ export class KurinGoogleDriveController {
   @Get(':kurinId/google-drive/connect')
   connect(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
-    const state = signGoogleDriveState(this.jwtService, kurinId);
+    const state = signGoogleDriveState(this.jwtService, kurinId, user.userId);
     return { url: this.googleDrive.getAuthUrl(state) };
   }
 
@@ -62,8 +64,9 @@ export class KurinGoogleDriveController {
   @Redirect()
   async callback(@Query('code') code: string, @Query('state') state: string) {
     try {
-      const kurinId = verifyGoogleDriveState(this.jwtService, state);
-      await this.googleDrive.handleCallback(kurinId, code);
+      const { kurinId, actorId } = verifyGoogleDriveState(this.jwtService, state);
+      const { email } = await this.googleDrive.handleCallback(kurinId, code);
+      await this.audit.record({ kurinId, actorId, action: AuditAction.DRIVE_CONNECTED, details: { email } });
       return { url: `${process.env.FRONTEND_URL}/inventory?driveConnected=1` };
     } catch (error) {
       this.logger.warn(`Google Drive OAuth callback failed: ${(error as Error).message}`);
@@ -94,6 +97,12 @@ export class KurinGoogleDriveController {
       data: { driveFolderId: dto.folderId, driveFolderName: dto.folderName },
       select: DRIVE_STATUS_SELECT,
     });
+    await this.audit.record({
+      kurinId,
+      actorId: user.userId,
+      action: AuditAction.DRIVE_FOLDER_SET,
+      details: { folderName: dto.folderName },
+    });
     return this.toStatus(kurin);
   }
 
@@ -103,6 +112,7 @@ export class KurinGoogleDriveController {
   async disconnect(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
     await this.googleDrive.disconnect(kurinId);
+    await this.audit.record({ kurinId, actorId: user.userId, action: AuditAction.DRIVE_DISCONNECTED, details: {} });
     return { connected: false };
   }
 

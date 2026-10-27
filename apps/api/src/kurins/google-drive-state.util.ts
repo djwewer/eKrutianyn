@@ -3,12 +3,15 @@ import { JwtService } from '@nestjs/jwt';
 
 const STATE_PURPOSE = 'google-drive-connect';
 
-export function signGoogleDriveState(jwtService: JwtService, kurinId: string): string {
-  return jwtService.sign({ kurinId, purpose: STATE_PURPOSE }, { expiresIn: '10m' });
+export function signGoogleDriveState(jwtService: JwtService, kurinId: string, actorId?: string): string {
+  return jwtService.sign({ kurinId, actorId, purpose: STATE_PURPOSE }, { expiresIn: '10m' });
 }
 
-export function verifyGoogleDriveState(jwtService: JwtService, state: string): string {
-  let payload: { kurinId?: string; purpose?: string };
+export function verifyGoogleDriveState(
+  jwtService: JwtService,
+  state: string,
+): { kurinId: string; actorId: string | null } {
+  let payload: { kurinId?: string; actorId?: string; purpose?: string };
   try {
     payload = jwtService.verify(state);
   } catch {
@@ -17,5 +20,5 @@ export function verifyGoogleDriveState(jwtService: JwtService, state: string): s
   if (payload.purpose !== STATE_PURPOSE || !payload.kurinId) {
     throw new BadRequestException('Недійсний запит на підключення Google Drive');
   }
-  return payload.kurinId;
+  return { kurinId: payload.kurinId, actorId: payload.actorId ?? null };
 }
