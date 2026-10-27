@@ -1,11 +1,33 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressAction, ProgressStatus, Role } from '@prisma/client';
+import { AuditAction, ProgressStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { AuditService } from '../audit/audit.service';
+import { personLabel } from '../audit/audit.util';
 
 @Injectable()
 export class ProbyProgressService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
+  private async recordPointEvent(
+    action: AuditAction,
+    junak: { id: string; kurinId: string; firstName: string; lastName: string; nickname: string | null },
+    pointId: string,
+    actor: CurrentUserPayload,
+  ) {
+    const point = await this.prisma.probyPoint.findUnique({ where: { id: pointId }, select: { description: true } });
+    await this.audit.record({
+      kurinId: junak.kurinId,
+      actorId: actor.userId,
+      action,
+      subjectUserId: junak.id,
+      entityId: pointId,
+      details: { pointTitle: point?.description ?? null, subjectName: personLabel(junak) },
+    });
+  }
 
   async getProgressFor(junakId: string, actor: CurrentUserPayload) {
     const junak = await this.prisma.user.findUnique({ where: { id: junakId } });
@@ -53,7 +75,7 @@ export class ProbyProgressService {
   }
 
   async confirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
-    await this.assertCanConfirm(junakId, actor);
+    const junak = await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
     await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
@@ -67,14 +89,12 @@ export class ProbyProgressService {
         confirmedAt: new Date(),
       },
     });
-    await this.prisma.progressAuditLog.create({
-      data: { junakId, pointId, action: ProgressAction.CONFIRM, actorId: actor.userId },
-    });
+    await this.recordPointEvent(AuditAction.PROBY_POINT_CONFIRMED, junak, pointId, actor);
     return progress;
   }
 
   async unconfirm(junakId: string, pointId: string, actor: CurrentUserPayload) {
-    await this.assertCanConfirm(junakId, actor);
+    const junak = await this.assertCanConfirm(junakId, actor);
     await this.assertPointExists(pointId);
     await this.assertStageIsOpenForPoint(junakId, pointId);
     const progress = await this.prisma.junakProgress.upsert({
@@ -82,9 +102,7 @@ export class ProbyProgressService {
       update: { status: ProgressStatus.NOT_DONE, confirmedById: null, confirmedAt: null },
       create: { junakId, pointId, status: ProgressStatus.NOT_DONE },
     });
-    await this.prisma.progressAuditLog.create({
-      data: { junakId, pointId, action: ProgressAction.UNCONFIRM, actorId: actor.userId },
-    });
+    await this.recordPointEvent(AuditAction.PROBY_POINT_UNCONFIRMED, junak, pointId, actor);
     return progress;
   }
 

@@ -1,0 +1,55 @@
+import { AuditAction } from '@prisma/client';
+
+export type AuditGroup = 'PROBY' | 'PEOPLE' | 'MONEY' | 'SETTINGS';
+
+export const AUDIT_GROUPS: Record<AuditGroup, AuditAction[]> = {
+  PROBY: [
+    AuditAction.PROBY_POINT_CONFIRMED,
+    AuditAction.PROBY_POINT_UNCONFIRMED,
+    AuditAction.PROBY_STAGE_CLOSED,
+    AuditAction.PROBY_STAGE_REOPENED,
+    AuditAction.DEGREE_DATE_CHANGED,
+  ],
+  PEOPLE: [
+    AuditAction.USER_CREATED,
+    AuditAction.USER_ARCHIVED,
+    AuditAction.USER_CONTACT_UPDATED,
+    AuditAction.USER_HURTOK_CHANGED,
+    AuditAction.POSITION_ASSIGNED,
+    AuditAction.POSITION_REMOVED,
+    AuditAction.HURTOK_CREATED,
+    AuditAction.HURTOK_UPDATED,
+    AuditAction.HURTOK_ARCHIVED,
+    AuditAction.VYKHOVNYK_ASSIGNED,
+    AuditAction.VYKHOVNYK_UNASSIGNED,
+    AuditAction.GUARDIAN_CREATED,
+    AuditAction.GUARDIAN_UPDATED,
+    AuditAction.GUARDIAN_DELETED,
+    AuditAction.APPROVAL_APPROVED,
+    AuditAction.APPROVAL_REJECTED,
+  ],
+  MONEY: [
+    AuditAction.TREASURY_TRANSACTION_CREATED,
+    AuditAction.TREASURY_TRANSACTION_DELETED,
+    AuditAction.TREASURY_STARTING_BALANCE_CHANGED,
+    AuditAction.INVENTORY_ITEM_CREATED,
+    AuditAction.INVENTORY_ITEM_UPDATED,
+    AuditAction.INVENTORY_ITEM_DELETED,
+    AuditAction.INVENTORY_PHOTO_ADDED,
+    AuditAction.INVENTORY_PHOTO_REMOVED,
+  ],
+  SETTINGS: [
+    AuditAction.KURIN_PROBY_PROGRAM_CHANGED,
+    AuditAction.DRIVE_CONNECTED,
+    AuditAction.DRIVE_DISCONNECTED,
+    AuditAction.DRIVE_FOLDER_SET,
+    AuditAction.JUDGE_BOOK_CONNECTED,
+    AuditAction.JUDGE_BOOK_IMPORTED,
+    AuditAction.JUDGE_BOOK_SYNCED,
+    AuditAction.JUDGE_BOOK_SYNCED_NIGHTLY,
+    AuditAction.APD_CREATED,
+    AuditAction.ANNOUNCEMENT_PUBLISHED,
+    AuditAction.ANNOUNCEMENT_UPDATED,
+    AuditAction.ANNOUNCEMENT_DELETED,
+  ],
+};

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProgressAction, ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
+import { ProgressStatus, ProbyProgramVersion, Role } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const KURIN_PUBLIC_SELECT = {
@@ -13,7 +14,10 @@ const KURIN_PUBLIC_SELECT = {
 
 @Injectable()
 export class KurinsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findById(kurinId: string) {
     const kurin = await this.prisma.kurin.findUnique({
@@ -66,10 +70,6 @@ export class KurinsService {
         const targetPointId =
           mapping.oldPointId === entry.pointId ? mapping.newPointId : mapping.oldPointId;
 
-        const existingTarget = await this.prisma.junakProgress.findUnique({
-          where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
-        });
-
         await this.prisma.junakProgress.upsert({
           where: { junakId_pointId: { junakId: junak.id, pointId: targetPointId } },
           update: {},
@@ -82,17 +82,6 @@ export class KurinsService {
             transferredFromPointId: entry.pointId,
           },
         });
-
-        if (!existingTarget) {
-          await this.prisma.progressAuditLog.create({
-            data: {
-              junakId: junak.id,
-              pointId: targetPointId,
-              action: ProgressAction.CONFIRM,
-              actorId,
-            },
-          });
-        }
       }
     }
 

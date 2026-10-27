@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus, ProgressAction } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, ProgressStatus, AuditAction } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
 import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
@@ -52,10 +52,14 @@ describe('Proby progress confirm (e2e)', () => {
     expect(response.body.status).toBe(ProgressStatus.DONE);
     expect(response.body.confirmedById).toBe(vykhovnyk.id);
 
-    const auditEntries = await prisma.progressAuditLog.findMany({ where: { junakId: junak.id } });
+    const auditEntries = await prisma.auditLog.findMany({
+      where: { subjectUserId: junak.id, action: AuditAction.PROBY_POINT_CONFIRMED },
+    });
     expect(auditEntries).toHaveLength(1);
-    expect(auditEntries[0].action).toBe(ProgressAction.CONFIRM);
+    expect(auditEntries[0].action).toBe(AuditAction.PROBY_POINT_CONFIRMED);
     expect(auditEntries[0].actorId).toBe(vykhovnyk.id);
+    expect(auditEntries[0].kurinId).toBe(kurin.id);
+    expect(auditEntries[0].details).toMatchObject({ pointTitle: 'Point 1' });
   });
 
   it('forbids an unassigned vykhovnyk from confirming', async () => {

@@ -44,11 +44,6 @@ enum ProgressStatus {
   DONE
 }
 
-enum ProgressAction {
-  CONFIRM
-  UNCONFIRM
-}
-
 enum ApprovalStatus {
   PENDING
   APPROVED
@@ -100,6 +95,7 @@ model Kurin {
   calendarEvents       KurinCalendarEvent[]
   announcements        Announcement[]
   announcementImages   AnnouncementImage[]
+  auditLogs            AuditLog[]
 }
 
 model JunakImportMapping {
@@ -170,7 +166,7 @@ model User {
   vykhovnykAssignments       VykhovnykHurtok[]      @relation("VykhovnykAssignments")
   progressEntries            JunakProgress[]        @relation("JunakProgressEntries")
   confirmedProgress          JunakProgress[]        @relation("ConfirmedByUser")
-  auditLogEntries            ProgressAuditLog[]     @relation("ActorAuditLogs")
+  auditLogEntries            AuditLog[]             @relation("ActorAuditLogs")
   initiatedRequests          ApprovalRequest[]      @relation("InitiatedRequests")
   decidedRequests            ApprovalRequest[]      @relation("DecidedRequests")
   passwordResetTokens        PasswordResetToken[]
@@ -433,16 +429,6 @@ model JunakStageProgress {
   @@unique([junakId, stageId])
 }
 
-model ProgressAuditLog {
-  id        String         @id @default(uuid())
-  junakId   String
-  pointId   String
-  action    ProgressAction
-  actorId   String
-  actor     User           @relation("ActorAuditLogs", fields: [actorId], references: [id])
-  createdAt DateTime       @default(now())
-}
-
 model ApprovalRequest {
   id            String             @id @default(uuid())
   initiatedById String
@@ -593,4 +579,70 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+enum AuditAction {
+  // Проба
+  PROBY_POINT_CONFIRMED
+  PROBY_POINT_UNCONFIRMED
+  PROBY_STAGE_CLOSED
+  PROBY_STAGE_REOPENED
+  DEGREE_DATE_CHANGED
+  // Люди й ролі
+  USER_CREATED
+  USER_ARCHIVED
+  USER_CONTACT_UPDATED
+  USER_HURTOK_CHANGED
+  POSITION_ASSIGNED
+  POSITION_REMOVED
+  HURTOK_CREATED
+  HURTOK_UPDATED
+  HURTOK_ARCHIVED
+  VYKHOVNYK_ASSIGNED
+  VYKHOVNYK_UNASSIGNED
+  GUARDIAN_CREATED
+  GUARDIAN_UPDATED
+  GUARDIAN_DELETED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  // Гроші й майно
+  TREASURY_TRANSACTION_CREATED
+  TREASURY_TRANSACTION_DELETED
+  TREASURY_STARTING_BALANCE_CHANGED
+  INVENTORY_ITEM_CREATED
+  INVENTORY_ITEM_UPDATED
+  INVENTORY_ITEM_DELETED
+  INVENTORY_PHOTO_ADDED
+  INVENTORY_PHOTO_REMOVED
+  // Налаштування та інтеграції
+  KURIN_PROBY_PROGRAM_CHANGED
+  DRIVE_CONNECTED
+  DRIVE_DISCONNECTED
+  DRIVE_FOLDER_SET
+  JUDGE_BOOK_CONNECTED
+  JUDGE_BOOK_IMPORTED
+  JUDGE_BOOK_SYNCED
+  JUDGE_BOOK_SYNCED_NIGHTLY
+  APD_CREATED
+  ANNOUNCEMENT_PUBLISHED
+  ANNOUNCEMENT_UPDATED
+  ANNOUNCEMENT_DELETED
+}
+
+model AuditLog {
+  id            String      @id @default(uuid())
+  kurinId       String
+  kurin         Kurin       @relation(fields: [kurinId], references: [id])
+  // null = системна дія (cron)
+  actorId       String?
+  actor         User?       @relation("ActorAuditLogs", fields: [actorId], references: [id])
+  action        AuditAction
+  subjectUserId String?
+  entityId      String?
+  details       Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([kurinId, createdAt, id])
+  @@index([kurinId, subjectUserId])
+  @@index([kurinId, action])
 }
