@@ -1,13 +1,17 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PositionType, Role, TreasuryTransactionType } from '@prisma/client';
+import { AuditAction, PositionType, Role, TreasuryTransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateStartingBalanceDto } from './dto/update-starting-balance.dto';
 
 @Injectable()
 export class TreasuryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private assertKurinMatches(kurinId: string, actor: CurrentUserPayload) {
     if (kurinId !== actor.kurinId) {
@@ -58,9 +62,19 @@ export class TreasuryService {
   async updateStartingBalance(kurinId: string, dto: UpdateStartingBalanceDto, actor: CurrentUserPayload) {
     this.assertKurinMatches(kurinId, actor);
     this.assertCanWrite(actor);
+    const previous = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { treasuryStartingBalanceCents: true },
+    });
     await this.prisma.kurin.update({
       where: { id: kurinId },
       data: { treasuryStartingBalanceCents: dto.startingBalanceCents },
+    });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.TREASURY_STARTING_BALANCE_CHANGED,
+      details: { from: previous?.treasuryStartingBalanceCents ?? 0, to: dto.startingBalanceCents },
     });
     return this.getSummary(kurinId, actor);
   }
@@ -68,7 +82,7 @@ export class TreasuryService {
   async createTransaction(kurinId: string, dto: CreateTransactionDto, actor: CurrentUserPayload) {
     this.assertKurinMatches(kurinId, actor);
     this.assertCanWrite(actor);
-    return this.prisma.treasuryTransaction.create({
+    const created = await this.prisma.treasuryTransaction.create({
       data: {
         kurinId,
         type: dto.type,
@@ -78,6 +92,14 @@ export class TreasuryService {
         createdById: actor.userId,
       },
     });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.TREASURY_TRANSACTION_CREATED,
+      entityId: created.id,
+      details: { type: created.type, amountCents: created.amountCents, description: created.description },
+    });
+    return created;
   }
 
   async deleteTransaction(kurinId: string, transactionId: string, actor: CurrentUserPayload) {
@@ -88,6 +110,13 @@ export class TreasuryService {
       throw new NotFoundException('Transaction not found');
     }
     await this.prisma.treasuryTransaction.delete({ where: { id: transactionId } });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.TREASURY_TRANSACTION_DELETED,
+      entityId: transactionId,
+      details: { type: transaction.type, amountCents: transaction.amountCents, description: transaction.description },
+    });
     return { success: true };
   }
 }
