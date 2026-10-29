@@ -8,6 +8,7 @@ const EXPECTED_COUNTS: Partial<Record<SkillGroup, [number, number]>> = {
   NATURE: [5, 7],
   SPORT: [12, 14],
   HOME: [4, 10],
+  SPECIAL: [12, 24],
 };
 
 const ALLOWED_NOTES = ['Виконати вимоги А або Б.', 'нова вмілість'];
@@ -145,5 +146,13 @@ describe('HOME clean-up', () => {
     expect(requirementsOf('Домашня зарадність', 2)[4].text).toBe('5. Знати і дотримуватися правил безпеки користування інструментами.');
     expect(requirementsOf('Домашня зарадність', 3)[0].text).toBe('1. Здобути вмілість «Домашня зарадність II».');
     expect(requirementsOf('Домашня зарадність', 3)).toHaveLength(5);
+  });
+});
+
+describe('SPECIAL clean-up', () => {
+  it('has three levels for the six multi-level special-interest skills', () => {
+    for (const name of ['Автознавство', 'Астрономія', 'Військовик', 'Провідництво туристів', 'Український амбасадор', 'Фотографування']) {
+      expect(levelsOf(name)).toEqual([1, 2, 3]);
+    }
   });
 });
