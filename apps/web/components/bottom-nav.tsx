@@ -48,6 +48,7 @@ function Item({
 
 export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string | null }) {
   const [openOn, setOpenOn] = useState<string | null>(null);
+  if (openOn !== null && openOn !== pathname) setOpenOn(null);
   const sheetOpen = openOn !== null && openOn === pathname;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);

@@ -100,6 +100,29 @@ test.describe('phone', () => {
     await expect(page).toHaveURL(/\/pysarstvo$/);
     await expect(page.getByRole('dialog', { name: 'Діловодство' })).toBeHidden();
   });
+
+  test('zvyazkovyi: діловодство sheet does not reopen when returning to the same path', async ({ page }) => {
+    const { seeded } = await seed();
+    await loginAs(page, seeded.zvyazkovyiEmail, seeded.zvyazkovyiPassword);
+    await page.goto('/news');
+
+    const nav = page.getByRole('navigation', { name: 'Основна навігація' });
+    const dilovody = nav.getByRole('button', { name: 'Діловодство' });
+    const sheet = page.getByRole('dialog', { name: 'Діловодство' });
+    await dilovody.click();
+    await expect(dilovody).toHaveAttribute('aria-expanded', 'true');
+    await expect(sheet).toBeVisible();
+
+    await nav.getByRole('link', { name: 'Календар', exact: true }).click();
+    await expect(page).toHaveURL(/\/calendar$/);
+    await expect(sheet).toBeHidden();
+
+    // The Next dev indicator sits over the first bar item, so dispatch the click directly.
+    await nav.getByRole('link', { name: 'Новини', exact: true }).dispatchEvent('click');
+    await expect(page).toHaveURL(/\/news$/);
+    await expect(sheet).toBeHidden();
+    await expect(dilovody).toHaveAttribute('aria-expanded', 'false');
+  });
 });
 
 test.describe('desktop', () => {
