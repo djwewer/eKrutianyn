@@ -27,6 +27,7 @@ import { JunakActivityModule } from './junak-activity/junak-activity.module';
 import { KurinCalendarModule } from './kurin-calendar/kurin-calendar.module';
 import { PushNotificationsModule } from './push-notifications/push-notifications.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { SkillsModule } from './skills/skills.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     KurinCalendarModule,
     PushNotificationsModule,
     AnnouncementsModule,
+    SkillsModule,
   ],
   controllers: [HealthController],
 })
