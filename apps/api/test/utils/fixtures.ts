@@ -1,4 +1,4 @@
-import { PrismaClient, Role, KurinGender, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
+import { PrismaClient, Role, KurinGender, ProbyProgramVersion, PositionScope, PositionType, SkillGroup } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 
@@ -125,4 +125,24 @@ export function issueTokenFor(
   user: { id: string; role: Role; kurinId: string },
 ) {
   return jwtService.sign({ sub: user.id, role: user.role, kurinId: user.kurinId });
+}
+
+export async function createSkill(
+  prisma: PrismaClient,
+  overrides: { name: string; group?: SkillGroup; kurinId?: string | null; levels?: number[] },
+) {
+  return prisma.skill.create({
+    data: {
+      name: overrides.name,
+      group: overrides.group ?? SkillGroup.PRACTICAL,
+      kurinId: overrides.kurinId ?? null,
+      levels: {
+        create: (overrides.levels ?? [1]).map((level) => ({
+          level,
+          requirements: [{ text: `1. Вимога рівня ${level}` }],
+        })),
+      },
+    },
+    include: { levels: { orderBy: { level: 'asc' } } },
+  });
 }

@@ -27,6 +27,12 @@ export const AUDIT_GROUPS: Record<AuditGroup, AuditAction[]> = {
     AuditAction.GUARDIAN_DELETED,
     AuditAction.APPROVAL_APPROVED,
     AuditAction.APPROVAL_REJECTED,
+    AuditAction.SKILL_ACHIEVED,
+    AuditAction.SKILL_UPDATED,
+    AuditAction.SKILL_REMOVED,
+    AuditAction.CUSTOM_SKILL_CREATED,
+    AuditAction.CUSTOM_SKILL_UPDATED,
+    AuditAction.CUSTOM_SKILL_DELETED,
   ],
   MONEY: [
     AuditAction.TREASURY_TRANSACTION_CREATED,

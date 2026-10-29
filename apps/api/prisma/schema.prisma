@@ -96,6 +96,7 @@ model Kurin {
   announcements        Announcement[]
   announcementImages   AnnouncementImage[]
   auditLogs            AuditLog[]
+  skills               Skill[]
 }
 
 model JunakImportMapping {
@@ -187,6 +188,8 @@ model User {
   uploadedAnnouncementImages AnnouncementImage[]
   announcementReactions      AnnouncementReaction[]
   pushSubscriptions          PushSubscription[]
+  junakSkills                JunakSkill[]           @relation("JunakSkills")
+  createdJunakSkills         JunakSkill[]           @relation("JunakSkillCreatedBy")
 }
 
 model KurinPosition {
@@ -284,6 +287,73 @@ model JunakActivityEntry {
   updatedAt   DateTime          @updatedAt
 
   @@index([junakId, occurredAt])
+}
+
+enum SkillGroup {
+  PRACTICAL // Вмілості практичного пластування
+  FIRST_AID // Вмілості першої допомоги і рятівництва
+  NATURE    // Природничі вмілості
+  SPORT     // Спортивні вмілості
+  HOME      // Вмілості домашньої зарадності
+  SPECIAL   // Вмілості спеціального зацікавлення
+  ARTS      // Мистецькі вмілості
+  AVIATION  // Вмілості літунського пластування
+  SEA       // Вмілості морського пластування
+}
+
+model Skill {
+  id        String       @id @default(uuid())
+  // null = глобальний каталог («Вмілості УПЮ», 2003, сид); не null = власна вмілість куреня.
+  kurinId   String?
+  // Restrict: SetNull (типовий для опціонального звʼязку) зробив би власні
+  // вмілості видаленого куреня «глобальними».
+  kurin     Kurin?       @relation(fields: [kurinId], references: [id], onDelete: Restrict)
+  name      String
+  group     SkillGroup
+  createdAt DateTime     @default(now())
+  levels    SkillLevel[]
+
+  // Унікальність власних назв у межах куреня. Для глобальних (kurinId IS NULL)
+  // Postgres вважає NULL різними, тож унікальність їхніх назв забезпечує
+  // частковий індекс "Skill_global_name_key" з міграції *_junak_skills —
+  // Prisma не вміє описати його в схемі. Якщо `prisma migrate dev` колись
+  // згенерує `DROP INDEX "Skill_global_name_key"`, приберіть цей рядок з міграції.
+  @@unique([kurinId, name])
+}
+
+model SkillLevel {
+  id           String       @id @default(uuid())
+  skillId      String
+  skill        Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  // 1, 2, 3 = перша / друга / третя проба, до якої призначена вмілість.
+  level        Int
+  // Упорядковані вимоги: [{ text: string, items?: string[] }] — SkillRequirement
+  // у src/skills/skill.types.ts (items — підпункти а/б/в).
+  requirements Json
+  // Примітка рівня: «Виконати вимоги А або Б.», «нова вмілість».
+  note         String?
+  achievements JunakSkill[]
+
+  @@unique([skillId, level])
+}
+
+model JunakSkill {
+  id                String     @id @default(uuid())
+  junakId           String
+  junak             User       @relation("JunakSkills", fields: [junakId], references: [id])
+  levelId           String
+  // Restrict (типово для обовʼязкового звʼязку): рівень зі здобуттями не видаляється.
+  level             SkillLevel @relation(fields: [levelId], references: [id])
+  achievedAt        DateTime   @db.Date
+  // Імʼя екзаменатора вільним текстом (може бути непластун).
+  examiner          String?
+  certificateNumber String?
+  createdById       String
+  createdBy         User       @relation("JunakSkillCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime   @default(now())
+
+  @@unique([junakId, levelId])
+  @@index([junakId])
 }
 
 enum GuardianRelation {
@@ -627,6 +697,13 @@ enum AuditAction {
   ANNOUNCEMENT_PUBLISHED
   ANNOUNCEMENT_UPDATED
   ANNOUNCEMENT_DELETED
+  // Історія юнака
+  SKILL_ACHIEVED
+  SKILL_UPDATED
+  SKILL_REMOVED
+  CUSTOM_SKILL_CREATED
+  CUSTOM_SKILL_UPDATED
+  CUSTOM_SKILL_DELETED
 }
 
 model AuditLog {
