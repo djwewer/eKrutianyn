@@ -11,7 +11,7 @@ test('inventory page only offers to change the folder, not reconnect/disconnect'
   });
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.getByText('Діловодство').click();
+  await page.getByRole('button', { name: 'Діловодство' }).click();
   await page.getByRole('link', { name: 'Облік реманенту' }).click();
 
   await expect(page.getByText('Підключено як: kurin-drive@example.com')).toBeVisible();

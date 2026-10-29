@@ -3,7 +3,7 @@ import { Manrope } from 'next/font/google';
 import { cookies } from 'next/headers';
 import './globals.css';
 import { QueryProvider } from '@/components/query-provider';
-import { Nav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 import { cn } from '@/lib/utils';
 
 const manrope = Manrope({
@@ -47,8 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <QueryProvider>
-          <Nav />
-          <main className="p-4">{children}</main>
+          <AppShell>{children}</AppShell>
         </QueryProvider>
       </body>
     </html>

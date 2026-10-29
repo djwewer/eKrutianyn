@@ -8,7 +8,7 @@ test('lets zvyazkovyi set a starting balance, record income/expenses, and see th
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.getByText('Діловодство').click();
+  await page.getByRole('button', { name: 'Діловодство' }).click();
   await page.getByRole('link', { name: 'Скарбниця' }).click();
 
   await expect(page.getByRole('heading', { name: 'Скарбниця' })).toBeVisible();

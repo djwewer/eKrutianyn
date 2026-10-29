@@ -9,7 +9,7 @@ test('lets zvyazkovyi add an inventory item with a photo and delete it', async (
   });
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.getByText('Діловодство').click();
+  await page.getByRole('button', { name: 'Діловодство' }).click();
   await page.getByRole('link', { name: 'Облік реманенту' }).click();
 
   await expect(page.getByRole('heading', { name: 'Облік реманенту' })).toBeVisible();
@@ -30,7 +30,7 @@ test('shows a message instead of the add form when Google Drive is not connected
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
-  await page.getByText('Діловодство').click();
+  await page.getByRole('button', { name: 'Діловодство' }).click();
   await page.getByRole('link', { name: 'Облік реманенту' }).click();
 
   await expect(page.getByText('Google Drive не підключено.')).toBeVisible();

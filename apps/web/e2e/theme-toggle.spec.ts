@@ -2,16 +2,18 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 
-test('clicking the Nav theme toggle flips dark mode and persists across reload and login', async ({ page }) => {
+test('clicking the theme switch on Налаштування flips dark mode and persists across reload and login', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
 
+  await page.goto('/settings');
+  const main = page.locator('main');
   const html = page.locator('html');
   await expect(html).not.toHaveClass(/dark/);
 
-  const toggle = page.getByRole('switch', { name: 'Перемкнути темну тему' });
+  const toggle = main.getByRole('switch', { name: 'Перемкнути темну тему' });
   await toggle.click();
   await expect(html).toHaveClass(/dark/);
 
@@ -23,11 +25,12 @@ test('clicking the Nav theme toggle flips dark mode and persists across reload a
   await expect(html).toHaveClass(/dark/);
 
   // The theme is independent of the session — it must survive logout/login.
-  await page.getByRole('button', { name: 'Вийти' }).click();
+  await main.getByRole('button', { name: 'Вийти' }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(html).toHaveClass(/dark/);
 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await page.goto('/settings');
   await expect(html).toHaveClass(/dark/);
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
 });
