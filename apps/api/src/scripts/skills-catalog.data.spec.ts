@@ -6,6 +6,8 @@ const EXPECTED_COUNTS: Partial<Record<SkillGroup, [number, number]>> = {
   PRACTICAL: [9, 9],
   FIRST_AID: [2, 3],
   NATURE: [5, 7],
+  SPORT: [12, 14],
+  HOME: [4, 10],
 };
 
 const ALLOWED_NOTES = ['Виконати вимоги А або Б.', 'нова вмілість'];
@@ -108,5 +110,40 @@ describe('NATURE clean-up', () => {
     expect(levelsOf('Природознавство')).toEqual([1, 2, 3]);
     expect(requirementsOf('Природознавство', 3)).toHaveLength(1);
     expect(requirementsOf('Рибальство', 2)[7].items).toHaveLength(3);
+  });
+});
+
+describe('SPORT clean-up', () => {
+  it('fixes skill names and splits the merged ski-touring level into its own skill', () => {
+    const names = SKILLS_CATALOG.map((s) => s.name);
+    expect(names).toEqual(expect.arrayContaining(['Альпіністика', 'Водне лещетарство', 'Мандрівне лещетарство']));
+    expect(names).not.toEqual(expect.arrayContaining(['Альпіністка']));
+    expect(allTexts().join('\n')).not.toMatch(/лещатарство|трасі\.третя/);
+    expect(levelsOf('Скелелазіння')).toEqual([2, 3]);
+    expect(levelsOf('Лещетарство')).toEqual([2, 3]);
+    const skiing3 = requirementsOf('Лещетарство', 3);
+    expect(skiing3.map((r) => r.text.split('.')[0])).toEqual(['I', 'II', 'III', 'IV', 'V']);
+    expect(JSON.stringify(skiing3)).not.toContain('Лещетарство альпійського стилю');
+    expect(skiing3[3].items).toContain('2. Розворот на 180° на місці в обидві сторони.');
+    expect(levelsOf('Мандрівне лещетарство')).toEqual([3]);
+    expect(requirementsOf('Мандрівне лещетарство', 3)[0].text).toContain('«Лещетарство альпійського стилю»');
+    expect(requirementsOf('Мандрівне лещетарство', 3)).toHaveLength(12);
+  });
+});
+
+describe('HOME clean-up', () => {
+  it('merges «Домашня парадність» into «Домашня зарадність» level 2', () => {
+    expect(allTexts().join('\n')).not.toContain('парадність');
+    expect(levelsOf('Плетіння')).toEqual([1, 2, 3]);
+    expect(levelsOf('Шиття')).toEqual([1, 2, 3]);
+  });
+
+  it('splits the level 3 merged into «…інструментами.третя проба» off level 2 of «Домашня зарадність»', () => {
+    expect(levelsOf('Домашня зарадність')).toEqual([1, 2, 3]);
+    expect(allTexts().join('\n')).not.toContain('третя проба');
+    expect(requirementsOf('Домашня зарадність', 2)).toHaveLength(5);
+    expect(requirementsOf('Домашня зарадність', 2)[4].text).toBe('5. Знати і дотримуватися правил безпеки користування інструментами.');
+    expect(requirementsOf('Домашня зарадність', 3)[0].text).toBe('1. Здобути вмілість «Домашня зарадність II».');
+    expect(requirementsOf('Домашня зарадність', 3)).toHaveLength(5);
   });
 });
