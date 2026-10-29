@@ -133,6 +133,12 @@ describe('Skills catalog and kurin custom skills (e2e)', () => {
       await post({ ...customBody, name: 'Нова', levels: [] }).expect(400);
     });
 
+    it('rejects a whitespace-only name', async () => {
+      const { tokens } = await setup();
+      await http().post('/skills').set(auth(tokens.zvyazkovyi)).send({ ...customBody, name: '   ' }).expect(400);
+      expect(await prisma.skill.count()).toBe(0);
+    });
+
     it('lets another kurin use the same custom name', async () => {
       const { tokens } = await setup();
       await http().post('/skills').set(auth(tokens.zvyazkovyi)).send(customBody).expect(201);
@@ -157,6 +163,16 @@ describe('Skills catalog and kurin custom skills (e2e)', () => {
       expect(res.body.levels).toHaveLength(1);
       const entries = await auditOf(kurin.id, AuditAction.CUSTOM_SKILL_UPDATED);
       expect(entries[0].details).toEqual({ skillName: 'Компʼютерна грамотність', group: 'ARTS' });
+    });
+
+    it('rejects a whitespace-only name and a rename that clashes with an existing name', async () => {
+      const { tokens } = await setup();
+      await createSkill(prisma, { name: 'Картографія' });
+      const created = await http().post('/skills').set(auth(tokens.zvyazkovyi)).send(customBody).expect(201);
+      const patch = (name: string) => http().patch(`/skills/${created.body.id}`).set(auth(tokens.zvyazkovyi)).send({ name });
+      await patch('   ').expect(400);
+      await patch('картографія').expect(409);
+      expect((await prisma.skill.findUniqueOrThrow({ where: { id: created.body.id } })).name).toBe('Знавець компʼютерів');
     });
 
     it('refuses to drop a level a junak has already achieved', async () => {

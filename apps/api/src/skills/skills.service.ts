@@ -74,7 +74,7 @@ export class SkillsService {
 
   async create(dto: CreateSkillDto, actor: CurrentUserPayload): Promise<SkillView> {
     this.assertZvyazkovyi(actor);
-    const name = dto.name.trim();
+    const name = this.trimName(dto.name);
     const levels = this.normalizeLevels(dto.levels);
     await this.assertNameFree(name, actor.kurinId);
     const skill = await this.prisma.skill.create({
@@ -88,8 +88,8 @@ export class SkillsService {
   async update(id: string, dto: UpdateSkillDto, actor: CurrentUserPayload): Promise<SkillView> {
     this.assertZvyazkovyi(actor);
     const skill = await this.findOwnCustomOrThrow(id, actor);
-    const name = dto.name?.trim();
-    if (name && name.toLowerCase() !== skill.name.toLowerCase()) {
+    const name = dto.name !== undefined ? this.trimName(dto.name) : undefined;
+    if (name !== undefined && name.toLowerCase() !== skill.name.toLowerCase()) {
       await this.assertNameFree(name, actor.kurinId, id);
     }
     if (dto.levels) {
@@ -132,6 +132,14 @@ export class SkillsService {
     await this.prisma.skill.delete({ where: { id } });
     await this.record(AuditAction.CUSTOM_SKILL_DELETED, skill, actor);
     return { success: true };
+  }
+
+  private trimName(raw: string): string {
+    const name = raw.trim();
+    if (name === '') {
+      throw new BadRequestException('Назва вмілості не може бути порожньою');
+    }
+    return name;
   }
 
   private assertZvyazkovyi(actor: CurrentUserPayload) {
