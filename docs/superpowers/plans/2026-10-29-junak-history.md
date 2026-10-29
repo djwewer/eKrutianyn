@@ -43,7 +43,7 @@ Spec: `docs/superpowers/specs/2026-10-29-junak-history-design.md` (прочит�
 - **Унікальність назв:** `@@unique([kurinId, name])` (власні в межах куреня) + частковий `UNIQUE (name) WHERE kurinId IS NULL` (глобальні). Сервіс додатково не дає створити власну вмілість з назвою, що вже є серед глобальних або власних куреня (без урахування регістру) — `409`. `@@index([kurinId])` зі spec не потрібен: його покриває `@@unique([kurinId, name])`.
 - **`Skill.kurin` — `onDelete: Restrict`** (а не типовий для опціонального звʼязку `SetNull`, який перетворив би власні вмілості видаленого куреня на «глобальні»).
 - **Сид:** ключ — назва глобальної вмілості (вона унікальна); якщо в даних змінилася група — оновлюється на місці. Нічого не видаляє, власних вмілостей куренів не чіпає.
-- **Каталог після вичитування:** 70 вмілостей, 107 записів «вмілість × рівень» (у spec «≈74/≈106» — підрахунок до розділення злитого лещетарства й без урахування того, що «Скульптура (третя)» з текстом різьбярства стає «Різьбярство (третя)»).
+- **Каталог після вичитування:** 70 вмілостей, 108 записів «вмілість × рівень» (у spec «≈74/≈106» — підрахунок до розділення злитого лещетарства й без урахування того, що «Скульптура (третя)» з текстом різьбярства стає «Різьбярство (третя)»).
 - **«Скульптура (друга/третя)»:** перший заголовок «Скульптура (третя проба)» (текст різьбярства) → «Різьбярство (третя проба)»; наступні два («Скульптура (друга)» — світова скульптура, «Скульптура (третя)» — українська) лишаються як надруковано.
 - **Додаткові очевидні опечатки джерела:** «Альпіністка» → «Альпіністика» (так її називає вимога «Скелелазіння»), «Водне лещатарство» → «Водне лещетарство», «Розворот на 1800» → «Розворот на 180°» (втрачений знак градуса), змішані латинські/кириличні римські цифри → латинські.
 - **«нова вмілість»:** у тексті PDF такого підзаголовка під жодною вмілістю немає; `note: 'нова вмілість'` ставиться лише якщо його видно на сторінці PDF (перевірити візуально сторінки «Скелелазіння», «Альпіністика»).
@@ -59,7 +59,7 @@ Spec: `docs/superpowers/specs/2026-10-29-junak-history-design.md` (прочит�
 | `apps/api/prisma/migrations/<ts>_junak_history/migration.sql` | міграція хвилі B |
 | `apps/api/src/audit/audit.constants.ts` | нові дії в групі `PEOPLE` |
 | `apps/api/src/skills/skill.types.ts` | `SkillRequirement` (форма елемента `requirements`) |
-| `apps/api/src/scripts/skills-catalog.data.ts` | дані каталогу (70 вмілостей, 107 рівнів) |
+| `apps/api/src/scripts/skills-catalog.data.ts` | дані каталогу (70 вмілостей, 108 рівнів) |
 | `apps/api/src/scripts/skills-catalog.data.spec.ts` | валідація даних |
 | `apps/api/src/scripts/seed-skills-catalog.ts` | ідемпотентний сид (`seedSkillsCatalog` + CLI) |
 | `apps/api/src/skills/{skills.module,skills.controller,skills.service}.ts`, `dto/{create-skill,update-skill}.dto.ts` | каталог і власні вмілості |
@@ -454,7 +454,7 @@ git commit -m "feat(api): skill catalog schema with partial unique index for glo
 - Consumes: enum `SkillGroup` з `@prisma/client` (задача 1).
 - Produces:
   - `skill.types.ts`: `export interface SkillRequirement { text: string; items?: string[] }`.
-  - `skills-catalog.data.ts`: `export interface SkillLevelData { level: 1 | 2 | 3; note?: string; requirements: SkillRequirement[] }`, `export interface SkillData { name: string; group: SkillGroup; levels: SkillLevelData[] }`, `export const SKILLS_CATALOG: SkillData[]` — 70 вмілостей, 107 рівнів.
+  - `skills-catalog.data.ts`: `export interface SkillLevelData { level: 1 | 2 | 3; note?: string; requirements: SkillRequirement[] }`, `export interface SkillData { name: string; group: SkillGroup; levels: SkillLevelData[] }`, `export const SKILLS_CATALOG: SkillData[]` — 70 вмілостей, 108 рівнів.
 
 **Джерело тексту.** Текстовий шар PDF: `/private/tmp/claude-501/-Users-user-Documents-Cowork-Playground-eKrutianyn/7d8f7f6d-a659-4b24-903c-f9dbfd184c91/scratchpad/vm.txt`. Якщо файлу немає — згенерувати у своїй scratchpad-теці: `pdftotext -layout /Users/user/Downloads/Vmilosti-UPYU.pdf <scratchpad>/vm.txt` (вивід ідентичний; номери рядків нижче — для цього файлу, 1553 рядки). Діапазони груп:
 
@@ -464,9 +464,9 @@ git commit -m "feat(api): skill catalog schema with partial unique index for glo
 | Вмілості першої допомоги і рятівництва | `FIRST_AID` | 248–288 | 2 / 3 |
 | Природничі вмілості | `NATURE` | 289–371 | 5 / 7 |
 | Спортивні вмілості | `SPORT` | 372–670 | 12 / 14 |
-| Вмілості домашньої зарадності | `HOME` | 671–838 | 4 / 9 |
+| Вмілості домашньої зарадності | `HOME` | 671–838 | 4 / 10 |
 | Вмілості спеціального зацікавлення | `SPECIAL` | 839–1069 | 12 / 24 |
-| Мистецькі вмілості | `ARTS` | 1070–1347 | 13 / 28 |
+| Мистецькі вмілості | `ARTS` | 1080–1347 | 13 / 28 |
 | Вмілості літунського пластування | `AVIATION` | 1348–1389 | 3 / 3 |
 | Вмілості морського пластування | `SEA` | 1390–1553 | 10 / 10 |
 
@@ -495,7 +495,7 @@ git commit -m "feat(api): skill catalog schema with partial unique index for glo
 | 543, 576 | `Розворот на 1800` | `Розворот на 180°` |
 | 556–622 | «Лещетарство (третя)» злите з іншим рівнем: у рядку 587 `…по непідготовленій трасі.третя` + рядок `проба` | «Лещетарство» рівень 3 закінчується вимогою `V. … 7-10 км по непідготовленій трасі.`; решта (рядки 589–622, від `1. Здобути пластові вмілості «Лещетарство альпійського стилю»…` до `12. … відеофільм.`) — нова вмілість **`Мандрівне лещетарство`**, `SPORT`, рівень 3 |
 | 692 | `Домашня парадність (друга проба)` | рівень 2 вмілості `Домашня зарадність` |
-| 1071 | `Актороство (перша проба)` | рівень 1 вмілості `Акторство` |
+| 1081 | `Актороство (перша проба)` | рівень 1 вмілості `Акторство` |
 | 1237 | `Скульптура (третя проба)` з вимогами різьблення (мотиви, оздоблення, «Оздобити одну річ») | рівень 3 вмілості `Різьбярство` |
 | 1241, 1250 | `Скульптура (друга)` і `Скульптура (третя)` | без змін: рівні 2 і 3 вмілості `Скульптура` |
 | 146–166 | «Піонірство (друга)» без п. 6 | як є (без вигадування п. 6) |
@@ -902,7 +902,7 @@ git add apps/api/src/scripts/skills-catalog.data.ts apps/api/src/scripts/skills-
 git commit -m "feat(api): skills catalog data — special interest group"
 ```
 
-- [ ] **Step 10: ARTS (рядки 1070–1347) — FAIL → PASS, Commit 4/5**
+- [ ] **Step 10: ARTS (рядки 1080–1347) — FAIL → PASS, Commit 4/5**
 
 Додати `ARTS: [13, 28],` і:
 
@@ -937,9 +937,9 @@ describe('SKILLS_CATALOG — completeness', () => {
     expect(new Set(SKILLS_CATALOG.map((s) => s.group))).toEqual(new Set(Object.values(SkillGroup)));
   });
 
-  it('has 70 skills and 107 skill×level entries', () => {
+  it('has 70 skills and 108 skill×level entries', () => {
     expect(SKILLS_CATALOG).toHaveLength(70);
-    expect(SKILLS_CATALOG.reduce((sum, s) => sum + s.levels.length, 0)).toBe(107);
+    expect(SKILLS_CATALOG.reduce((sum, s) => sum + s.levels.length, 0)).toBe(108);
   });
 });
 ```
@@ -992,11 +992,11 @@ describe('seedSkillsCatalog (e2e)', () => {
     { name: 'Картографія', group: SkillGroup.PRACTICAL, levels: [{ level: 2, requirements: [{ text }] }] },
   ];
 
-  it('loads the full catalog: 70 global skills with 107 levels in 9 groups', async () => {
+  it('loads the full catalog: 70 global skills with 108 levels in 9 groups', async () => {
     const result = await seedSkillsCatalog(prisma);
-    expect(result).toEqual({ skillsCreated: 70, skillsUpdated: 0, levelsCreated: 107, levelsUpdated: 0 });
+    expect(result).toEqual({ skillsCreated: 70, skillsUpdated: 0, levelsCreated: 108, levelsUpdated: 0 });
     expect(await prisma.skill.count({ where: { kurinId: null } })).toBe(70);
-    expect(await prisma.skillLevel.count()).toBe(107);
+    expect(await prisma.skillLevel.count()).toBe(108);
     expect(await prisma.skill.findMany({ distinct: ['group'], select: { group: true } })).toHaveLength(9);
     const firstAid = await prisma.skill.findFirstOrThrow({
       where: { kurinId: null, name: 'Перша допомога' },
@@ -1124,7 +1124,7 @@ if (require.main === module) {
 
 - [ ] **Step 4: Запустити — PASS; прогнати сид на dev двічі**
 
-`test/skills-catalog-seed.e2e-spec.ts` → 4 passed. Потім з `apps/api`: `npx ts-node src/scripts/seed-skills-catalog.ts` двічі. Expected: перший раз `+70 skills (0 regrouped), +107 levels (0 updated). Global now: 70 skills, 107 levels.`, другий — `+0 skills (0 regrouped), +0 levels (107 updated). Global now: 70 skills, 107 levels.` `npx tsc --noEmit -p tsconfig.json` — чисто.
+`test/skills-catalog-seed.e2e-spec.ts` → 4 passed. Потім з `apps/api`: `npx ts-node src/scripts/seed-skills-catalog.ts` двічі. Expected: перший раз `+70 skills (0 regrouped), +108 levels (0 updated). Global now: 70 skills, 108 levels.`, другий — `+0 skills (0 regrouped), +0 levels (108 updated). Global now: 70 skills, 108 levels.` `npx tsc --noEmit -p tsconfig.json` — чисто.
 
 - [ ] **Step 5: Commit**
 
@@ -1133,7 +1133,7 @@ git add apps/api/src/scripts/seed-skills-catalog.ts apps/api/test/skills-catalog
 git commit -m "feat(api): idempotent seed for the skills catalog"
 ```
 
-**На проді (ручна дія після деплою хвилі A, не частина задачі):** `cd /opt/plast-api/repo && git pull`, `cd /opt/plast-api && docker compose up -d --build`, `docker compose exec api node dist/scripts/seed-skills-catalog.js` — очікувано `Global now: 70 skills, 107 levels.`
+**На проді (ручна дія після деплою хвилі A, не частина задачі):** `cd /opt/plast-api/repo && git pull`, `cd /opt/plast-api && docker compose up -d --build`, `docker compose exec api node dist/scripts/seed-skills-catalog.js` — очікувано `Global now: 70 skills, 108 levels.`
 
 ---
 
@@ -3660,7 +3660,7 @@ export function JunakHistory({ junakId, readOnly = false }: { junakId: string; r
 
 ```markdown
 **Що зроблено (хвиля A, spec `docs/superpowers/specs/2026-10-29-junak-history-design.md`):**
-каталог «Вмілості УПЮ» 2003 р. (70 вмілостей, 107 рівнів; сид `seed-skills-catalog.ts`) +
+каталог «Вмілості УПЮ» 2003 р. (70 вмілостей, 108 рівнів; сид `seed-skills-catalog.ts`) +
 власні вмілості куреня (звʼязковий), сторінка «Вмілості» (`/skills`, плитка в хабі),
 здобуті вмілості юнака в секції «Історія» на `/users/[id]` (звʼязковий і виховник гуртка)
 та на `/me` (перегляд), події в «Журналі дій». ВФВ — хвиля B.
