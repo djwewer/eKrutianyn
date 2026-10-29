@@ -10,6 +10,8 @@ const EXPECTED_COUNTS: Partial<Record<SkillGroup, [number, number]>> = {
   HOME: [4, 10],
   SPECIAL: [12, 24],
   ARTS: [13, 28],
+  AVIATION: [3, 3],
+  SEA: [10, 10],
 };
 
 const ALLOWED_NOTES = ['Виконати вимоги А або Б.', 'нова вмілість'];
@@ -167,5 +169,16 @@ describe('ARTS clean-up', () => {
     expect(levelsOf('Скульптура')).toEqual([2, 3]);
     expect(requirementsOf('Скульптура', 2)[0].text).toContain('історію світової скульптури');
     expect(requirementsOf('Скульптура', 3)[0].text).toContain('історію української скульптури');
+  });
+});
+
+describe('SKILLS_CATALOG — completeness', () => {
+  it('covers all 9 groups', () => {
+    expect(new Set(SKILLS_CATALOG.map((s) => s.group))).toEqual(new Set(Object.values(SkillGroup)));
+  });
+
+  it('has 70 skills and 108 skill×level entries', () => {
+    expect(SKILLS_CATALOG).toHaveLength(70);
+    expect(SKILLS_CATALOG.reduce((sum, s) => sum + s.levels.length, 0)).toBe(108);
   });
 });
