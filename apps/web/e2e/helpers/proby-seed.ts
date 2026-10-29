@@ -54,3 +54,20 @@ export async function assignVykhovnyk(zvyazkovyiToken: string, vykhovnykId: stri
   }
   return res.json();
 }
+
+// A user created with an explicit password carries mustChangePassword:true,
+// which redirects every navigation to /settings. Clear it like a first login.
+export async function createOnboardedUserAs(zvyazkovyiToken: string, dto: Record<string, unknown>) {
+  const password = 'password123';
+  const user = await createUserAs(zvyazkovyiToken, { ...dto, password });
+  const token = await loginForToken(dto.email as string, password);
+  const res = await fetch(`${API_URL}/users/me/password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currentPassword: password, newPassword: password }),
+  });
+  if (!res.ok) {
+    throw new Error(`createOnboardedUserAs failed: ${res.status} ${await res.text()}`);
+  }
+  return { user, email: dto.email as string, password };
+}
