@@ -11,6 +11,12 @@ import { PhotoCropDialog } from '@/components/photo-crop-dialog';
 import { PushNotificationToggle } from '@/components/push-notification-toggle';
 import { getInitials } from '@/lib/utils';
 import { ApiError } from '@/lib/api-client';
+import Link from 'next/link';
+import { ClipboardList, History, LogOut, Moon } from 'lucide-react';
+import { useSession } from '@/lib/session-client';
+import { useLogout } from '@/lib/use-logout';
+import { useApprovalRequests } from '@/lib/queries/approval-requests-list';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError && typeof error.body === 'object' && error.body) {
@@ -23,6 +29,10 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 
 export default function SettingsPage() {
   const { data: profile, isLoading } = useOwnProfile();
+  const { data: session } = useSession();
+  const logout = useLogout();
+  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
+  const { data: pending } = useApprovalRequests('PENDING', { enabled: isZvyazkovyi });
   const updateProfile = useUpdateOwnProfile();
   const changePassword = useChangePassword();
   const requestEmailChange = useRequestEmailChange();
@@ -101,6 +111,38 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <h1 className="text-2xl font-bold">Налаштування</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Швидкі дії</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1">
+          {isZvyazkovyi && (
+            <>
+              <Link href="/approval-requests" className="flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent-soft hover:text-accent-text">
+                <ClipboardList className="size-4" aria-hidden="true" />
+                <span className="flex-1">Запити</span>
+                {pending && pending.length > 0 && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-text">{pending.length}</span>
+                )}
+              </Link>
+              <Link href="/audit-log" className="flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent-soft hover:text-accent-text">
+                <History className="size-4" aria-hidden="true" />
+                <span className="flex-1">Журнал дій</span>
+              </Link>
+            </>
+          )}
+          <div className="flex items-center gap-3 px-2 py-2 text-sm font-medium">
+            <Moon className="size-4" aria-hidden="true" />
+            <span className="flex-1">Темна тема</span>
+            <ThemeToggle />
+          </div>
+          <Button type="button" variant="outline" className="mt-2 w-full justify-center text-destructive" onClick={logout}>
+            <LogOut className="size-4" aria-hidden="true" />
+            Вийти
+          </Button>
+        </CardContent>
+      </Card>
 
       {forcedPasswordChange && (
         <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">

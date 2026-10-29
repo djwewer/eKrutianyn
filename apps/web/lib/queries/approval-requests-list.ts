@@ -4,11 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type { ApprovalRequest, ApprovalStatus } from '@/lib/types';
 
-export function useApprovalRequests(status?: ApprovalStatus) {
+export function useApprovalRequests(status?: ApprovalStatus, options?: { enabled?: boolean }) {
   const query = status ? `?status=${status}` : '';
   return useQuery({
     queryKey: ['approval-requests', status],
     queryFn: () => apiFetch<ApprovalRequest[]>(`/approval-requests${query}`),
+    enabled: options?.enabled ?? true,
   });
 }
 
