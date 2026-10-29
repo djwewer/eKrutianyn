@@ -1,0 +1,525 @@
+<title>Нижня панель єПластун</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a controls column beside a phone mock; below ~860px the controls stack above the phone.
+   Colour: cool blue-grey neutrals with the app's blue accent; the AI tile keeps the app's violet-to-cyan gradient. */
+:root {
+  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bg: #ECEEF3;
+  --panel: #FFFFFF;
+  --fg: #171A21;
+  --muted: #5B6372;
+  --line: #D8DCE4;
+  --accent: #3556D8;
+  --accent-soft: #E4EAFF;
+  --accent-text: #2A45B5;
+  --on-accent: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1014; --panel: #171A20; --fg: #ECEEF2; --muted: #9AA1AE; --line: #2A2E36;
+    --accent: #7B93F2; --accent-soft: #232A47; --accent-text: #A9BAFF; --on-accent: #0E1330;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1014; --panel: #171A20; --fg: #ECEEF2; --muted: #9AA1AE; --line: #2A2E36;
+  --accent: #7B93F2; --accent-soft: #232A47; --accent-text: #A9BAFF; --on-accent: #0E1330;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 40px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.stage { max-width: 940px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 40px; align-items: start; }
+@media (max-width: 860px) { .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 24px; } .controls { width: 100%; max-width: 390px; } }
+
+.controls h1 { font-size: 26px; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+.controls p { margin: 0 0 20px; color: var(--muted); max-width: 46ch; }
+.label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 9px; font-weight: 500; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.check { display: flex; align-items: center; gap: 10px; margin-bottom: 26px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.check input:disabled + span { color: var(--muted); }
+.notes { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; max-width: 46ch; }
+.notes li { padding-left: 18px; position: relative; color: var(--fg); }
+.notes li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.notes li.open::before { background: transparent; border: 2px solid var(--accent); }
+.notes small { display: block; color: var(--muted); font-size: 13px; }
+
+/* ---------- phone ---------- */
+.phone {
+  --p-bg: #F6F7F9; --p-surface: #FFFFFF; --p-fg: #171A21; --p-muted: #636B79; --p-line: #E1E4EA;
+  --p-accent: #3556D8; --p-accent-soft: #E6ECFF; --p-accent-text: #2A45B5; --p-on-accent: #FFFFFF;
+  --p-bar: #FFFFFF; --p-shadow: 0 10px 30px rgba(20, 28, 60, 0.18); --p-danger: #C93C3C; --p-fab-ring: #FFFFFF;
+  position: relative; width: min(100%, 390px); height: 780px; border-radius: 38px; overflow: hidden;
+  border: 1px solid var(--line); background: var(--p-bg); color: var(--p-fg);
+  display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(10, 14, 30, 0.14);
+}
+.phone[data-theme="dark"] {
+  --p-bg: #16171A; --p-surface: #1F2024; --p-fg: #ECEDF0; --p-muted: #9A9EA9; --p-line: #2D2F35;
+  --p-accent: #6F8AF5; --p-accent-soft: #252C4E; --p-accent-text: #A9BAFF; --p-on-accent: #0E1330;
+  --p-bar: #222328; --p-shadow: 0 10px 30px rgba(0, 0, 0, 0.55); --p-danger: #F07272; --p-fab-ring: #222328;
+}
+.top { display: flex; align-items: center; gap: 12px; padding: 18px 16px 12px; }
+.logo { flex: none; width: 38px; height: 38px; border-radius: 10px; background: var(--p-accent); color: var(--p-on-accent); display: grid; place-items: center; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+.brand { min-width: 0; flex: 1; }
+.brand small { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--p-accent-text); }
+.brand strong { display: block; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.avatar { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--p-line); background: var(--p-accent-soft); color: var(--p-accent-text); font-weight: 700; font-size: 14px; display: grid; place-items: center; padding: 0; }
+.avatar[aria-expanded="true"] { border-color: var(--p-accent); }
+.dot { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--p-danger); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--p-bg); }
+
+.main { flex: 1; overflow-y: auto; padding: 6px 16px 128px; }
+.main h2 { font-size: 24px; letter-spacing: -0.02em; margin: 8px 0 4px; }
+.sub { color: var(--p-muted); margin: 0 0 16px; font-size: 14px; }
+.chip { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--p-accent-soft); color: var(--p-accent-text); font-size: 12px; font-weight: 600; }
+.card { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+.card h3 { margin: 0 0 4px; font-size: 16px; }
+.card p { margin: 0; color: var(--p-muted); font-size: 14px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 14px; margin-bottom: 8px; }
+.row .grow { flex: 1; min-width: 0; }
+.row strong { display: block; font-size: 15px; }
+.row span.m { display: block; color: var(--p-muted); font-size: 13px; }
+.datebox { flex: none; width: 46px; text-align: center; border-radius: 12px; background: var(--p-accent-soft); color: var(--p-accent-text); padding: 5px 0; line-height: 1.1; }
+.datebox b { display: block; font-size: 18px; }
+.datebox i { font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.bar-track { height: 6px; border-radius: 3px; background: var(--p-line); overflow: hidden; margin-top: 8px; }
+.bar-fill { height: 100%; background: var(--p-accent); border-radius: 3px; }
+.btn { width: 100%; padding: 13px 16px; border: 0; border-radius: 14px; background: var(--p-accent); color: var(--p-on-accent); font-weight: 600; margin-top: 6px; }
+.btn.ghost { background: transparent; color: var(--p-accent-text); border: 1px solid var(--p-line); }
+.chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.chips button { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--p-line); background: var(--p-surface); font-weight: 500; font-size: 14px; }
+.chips button[aria-pressed="true"] { background: var(--p-accent); border-color: var(--p-accent); color: var(--p-on-accent); font-weight: 600; }
+
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { text-align: left; border: 1px solid var(--p-line); background: var(--p-surface); border-radius: 20px; padding: 14px; min-height: 150px; display: flex; flex-direction: column; justify-content: space-between; }
+.tile .ti { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--p-accent-soft); color: var(--p-accent-text); }
+.tile strong { display: block; font-size: 16px; line-height: 1.2; margin-bottom: 3px; }
+.tile span { color: var(--p-muted); font-size: 13px; line-height: 1.3; display: block; }
+.tile.ai { border: 0; background: linear-gradient(125deg, #7C3AED, #2F5FD9 55%, #0891B2); color: #fff; }
+.tile.ai .ti { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.tile.ai span { color: rgba(255, 255, 255, 0.88); }
+
+/* ---------- bottom bar ---------- */
+.bar {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 10;
+  display: grid; grid-template-columns: 1fr 1fr 82px 1fr 1fr; align-items: end;
+  padding: 8px 6px 8px; border-radius: 32px; background: var(--p-bar); border: 1px solid var(--p-line); box-shadow: var(--p-shadow);
+}
+.tab { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: transparent; padding: 2px 0; color: var(--p-muted); font-size: 10.5px; font-weight: 500; white-space: nowrap; min-width: 0; }
+.tab .ico { position: relative; width: 36px; height: 30px; border-radius: 11px; display: grid; place-items: center; transition: background-color 0.15s, color 0.15s; }
+.tab[aria-current="page"] { color: var(--p-fg); font-weight: 600; }
+.tab[aria-current="page"] .ico { background: var(--p-accent); color: var(--p-on-accent); }
+.bar.six { grid-template-columns: 1fr 1fr 74px 1fr 1fr 1fr; }
+.bar.six .tab { font-size: 9.5px; }
+.mid { display: flex; flex-direction: column; align-items: center; gap: 5px; border: 0; background: transparent; padding: 0; color: var(--p-muted); font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+.mid .fab { width: 62px; height: 62px; margin-top: -34px; border-radius: 50%; background: var(--p-accent); color: var(--p-on-accent); display: grid; place-items: center; border: 5px solid var(--p-fab-ring); box-shadow: 0 8px 18px rgba(30, 50, 140, 0.35); }
+.mid[aria-current="page"] { color: var(--p-fg); font-weight: 600; }
+.mid[aria-current="page"] .fab { box-shadow: 0 0 0 3px var(--p-accent-soft), 0 8px 18px rgba(30, 50, 140, 0.35); }
+
+/* ---------- overlays ---------- */
+.scrim { position: absolute; inset: 0; z-index: 20; background: transparent; }
+.scrim.dim { background: rgba(8, 10, 20, 0.35); }
+.sheet { position: absolute; left: 12px; right: 12px; bottom: 100px; z-index: 25; background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 22px; box-shadow: var(--p-shadow); padding: 8px; }
+.sheet h4 { margin: 8px 10px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--p-muted); }
+.item { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 11px 10px; border: 0; background: transparent; border-radius: 12px; font-size: 15px; }
+.item:hover { background: var(--p-accent-soft); }
+.item .ti2 { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--p-accent-soft); color: var(--p-accent-text); }
+.menu { position: absolute; top: 66px; right: 12px; z-index: 30; width: 282px; background: var(--p-surface); border: 1px solid var(--p-line); border-radius: 18px; box-shadow: var(--p-shadow); padding: 6px; }
+.who { padding: 12px 12px 10px; border-bottom: 1px solid var(--p-line); margin-bottom: 6px; }
+.who strong { display: block; font-size: 16px; }
+.who span { display: block; color: var(--p-muted); font-size: 13px; overflow-wrap: anywhere; }
+.who .chip { margin-top: 8px; }
+.menu .item { padding: 10px; font-size: 14.5px; }
+.menu .item .ti2 { width: 30px; height: 30px; border-radius: 10px; }
+.sep { height: 1px; background: var(--p-line); margin: 6px 4px; }
+.badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--p-danger); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.switch { margin-left: auto; width: 38px; height: 22px; border-radius: 11px; background: var(--p-line); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--p-surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.15s; }
+.switch.on { background: var(--p-accent); }
+.switch.on::after { transform: translateX(16px); }
+.item.danger { color: var(--p-danger); }
+.item.danger .ti2 { background: transparent; color: var(--p-danger); }
+@media (prefers-reduced-motion: reduce) { .tab .ico, .switch::after { transition: none; } }
+svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fab svg.i { width: 26px; height: 26px; }
+.ico .dot { top: -6px; right: -4px; border-color: var(--p-bar); }
+.avatar[aria-current="page"] { border-color: var(--p-accent); }
+
+/* ---------- my page ---------- */
+.mehead { display: flex; align-items: center; gap: 14px; margin: 6px 0 16px; }
+.bigav { flex: none; width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--p-line); background: var(--p-accent-soft); color: var(--p-accent-text); display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+.mehead h2 { margin: 0 0 2px; font-size: 21px; }
+.m2 { display: block; color: var(--p-muted); font-size: 13px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.card h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--p-muted); }
+.step { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
+.step + .step { border-top: 1px solid var(--p-line); }
+.step .tick { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--p-accent); color: var(--p-on-accent); }
+.step .tick svg.i { width: 15px; height: 15px; stroke-width: 2.4; }
+.step.todo .tick { background: transparent; border: 2px solid var(--p-line); color: var(--p-muted); }
+.step strong { display: block; font-size: 15px; }
+.step span.m { display: block; color: var(--p-muted); font-size: 13px; }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; }
+.kv + .kv { border-top: 1px solid var(--p-line); }
+.kv span:first-child { color: var(--p-muted); }
+.kv span:last-child { text-align: right; overflow-wrap: anywhere; }
+
+/* ---------- desktop: sidebar layout ---------- */
+.stage.is-desktop { grid-template-columns: minmax(0, 1fr); overflow-x: auto; }
+.stage.is-desktop .controls { max-width: none; }
+.phone.desk { flex-direction: row; width: 100%; max-width: 1040px; min-width: 760px; height: 660px; border-radius: 20px; justify-self: center; }
+.side { flex: none; width: 250px; display: flex; flex-direction: column; gap: 14px; padding: 18px 12px 14px; background: var(--p-surface); border-right: 1px solid var(--p-line); }
+.sbrand { display: flex; align-items: center; gap: 12px; padding: 0 6px 6px; }
+.snav, .sfoot { display: flex; flex-direction: column; gap: 3px; }
+.sfoot { margin-top: auto; gap: 8px; }
+.sitem { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--p-muted); text-align: left; font-size: 14.5px; font-weight: 500; }
+.sitem:hover { background: var(--p-accent-soft); color: var(--p-accent-text); }
+.sitem[aria-current="page"] { background: var(--p-accent-soft); color: var(--p-accent-text); font-weight: 600; }
+.sitem.primary { background: var(--p-accent); color: var(--p-on-accent); font-weight: 600; margin-bottom: 8px; }
+.sitem.primary:hover { background: var(--p-accent); color: var(--p-on-accent); filter: brightness(1.08); }
+.sitem.primary[aria-current="page"] { background: var(--p-accent); color: var(--p-on-accent); box-shadow: 0 0 0 3px var(--p-accent-soft); }
+.sitem svg.i { width: 20px; height: 20px; flex: none; }
+.sitem .badge { margin-left: auto; }
+.sitem .chev { margin-left: auto; display: grid; transition: transform 0.15s; }
+.sitem .chev.up { transform: rotate(180deg); }
+.subs { margin: 2px 0 4px 22px; padding-left: 8px; border-left: 1px solid var(--p-line); display: flex; flex-direction: column; gap: 2px; }
+.sitem.sub { padding: 8px 10px; font-size: 14px; }
+.pcard { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 14px; border: 1px solid var(--p-line); background: var(--p-bg); text-align: left; }
+.pcard[aria-current="page"] { border-color: var(--p-accent); }
+.pcard .pc { min-width: 0; }
+.pcard strong { display: block; font-size: 14px; }
+.pcard .pc span { display: block; color: var(--p-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmain { padding: 28px 40px 40px; }
+.dmain h2 { font-size: 28px; }
+.dmain .tiles { grid-template-columns: repeat(4, 1fr); }
+.dmain .tile { min-height: 170px; }
+.dmain .card, .dmain .row { max-width: 720px; }
+.dmain .btn { max-width: 320px; }
+</style>
+
+<div class="stage">
+  <section class="controls">
+    <h1>Нижня панель для телефона</h1>
+    <p>Інтерактивний макет навігації єПластун. Оберіть роль, торкайтеся пунктів панелі, натисніть фото профілю згори.</p>
+    <p class="label">Пристрій</p>
+    <div class="seg" role="group" aria-label="Пристрій">
+      <button type="button" data-device="phone" aria-pressed="true">Телефон</button>
+      <button type="button" data-device="desktop" aria-pressed="false">Комп’ютер</button>
+    </div>
+    <p class="label">Роль</p>
+    <div class="seg" role="group" aria-label="Роль користувача">
+      <button type="button" data-role="junak" aria-pressed="true">Юнак</button>
+      <button type="button" data-role="vykhovnyk" aria-pressed="false">Виховник</button>
+      <button type="button" data-role="zvyazkovyi" aria-pressed="false">Звʼязковий</button>
+    </div>
+    <label class="check"><input type="checkbox" id="hasPos"><span>Має діловодство (писар і скарбник, для прикладу)</span></label>
+    <p class="label">Що вже вирішено</p>
+    <ul class="notes">
+      <li>Ліворуч «Новини» і «Календар», праворуч «Курінь», «Діловодство» і «Налаштування» (п’ята кнопка).</li>
+      <li>Центральна кругла кнопка залежить від ролі: юнак бачить «Моє пластування», виховник «Мій гурток», звʼязковий лишає «Моя проба» для тестування.</li>
+      <li>Фото профілю згори веде на «Мою сторінку»: дані, ступені, діловодство.</li>
+      <li>На комп’ютері та сама логіка в бічній панелі: «Моє пластування» виділено зверху, діловодство розгортається списком, «Налаштування» і профіль унизу. Перемкніть «Пристрій».</li>
+      <li>«Налаштування» містять тему, «Запити», журнал дій (для звʼязкового) і «Вийти».</li>
+      <li class="open">Відкрито: без діловодства панель має 5 пунктів і симетрична, з діловодством 6 (два ліворуч, три праворуч). Зніміть позначку вище, щоб порівняти.
+        <small>Перевірте, чи підпис «Налаштування» вміщується на вузькому екрані.</small></li>
+    </ul>
+  </section>
+  <div class="phone" id="phone" data-theme="light"></div>
+</div>
+
+<script>
+(function () {
+  var I = {
+    news: '<path d="M5 4h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2V4z"/><path d="M9 9h6M9 13h6"/>',
+    calendar: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/>',
+    flag: '<path d="M6 21V4"/><path d="M6 5h11l-2 4 2 4H6"/>',
+    tent: '<path d="M2 20 12 4l10 16z"/><path d="M12 11v9"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"/>',
+    users: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.9.2 5 2.4 5 5.3"/>',
+    spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+    inbox: '<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+    sliders: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+    check: '<path d="M5 12l4.5 4.5L19 7"/>',
+    chev: '<path d="M6 9l6 6 6-6"/>',
+    out: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h9"/>',
+    box: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+    scale: '<path d="M12 4v16M6 20h12M5 8h14"/><path d="M5 8l-2 6a3 3 0 0 0 4 0zM19 8l-2 6a3 3 0 0 0 4 0z"/>',
+    pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+    coin: '<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.6 2.5-1.6s2.5.7 2.5 1.7-1 1.4-2.5 1.7-2.5.7-2.5 1.8 1 1.7 2.5 1.7 2.5-.6 2.5-1.6"/>'
+  };
+  function ic(n) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + I[n] + '</svg>'; }
+
+  var ROLES = {
+    junak: { name: 'Орест Гайовий', mail: 'orest@example.com', tag: 'Юнак · гурток Орлики', initials: 'ОГ', center: { label: 'Моє пластування', icon: 'flag' } },
+    vykhovnyk: { name: 'Марта Левицька', mail: 'marta@example.com', tag: 'Виховник · Орлики, Яструби', initials: 'МЛ', center: { label: 'Мій гурток', icon: 'users' } },
+    zvyazkovyi: { name: 'Андрій Т.', mail: 'andrii@example.com', tag: 'Звʼязковий куреня', initials: 'АТ', center: { label: 'Моя проба', icon: 'flag' } }
+  };
+  var ALL_PAGES = [
+    { id: 'Облік реманенту', icon: 'box' }, { id: 'Суддівство', icon: 'scale' },
+    { id: 'Писарство', icon: 'pen' }, { id: 'Скарбниця', icon: 'coin' }
+  ];
+  var SOME_PAGES = [{ id: 'Писарство', icon: 'pen' }, { id: 'Скарбниця', icon: 'coin' }];
+
+  var root = document.documentElement;
+  var pageDark = root.getAttribute('data-theme') === 'dark' ||
+    (!root.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var S = { role: 'junak', hasPos: false, screen: 'center', page: '', menu: false, sheet: false, dark: pageDark, hurtok: 0, device: 'phone', dilOpen: true };
+  var phone = document.getElementById('phone');
+  var stageEl = document.querySelector('.stage');
+  var hasPosBox = document.getElementById('hasPos');
+
+  function pages() {
+    if (S.role === 'zvyazkovyi') return ALL_PAGES;
+    return S.hasPos ? SOME_PAGES : [];
+  }
+
+  function hub() {
+    var z = S.role === 'zvyazkovyi';
+    return '<h2>Моє пластування</h2><p class="sub">Проба «Учасник», 18 з 32 точок.</p>' +
+      (z ? '<p><span class="chip">Тестовий режим: хаб юнака</span></p>' : '') +
+      '<div class="tiles">' +
+      '<button type="button" class="tile" data-act="go" data-v="proba"><span class="ti">' + ic('flag') + '</span><div><strong>Моя проба</strong><span>18 з 32 точок</span><div class="bar-track"><div class="bar-fill" style="width:56%"></div></div></div></button>' +
+      '<button type="button" class="tile ai" data-act="go" data-v="ai"><span class="ti">' + ic('spark') + '</span><div><strong>AI-виховник</strong><span>Запитай про будь-яку точку</span></div></button>' +
+      '<button type="button" class="tile" data-act="go" data-v="activity"><span class="ti">' + ic('plus') + '</span><div><strong>Додати акцію</strong><span>Табір, сходини, акція</span></div></button>' +
+      '<button type="button" class="tile" data-act="go" data-v="requests"><span class="ti">' + ic('doc') + '</span><div><strong>Запит</strong><span>Дозвіл, посвідка, документ</span></div></button>' +
+      '</div>';
+  }
+
+  function hurtok() {
+    var names = ['Орлики', 'Яструби'];
+    var people = S.hurtok === 0
+      ? [['Орест Г.', '18/32', 56], ['Тарас К.', '24/32', 75], ['Ярина М.', '9/32', 28], ['Богдан Л.', '31/32', 97]]
+      : [['Соломія Р.', '12/32', 38], ['Данило П.', '20/32', 62], ['Оксана В.', '5/32', 16]];
+    return '<h2>Мій гурток</h2><div class="chips" role="group" aria-label="Гурток">' +
+      names.map(function (n, i) { return '<button type="button" data-act="hurtok" data-v="' + i + '" aria-pressed="' + (i === S.hurtok) + '">' + n + '</button>'; }).join('') +
+      '</div><p class="sub">' + people.length + ' юнаки · 3 точки чекають підпису</p>' +
+      people.map(function (p) {
+        return '<div class="row"><div class="grow"><strong>' + p[0] + '</strong><span class="m">Точок: ' + p[1] + '</span><div class="bar-track"><div class="bar-fill" style="width:' + p[2] + '%"></div></div></div></div>';
+      }).join('') +
+      '<button type="button" class="btn" data-act="go" data-v="sign">Підписати точки</button>';
+  }
+
+  function news() {
+    return '<h2>Оголошення</h2><p class="sub">Новини куреня</p>' +
+      '<div class="card"><h3>Збір у суботу о 15:00</h3><p>Формуємо групи на крутянський табір. Візьміть спорядження зі списку.</p></div>' +
+      '<div class="card"><h3>Нові точки в пробі Учасника</h3><p>Оновлено каталог проб, перегляньте зміни у розділі «Моя проба».</p></div>';
+  }
+  function calendar() {
+    var ev = [['29', 'січ', 'Табір «Крути»', 'Три дні, збір о 7:30'], ['02', 'лют', 'Сходини гуртка', 'Орлики, 18:00'], ['09', 'лют', 'Рада гурткових', 'Приміщення куреня']];
+    return '<h2>Календар</h2><p class="sub">Найближчі події</p>' + ev.map(function (e) {
+      return '<div class="row"><div class="datebox"><b>' + e[0] + '</b><i>' + e[1] + '</i></div><div class="grow"><strong>' + e[2] + '</strong><span class="m">' + e[3] + '</span></div></div>';
+    }).join('');
+  }
+  function kurin() {
+    var s = [['Інформація', 'Назва, станиця, програма проби'], ['Керівництво', 'Курінний, суддя, писар, скарбник'], ['Гуртки', 'Орлики, Яструби, Ведмедики'], ['Виховники', 'Склад і прикріплення до гуртків'], ['Юнаки', '24 активні']];
+    return '<h2>Курінь</h2><p class="sub">Курінь ч.75 ім. Героїв Бою під Крутами</p>' + s.map(function (x) {
+      return '<div class="row"><div class="grow"><strong>' + x[0] + '</strong><span class="m">' + x[1] + '</span></div></div>';
+    }).join('');
+  }
+  function simple(title, text) {
+    return '<h2>' + title + '</h2><p class="sub">' + text + '</p><div class="card"><p>Сторінка без змін у цьому макеті. Мета: показати, як до неї дійти.</p></div>';
+  }
+  function requests() {
+    if (S.role === 'zvyazkovyi') {
+      return '<h2>Запити</h2><p class="sub">Чекають на підтвердження</p>' +
+        '<div class="row"><div class="grow"><strong>Посвідка звільнення</strong><span class="m">Тарас К. · сьогодні</span></div></div>' +
+        '<div class="row"><div class="grow"><strong>Зміна гуртка</strong><span class="m">Ярина М. · учора</span></div></div>' +
+        '<div class="row"><div class="grow"><strong>Зміна ПІБ</strong><span class="m">Богдан Л. · 2 дні тому</span></div></div>';
+    }
+    return '<h2>Мої запити</h2><p class="sub">Дозвіл, посвідка та інші документи</p><button type="button" class="btn">Новий запит</button>' +
+      '<div class="row" style="margin-top:14px"><div class="grow"><strong>Дозвіл на табір</strong><span class="m">Надіслано · очікує</span></div></div>';
+  }
+  function log() {
+    return '<h2>Журнал дій</h2><p class="sub">Хто, що і коли змінив</p>' +
+      '<div class="row"><div class="grow"><strong>Підтвердив точку «Прапор куреня»</strong><span class="m">Марта Левицька · 12:40</span></div></div>' +
+      '<div class="row"><div class="grow"><strong>Створив АПД «Сходини 02.02»</strong><span class="m">Писар · вчора</span></div></div>' +
+      '<div class="row"><div class="grow"><strong>Додав витрату 450,00 грн</strong><span class="m">Скарбник · вчора</span></div></div>';
+  }
+
+  function step(done, title, note) {
+    return '<div class="step' + (done ? '' : ' todo') + '"><span class="tick">' + (done ? ic('check') : '') + '</span><div><strong>' + title + '</strong><span class="m">' + note + '</span></div></div>';
+  }
+  function kv(k, v) { return '<div class="kv"><span>' + k + '</span><span>' + v + '</span></div>'; }
+
+  function me() {
+    var r = ROLES[S.role];
+    var out = '<div class="mehead"><div class="bigav">' + r.initials + '</div><div><h2>' + r.name + '</h2><span class="m2">' + r.mail + '</span><span class="chip">' + r.tag + '</span></div></div>';
+    if (S.role === 'vykhovnyk') {
+      out += '<div class="card"><h4>Мої гуртки</h4>' + kv('Орлики', '4 юнаки') + kv('Яструби', '3 юнаки') + '</div>';
+    } else {
+      out += '<div class="card"><h4>Ступені</h4>' +
+        step(true, 'Прихильник', '12.10.2024') +
+        step(true, 'Учасник', '03.05.2025') +
+        step(false, 'Розвідувач', 'У процесі · 18 з 32 точок') +
+        step(false, 'Скоб', 'Ще не здобуто') + '</div>';
+    }
+    var posRows = S.role === 'zvyazkovyi' ? kv('Звʼязковий', 'з 09.2024') : (S.hasPos ? kv('Писар', 'з 09.2025') + kv('Гурткові', '09.2024 – 06.2025 (архів)') : kv('Посад зараз немає', '—'));
+    out += '<div class="card"><h4>Діловодство</h4>' + posRows + '</div>' +
+      '<div class="card"><h4>Дані</h4>' + kv('Гурток', S.role === 'vykhovnyk' ? 'Орлики, Яструби' : 'Орлики') + kv('Дата народження', '14.03.2010') + kv('Телефон', '+380 ·· ··· ·· 12') + '</div>' +
+      '<p class="sub">Приклад: тут же згодом з’являться вмілості, табори, акції та відзнаки.</p>';
+    return out;
+  }
+
+  function settingsPage() {
+    var badge = S.role === 'zvyazkovyi' ? 3 : 0;
+    return '<h2>Налаштування</h2><p class="sub">Вигляд, запити та вихід</p><div class="card" style="padding:6px">' +
+      (S.role !== 'vykhovnyk' ? '<button type="button" class="item" data-act="go" data-v="requests"><span class="ti2">' + ic('inbox') + '</span>' + (S.role === 'zvyazkovyi' ? 'Запити' : 'Мої запити') + (badge ? '<span class="badge">' + badge + '</span>' : '') + '</button>' : '') +
+      (S.role === 'zvyazkovyi' ? '<button type="button" class="item" data-act="go" data-v="log"><span class="ti2">' + ic('clock') + '</span>Журнал дій</button>' : '') +
+      '<button type="button" class="item" role="switch" aria-checked="' + S.dark + '" data-act="theme"><span class="ti2">' + ic('moon') + '</span>Темна тема<span class="switch' + (S.dark ? ' on' : '') + '"></span></button>' +
+      '<button type="button" class="item" data-act="go" data-v="settings"><span class="ti2">' + ic('pen') + '</span>Профіль і пароль</button>' +
+      '<div class="sep"></div>' +
+      '<button type="button" class="item danger" data-act="close"><span class="ti2">' + ic('out') + '</span>Вийти</button></div>';
+  }
+
+  function content() {
+    var sc = S.screen;
+    if (sc === 'news') return news();
+    if (sc === 'calendar') return calendar();
+    if (sc === 'kurin') return kurin();
+    if (sc === 'center') return S.role === 'vykhovnyk' ? hurtok() : hub();
+    if (sc === 'requests') return requests();
+    if (sc === 'log') return log();
+    if (sc === 'settings') return settingsPage();
+    if (sc === 'me') return me();
+    if (sc === 'page') return simple(S.page, 'Сторінка діловодства.');
+    if (sc === 'proba') return simple('Моя проба', 'Усі точки проби та їх стан.');
+    if (sc === 'ai') return simple('AI-виховник', 'Чат по обраній точці проби.');
+    if (sc === 'activity') return simple('Додати акцію', 'Назва, дата, роль, опис.');
+    if (sc === 'sign') return simple('Підписати точки', 'Список точок, що чекають підпису.');
+    return '';
+  }
+
+  function tab(id, label, icon, active, badge) {
+    return '<button type="button" class="tab" data-act="go" data-v="' + id + '"' + (active ? ' aria-current="page"' : '') + '><span class="ico">' + ic(icon) + (badge ? '<span class="dot">' + badge + '</span>' : '') + '</span>' + label + '</button>';
+  }
+
+  function frame(desk) {
+    phone.className = 'phone' + (desk ? ' desk' : '');
+    stageEl.classList.toggle('is-desktop', desk);
+    phone.setAttribute('data-theme', S.dark ? 'dark' : 'light');
+  }
+
+  function renderDesktop() {
+    var r = ROLES[S.role];
+    var pg = pages();
+    var onCenter = S.screen === 'center' || ['proba', 'ai', 'activity', 'sign'].indexOf(S.screen) > -1;
+    var badge = S.role === 'zvyazkovyi' ? 3 : 0;
+    function it(id, label, icon, active, cls, extra) {
+      return '<button type="button" class="sitem' + (cls ? ' ' + cls : '') + '" data-act="go" data-v="' + id + '"' + (active ? ' aria-current="page"' : '') + '>' + ic(icon) + '<span>' + label + '</span>' + (extra || '') + '</button>';
+    }
+    var dilActive = S.screen === 'page';
+    var dil = '';
+    if (pg.length) {
+      var open = S.dilOpen || dilActive;
+      dil = '<button type="button" class="sitem" data-act="dil" aria-expanded="' + open + '"' + (dilActive ? ' aria-current="page"' : '') + '>' + ic('briefcase') + '<span>Діловодство</span><span class="chev' + (open ? ' up' : '') + '">' + ic('chev') + '</span></button>' +
+        (open ? '<div class="subs">' + pg.map(function (p) {
+          return '<button type="button" class="sitem sub" data-act="page" data-v="' + p.id + '"' + (S.screen === 'page' && S.page === p.id ? ' aria-current="page"' : '') + '>' + ic(p.icon) + '<span>' + p.id + '</span></button>';
+        }).join('') + '</div>' : '');
+    }
+    var html = '<aside class="side"><div class="sbrand"><div class="logo" aria-hidden="true">єП</div><div class="brand"><small>єПластун</small><strong>Курінь ч.75 ім. Героїв Бою під Крутами</strong></div></div>' +
+      '<nav class="snav" aria-label="Основна навігація">' +
+      it('center', r.center.label, r.center.icon, onCenter, 'primary') +
+      it('news', 'Новини', 'news', S.screen === 'news') +
+      it('calendar', 'Календар', 'calendar', S.screen === 'calendar') +
+      it('kurin', 'Курінь', 'tent', S.screen === 'kurin') + dil + '</nav>' +
+      '<div class="sfoot">' + it('settings', 'Налаштування', 'sliders', S.screen === 'settings', '', badge ? '<span class="badge">' + badge + '</span>' : '') +
+      '<button type="button" class="pcard" data-act="go" data-v="me"' + (S.screen === 'me' ? ' aria-current="page"' : '') + '><span class="avatar" aria-hidden="true">' + r.initials + '</span><span class="pc"><strong>' + r.name + '</strong><span>' + r.tag + '</span></span></button></div></aside>' +
+      '<main class="main dmain">' + content() + '</main>';
+    var keep = phone.querySelector('.main');
+    var top = keep ? keep.scrollTop : 0;
+    frame(true);
+    phone.innerHTML = html;
+    var m = phone.querySelector('.main');
+    if (m) m.scrollTop = top;
+  }
+
+  function render() {
+    frame(false);
+    if (S.device === 'desktop') { renderDesktop(); return; }
+    var r = ROLES[S.role];
+    var pg = pages();
+    var onCenter = S.screen === 'center' || ['proba', 'ai', 'activity', 'sign'].indexOf(S.screen) > -1;
+    var badge = S.role === 'zvyazkovyi' ? 3 : 0;
+
+    var right2 = pg.length
+      ? '<button type="button" class="tab" data-act="sheet"' + (S.screen === 'page' || S.sheet ? ' aria-current="page"' : '') + ' aria-haspopup="dialog" aria-expanded="' + S.sheet + '"><span class="ico">' + ic('briefcase') + '</span>Діловодство</button>'
+      : '';
+
+    var html =
+      '<header class="top"><div class="logo" aria-hidden="true">єП</div>' +
+      '<div class="brand"><small>єПластун</small><strong>Курінь ч.75 ім. Героїв Бою під Крутами</strong></div>' +
+      '<button type="button" class="avatar" data-act="go" data-v="me"' + (S.screen === 'me' ? ' aria-current="page"' : '') + ' aria-label="Моя сторінка">' + r.initials + '</button></header>' +
+      '<main class="main">' + content() + '</main>' +
+      '<nav class="bar' + (pg.length ? ' six' : '') + '" aria-label="Основна навігація">' +
+      tab('news', 'Новини', 'news', S.screen === 'news') +
+      tab('calendar', 'Календар', 'calendar', S.screen === 'calendar') +
+      '<button type="button" class="mid" data-act="go" data-v="center"' + (onCenter ? ' aria-current="page"' : '') + '><span class="fab">' + ic(r.center.icon) + '</span>' + r.center.label + '</button>' +
+      tab('kurin', 'Курінь', 'tent', S.screen === 'kurin') +
+      right2 + tab('settings', 'Налаштування', 'sliders', S.screen === 'settings', badge) + '</nav>';
+
+    if (S.sheet) {
+      html += '<div class="scrim dim" data-act="close"></div><div class="sheet" role="dialog" aria-label="Діловодство"><h4>Діловодство</h4>' +
+        pg.map(function (p) { return '<button type="button" class="item" data-act="page" data-v="' + p.id + '"><span class="ti2">' + ic(p.icon) + '</span>' + p.id + '</button>'; }).join('') + '</div>';
+    }
+    var keep = phone.querySelector('.main');
+    var top = keep ? keep.scrollTop : 0;
+    phone.setAttribute('data-theme', S.dark ? 'dark' : 'light');
+    phone.innerHTML = html;
+    var m = phone.querySelector('.main');
+    if (m) m.scrollTop = top;
+  }
+
+  phone.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]');
+    if (!el) return;
+    var a = el.getAttribute('data-act'), v = el.getAttribute('data-v');
+    if (a === 'go') { S.screen = v; S.menu = false; S.sheet = false; if (v === 'center') S.page = ''; }
+    else if (a === 'page') { S.screen = 'page'; S.page = v; S.sheet = false; S.menu = false; }
+    else if (a === 'sheet') { S.sheet = !S.sheet; S.menu = false; }
+    else if (a === 'menu') { S.menu = !S.menu; S.sheet = false; }
+    else if (a === 'close') { S.menu = false; S.sheet = false; }
+    else if (a === 'theme') { S.dark = !S.dark; }
+    else if (a === 'dil') { S.dilOpen = !S.dilOpen; }
+    else if (a === 'hurtok') { S.hurtok = parseInt(v, 10); }
+    render();
+  });
+
+  document.querySelectorAll('[data-role]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      S.role = b.getAttribute('data-role'); S.screen = 'center'; S.menu = false; S.sheet = false; S.page = '';
+      document.querySelectorAll('[data-role]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      hasPosBox.disabled = S.role === 'zvyazkovyi';
+      hasPosBox.checked = S.role === 'zvyazkovyi' ? true : S.hasPos;
+      render();
+    });
+  });
+  document.querySelectorAll('[data-device]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      S.device = b.getAttribute('data-device'); S.sheet = false; S.menu = false;
+      document.querySelectorAll('[data-device]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      render();
+    });
+  });
+  hasPosBox.addEventListener('change', function () { S.hasPos = hasPosBox.checked; S.sheet = false; render(); });
+
+  render();
+})();
+</script>
