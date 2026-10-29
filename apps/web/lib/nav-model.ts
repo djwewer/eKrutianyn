@@ -47,7 +47,7 @@ export function buildNav(session: CurrentUserPayload, pendingRequests: number): 
   const dilovody = DILOVODY_PAGES.filter(
     (page) =>
       session.role === 'ZVYAZKOVYI' || session.isKurinniy || session.positions.includes(page.position),
-  ).map(({ position: _position, ...item }) => item);
+  ).map((page) => ({ href: page.href, label: page.label, icon: page.icon }));
 
   return {
     left: [

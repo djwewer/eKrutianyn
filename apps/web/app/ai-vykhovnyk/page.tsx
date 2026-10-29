@@ -154,8 +154,8 @@ export default function AiVykhovnykPage() {
   if (!program) return <p>Не вдалося завантажити програму проб.</p>;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      <Card className="sm:w-64 sm:shrink-0">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <Card className="lg:w-64 lg:shrink-0">
         <CardHeader>
           <CardTitle className="text-base">Розмови</CardTitle>
         </CardHeader>

@@ -396,15 +396,15 @@ export default function JunakImportPage() {
               const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
               const i = row.rowIndex;
               return (
-              <div key={i} className="flex flex-col gap-2 border-b pb-2 text-sm sm:flex-row sm:items-center sm:pb-1">
-                <div className="flex items-center gap-2 sm:contents">
-                  <span className="min-w-0 flex-1 truncate sm:w-40 sm:flex-none">
+              <div key={i} className="flex flex-col gap-2 border-b pb-2 text-sm lg:flex-row lg:items-center lg:pb-1">
+                <div className="flex items-center gap-2 lg:contents">
+                  <span className="min-w-0 flex-1 truncate lg:w-40 lg:flex-none">
                     {row.firstName} {row.lastName}
                   </span>
-                  <span className="shrink-0 truncate text-muted-foreground sm:w-24">{row.hurtokName || '—'}</span>
+                  <span className="shrink-0 truncate text-muted-foreground lg:w-24">{row.hurtokName || '—'}</span>
                 </div>
                 <Input
-                  className="w-full sm:w-56"
+                  className="w-full lg:w-56"
                   placeholder="Email"
                   defaultValue={rowOverrides[i]?.email ?? (emailFromSheet || undefined)}
                   onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}

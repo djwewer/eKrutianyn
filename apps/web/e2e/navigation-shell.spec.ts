@@ -75,6 +75,12 @@ test.describe('phone', () => {
     await expect(nav.getByRole('link', { name: 'Налаштування', exact: true })).toBeVisible();
 
     const dilovody = nav.getByRole('button', { name: 'Діловодство' });
+    // Six columns: five links plus the діловодство button; adjacent labels must not touch.
+    await expect(nav.getByRole('link')).toHaveCount(5);
+    await expect(dilovody).toHaveCount(1);
+    const dBox = await dilovody.boundingBox();
+    const sBox = await nav.getByRole('link', { name: 'Налаштування', exact: true }).boundingBox();
+    expect(dBox && sBox && sBox.x - (dBox.x + dBox.width)).toBeGreaterThan(0);
     await expect(dilovody).toHaveAttribute('aria-expanded', 'false');
     await dilovody.click();
     await expect(dilovody).toHaveAttribute('aria-expanded', 'true');
@@ -83,6 +89,12 @@ test.describe('phone', () => {
     for (const name of ['Облік реманенту', 'Суддівство', 'Писарство', 'Скарбниця']) {
       await expect(sheet.getByRole('link', { name })).toBeVisible();
     }
+
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(dilovody).toBeFocused();
+    await dilovody.click();
+    await expect(sheet.getByRole('link', { name: 'Облік реманенту' })).toBeFocused();
 
     await sheet.getByRole('link', { name: 'Писарство' }).click();
     await expect(page).toHaveURL(/\/pysarstvo$/);

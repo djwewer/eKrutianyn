@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createOnboardedUserAs, createUserAs, loginForToken } from './helpers/proby-seed';
 
 type StoredMessage = { role: 'USER' | 'ASSISTANT'; content: string; probyPointId: string | null; createdAt: string };
 type StoredConversation = { id: string; title: string | null; probyPointId: string | null; createdAt: string; updatedAt: string };
@@ -296,13 +296,11 @@ test('does not expose AI-виховник to a vykhovnyk (no nav link, hub denie
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
 
   const vykhovnykEmail = `vykhovnyk-ai-${Date.now()}@example.com`;
-  const vykhovnykPassword = 'password123';
-  await createUserAs(zvyazkovyiToken, {
+  const { password: vykhovnykPassword } = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Марія',
     lastName: 'Мельник',
     email: vykhovnykEmail,
     role: 'VYKHOVNYK',
-    password: vykhovnykPassword,
   });
 
   await loginAs(page, vykhovnykEmail, vykhovnykPassword);

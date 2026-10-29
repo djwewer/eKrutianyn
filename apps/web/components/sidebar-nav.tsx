@@ -52,7 +52,7 @@ export function SidebarNav({
   const centerActive = isActive(nav.center, pathname);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[250px] shrink-0 flex-col gap-3.5 border-r border-border bg-popover px-3 py-[18px] sm:flex">
+    <aside className="sticky top-0 hidden h-screen w-[250px] overflow-y-auto overscroll-contain shrink-0 flex-col gap-3.5 border-r border-border bg-popover px-3 py-[18px] sm:flex">
       <Link href="/news" className="flex min-w-0 items-center gap-3 px-1">
         <Image src="/logo.webp" alt="" width={36} height={36} className="size-9 shrink-0 rounded-md" />
         <span className="flex min-w-0 flex-col">
