@@ -9,6 +9,7 @@ const EXPECTED_COUNTS: Partial<Record<SkillGroup, [number, number]>> = {
   SPORT: [12, 14],
   HOME: [4, 10],
   SPECIAL: [12, 24],
+  ARTS: [13, 28],
 };
 
 const ALLOWED_NOTES = ['Виконати вимоги А або Б.', 'нова вмілість'];
@@ -154,5 +155,17 @@ describe('SPECIAL clean-up', () => {
     for (const name of ['Автознавство', 'Астрономія', 'Військовик', 'Провідництво туристів', 'Український амбасадор', 'Фотографування']) {
       expect(levelsOf(name)).toEqual([1, 2, 3]);
     }
+  });
+});
+
+describe('ARTS clean-up', () => {
+  it('fixes «Актороство» and moves the mislabelled woodcarving level from «Скульптура» to «Різьбярство»', () => {
+    expect(levelsOf('Акторство')).toEqual([1, 2, 3]);
+    expect(allTexts().join('\n')).not.toContain('Актороство');
+    expect(levelsOf('Різьбярство')).toEqual([1, 2, 3]);
+    expect(requirementsOf('Різьбярство', 3)[0].text).toBe('1. Знати назви мотивів орнаментального різьблення по дереву.');
+    expect(levelsOf('Скульптура')).toEqual([2, 3]);
+    expect(requirementsOf('Скульптура', 2)[0].text).toContain('історію світової скульптури');
+    expect(requirementsOf('Скульптура', 3)[0].text).toContain('історію української скульптури');
   });
 });
