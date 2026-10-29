@@ -28,21 +28,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [profile?.mustChangePassword, pathname, router]);
 
-  if (!session) return <main className="p-4">{children}</main>;
-
-  const nav = buildNav(session, pending?.length ?? 0);
+  const nav = session ? buildNav(session, pending?.length ?? 0) : null;
   const kurinTitle = kurin
     ? `${kurin.kurinNumber ? `Курінь ч.${kurin.kurinNumber}` : 'Підготовчий курінь'} ${kurin.name.replace(/^курінь\s+/i, '')}`
     : '';
 
+  // Дерево стабільне незалежно від сесії: інакше, щойно сесія завантажиться,
+  // children перемонтуються і втрачають введений стан (напр. поля форми входу).
   return (
-    <div className="sm:flex sm:min-h-screen">
-      <SidebarNav nav={nav} profile={profile} role={session.role} kurinTitle={kurinTitle} pathname={pathname} />
+    <div className={session ? 'sm:flex sm:min-h-screen' : undefined}>
+      {session && nav && (
+        <SidebarNav nav={nav} profile={profile} role={session.role} kurinTitle={kurinTitle} pathname={pathname} />
+      )}
       <div className="min-w-0 flex-1">
-        <MobileHeader profile={profile} kurinTitle={kurinTitle} />
-        <main className="p-4 pb-32 sm:p-8">{children}</main>
+        {session && <MobileHeader profile={profile} kurinTitle={kurinTitle} />}
+        <main className={session ? 'p-4 pb-32 sm:p-8' : 'p-4'}>{children}</main>
       </div>
-      <BottomNav nav={nav} pathname={pathname} />
+      {session && nav && <BottomNav nav={nav} pathname={pathname} />}
     </div>
   );
 }
