@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Avatar } from '@/components/ui/avatar';
 import { getInitials, cn } from '@/lib/utils';
+import type { PositionType } from '@/lib/types';
 
 const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   JUNAK: [
@@ -40,11 +41,13 @@ const LINKS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
   ],
 };
 
-const DILOVODY_PAGES = [
-  { href: '/inventory', label: 'Облік реманенту' },
-  { href: '/suddivstvo', label: 'Суддівство' },
-  { href: '/pysarstvo', label: 'Писарство' },
-  { href: '/treasury', label: 'Скарбниця' },
+// Діловодство pages and the kurin position that opens each one (the zvyazkovyi
+// and the kurinniy see all of them).
+const DILOVODY_PAGES: { href: string; label: string; position: PositionType }[] = [
+  { href: '/inventory', label: 'Облік реманенту', position: 'INTENDANT' },
+  { href: '/suddivstvo', label: 'Суддівство', position: 'SUDDIA' },
+  { href: '/pysarstvo', label: 'Писарство', position: 'PYSAR' },
+  { href: '/treasury', label: 'Скарбниця', position: 'SKARBNYK' },
 ];
 
 function NavLink({
@@ -91,6 +94,7 @@ export function Nav() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dilovodyOpen, setDilovodyOpen] = useState(false);
   const { data: session } = useSession();
   const { data: kurin } = useKurin({ enabled: !!session });
   const { data: profile } = useOwnProfile({ enabled: !!session });
@@ -115,20 +119,18 @@ export function Nav() {
   if (!session) return null;
 
   const links = [...(LINKS_BY_ROLE[session.role] ?? [])];
-  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('INTENDANT') || session.isKurinniy)) {
-    links.push({ href: '/inventory', label: 'Облік реманенту' });
-  }
-  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('SUDDIA') || session.isKurinniy)) {
-    links.push({ href: '/suddivstvo', label: 'Суддівство' });
-  }
-  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('PYSAR') || session.isKurinniy)) {
-    links.push({ href: '/pysarstvo', label: 'Писарство' });
-  }
-  if (session.role !== 'ZVYAZKOVYI' && (session.positions.includes('SKARBNYK') || session.isKurinniy)) {
-    links.push({ href: '/treasury', label: 'Скарбниця' });
+  const dilovodyPages = DILOVODY_PAGES.filter(
+    (page) => session.role === 'ZVYAZKOVYI' || session.isKurinniy || session.positions.includes(page.position),
+  );
+  // Several діловодство pages collapse into one «Діловодство» group; a single
+  // one stays a plain link.
+  const groupDilovody = dilovodyPages.length > 1;
+  if (dilovodyPages.length === 1) {
+    links.push({ href: dilovodyPages[0].href, label: dilovodyPages[0].label });
   }
 
-  const dilovodyActive = DILOVODY_PAGES.some((p) => pathname?.startsWith(p.href));
+  const dilovodyActive = dilovodyPages.some((p) => pathname?.startsWith(p.href));
+  const dilovodyExpanded = dilovodyOpen || dilovodyActive;
 
   return (
     <nav className="flex flex-wrap items-center justify-between gap-6 border-b px-4 py-5 sm:px-8">
@@ -149,7 +151,7 @@ export function Nav() {
         {links.map((link) => (
           <NavLink key={link.href} href={link.href} label={link.label} active={pathname === link.href} />
         ))}
-        {session.role === 'ZVYAZKOVYI' && (
+        {groupDilovody && (
           <details className="relative">
             <summary
               className={cn(
@@ -160,7 +162,7 @@ export function Nav() {
               Діловодство
             </summary>
             <div className="absolute left-0 z-10 mt-1 flex flex-col rounded-md border bg-popover p-1 shadow-lg sm:left-auto sm:right-0">
-              {DILOVODY_PAGES.map((page) => (
+              {dilovodyPages.map((page) => (
                 <Link
                   key={page.href}
                   href={page.href}
@@ -213,16 +215,44 @@ export function Nav() {
               onClick={() => setMobileMenuOpen(false)}
             />
           ))}
-          {session.role === 'ZVYAZKOVYI' &&
-            DILOVODY_PAGES.map((page) => (
-              <NavLink
-                key={page.href}
-                href={page.href}
-                label={page.label}
-                active={pathname === page.href}
-                onClick={() => setMobileMenuOpen(false)}
-              />
-            ))}
+          {groupDilovody && (
+            <div>
+              <button
+                type="button"
+                aria-expanded={dilovodyExpanded}
+                onClick={() => setDilovodyOpen((open) => !open)}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent-soft hover:text-accent-text',
+                  dilovodyActive && 'bg-accent-soft font-semibold text-accent-text',
+                )}
+              >
+                Діловодство
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                  className={cn('transition-transform', dilovodyExpanded && 'rotate-180')}
+                >
+                  <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {dilovodyExpanded && (
+                <div className="ml-3 mt-1 flex flex-col gap-1 border-l pl-2">
+                  {dilovodyPages.map((page) => (
+                    <NavLink
+                      key={page.href}
+                      href={page.href}
+                      label={page.label}
+                      active={pathname === page.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </nav>

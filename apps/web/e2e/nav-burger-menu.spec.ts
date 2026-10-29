@@ -12,7 +12,7 @@ test('below sm: the inline nav links are hidden behind a hamburger that reveals 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
 
   // The inline pills row is not visible at phone width.
-  await expect(page.getByRole('link', { name: 'Курінь' })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Курінь', exact: true })).toBeHidden();
   await expect(page.getByRole('link', { name: 'Запити' })).toBeHidden();
 
   const burger = page.getByRole('button', { name: 'Меню' });
@@ -22,12 +22,16 @@ test('below sm: the inline nav links are hidden behind a hamburger that reveals 
   await burger.click();
   await expect(burger).toHaveAttribute('aria-expanded', 'true');
 
-  // The full link list is now visible, including a role-gated link: "Облік
-  // реманенту" only ever appears for ZVYAZKOVYI via the flattened
-  // Діловодство entries.
-  await expect(page.getByRole('link', { name: 'Курінь' })).toBeVisible();
+  // The full link list is now visible. The діловодство pages are grouped under
+  // one collapsed «Діловодство» entry that expands on tap.
+  await expect(page.getByRole('link', { name: 'Курінь', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Запити' })).toBeVisible();
   const inventoryLink = page.getByRole('link', { name: 'Облік реманенту' });
+  await expect(inventoryLink).toBeHidden();
+  const dilovody = page.getByRole('button', { name: 'Діловодство' });
+  await expect(dilovody).toHaveAttribute('aria-expanded', 'false');
+  await dilovody.click();
+  await expect(dilovody).toHaveAttribute('aria-expanded', 'true');
   await expect(inventoryLink).toBeVisible();
 
   await inventoryLink.click();
