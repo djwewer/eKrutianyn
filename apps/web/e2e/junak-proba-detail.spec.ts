@@ -20,7 +20,7 @@ test('lets zvyazkovyi expand a proba category and confirm a point from the junak
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/users/${junak.id}`);
 
-  await expect(page.getByText('Проба')).toBeVisible();
+  await expect(page.getByText('Проба', { exact: true })).toBeVisible();
   await page.getByText('Категорія 1 (0/1)').click();
   await expect(page.getByRole('button', { name: 'Підтвердити' })).toBeVisible();
 

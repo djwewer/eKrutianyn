@@ -26,8 +26,8 @@ test('a junak with the kurinniy position sees the Курінь nav link', async 
 
   await loginAs(page, junakEmail, 'password123');
 
-  await expect(page.getByRole('link', { name: 'Курінь' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Курінь', exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Курінь' }).click();
+  await page.getByRole('link', { name: 'Курінь', exact: true }).click();
   await expect(page).toHaveURL(/\/kurin$/);
 });

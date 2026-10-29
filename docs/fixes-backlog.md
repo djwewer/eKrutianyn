@@ -378,3 +378,13 @@ fail-fast з поясненням за відсутності VAPID/ADMIN змі
 «Курінь ч.75 …» у шапці (воно веде на `/news`) — локатор уточнено через
 `exact: true`.
 
+**Також падають на `main` (перевірено 2026-10-29, не повʼязано з навігацією):**
+`e2e/approval-request-create.spec.ts`, `e2e/approval-request-decide.spec.ts`,
+`e2e/change-hurtok-request.spec.ts` (2 тести). Спільна причина більшості
+таких падінь: юнак/користувач, створений через `createUserAs` із паролем, має
+`mustChangePassword` і `AppShell` переспрямовує його на `/settings`, тож тест
+не доходить до своєї сторінки (так само падають на `main` `ai-vykhovnyk` ×5,
+`hurtok-settings` ×3, `my-activity`, `positions.spec.ts:82`, `user-archive:55`,
+`users-role-filter`, `admin-kurins:17`). Треба оновити сідінг тестів (скидати
+`mustChangePassword`) або їхній вхід.
+

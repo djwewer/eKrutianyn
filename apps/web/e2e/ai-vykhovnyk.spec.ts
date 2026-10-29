@@ -290,7 +290,7 @@ test('renders markdown (bold, headings) in the assistant reply instead of raw sy
   await expect(page.getByText('###', { exact: false })).toHaveCount(0);
 });
 
-test('does not show the AI-виховник nav link for a vykhovnyk', async ({ page }) => {
+test('does not expose AI-виховник to a vykhovnyk (no nav link, hub denies access)', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
@@ -308,4 +308,8 @@ test('does not show the AI-виховник nav link for a vykhovnyk', async ({ 
   await loginAs(page, vykhovnykEmail, vykhovnykPassword);
 
   await expect(page.getByRole('link', { name: 'AI-виховник' })).toHaveCount(0);
+  // The only entry point to AI-виховник is the junak hub, which is closed to a vykhovnyk.
+  await page.goto('/plastuvannia');
+  await expect(page.getByText('Немає доступу.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /AI-виховник/ })).toHaveCount(0);
 });

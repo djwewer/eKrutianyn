@@ -19,7 +19,8 @@ test('lets a junak add an activity entry and delete it, and shows the in-product
   });
 
   await loginAs(page, junakEmail, 'password123');
-  await page.getByRole('link', { name: 'Моя активність' }).click();
+  await page.getByRole('link', { name: 'Моє пластування' }).first().click();
+  await page.getByRole('link', { name: /Додати акцію/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Моя активність' })).toBeVisible();
   await expect(page.getByText('ще у виробництві')).toBeVisible();
