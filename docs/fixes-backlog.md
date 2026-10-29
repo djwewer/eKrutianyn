@@ -9,9 +9,13 @@
 - 🟡 в роботі
 - 🟢 зроблено (запушено)
 
+_Остання ревізія: 2026-10-29, звірено з кодом `main` (`e1635e0`)._
+
 ---
 
 ## 🔴 AI-виховник не знає гуртка/виховника/контактів юнака
+
+_Перевірено 2026-10-29: `ai-assistant.service.ts` досі не використовує дані гуртка/виховника._
 
 **Опис:** зараз системний промпт AI-виховника (`buildSystemPrompt` у
 `apps/api/src/ai-assistant/ai-assistant.service.ts`) будує контекст лише
@@ -274,3 +278,103 @@ ingress ще до завершення обробки на сервері (са�
 `apps/web/components/announcement-editor.tsx` (Tiptap `Image` node).
 
 ---
+
+---
+
+## 🔴 Дрібні знахідки з ревʼю аудит-логу (2026-10-27)
+
+Non-blocking пункти з ревʼю окремих задач і фінального ревʼю плану
+`docs/superpowers/plans/2026-10-27-audit-log.md` — не блокували мердж:
+
+- **Фільтр за датою: UTC проти локального дня.** `from`/`to` трактуються як
+  UTC-дати (`audit.service.ts`), а сторінка групує події за локальним днем,
+  тож події між 00:00 і 03:00 за Києвом потрапляють «не в той» день фільтра.
+  Також `@IsDateString()` приймає повні datetime, а `to` завжди додає +24 год —
+  замінити на валідацію лише дати (`YYYY-MM-DD`) або врахувати часовий пояс.
+- **Прогалини в тестах журналу.** Пагінація без рядків з однаковим
+  `createdAt` (tie-break по `id` не тестується); період без перевірки
+  включного кінця дня (`to`); немає Playwright-покриття фільтрів, пагінації та
+  актора «Система»; `describeAuditEvent` без unit-тестів (у `apps/web` немає
+  unit-раннера); тест `INVENTORY_ITEM_UPDATED` міняє лише кількість, не назву;
+  нічний sync у e2e покриває лише гілку `updated > 0`; немає тесту на
+  заміну *іншого* власника тієї ж посади, на події, що їх створює імпорт, і
+  на `POSITION_REMOVED` для посади гуртка з `hurtokName`.
+- **Текст подій.** `DEGREE_DATE_CHANGED` показує сиру ISO-дату і «на —»,
+  коли дату очищено («Очистив дату…»); у запиті на зміну ПІБ записується старе
+  імʼя, нового немає; групові кнопки фільтра без `aria-pressed`.
+- **`DRIVE_DISCONNECTED`** пишеться, навіть якщо Drive не був підключений
+  (шумні записи).
+- **`KurinPositionsService.assign`:** попереднє читання позицій, що будуть
+  зняті, виконується поза транзакцією (рідкісна гонка = зайвий/пропущений
+  `POSITION_REMOVED`) і тягне повний рядок користувача — достатньо
+  `firstName`/`lastName`/`nickname`; перенести `findMany` усередину `$transaction`.
+- **`updateStartingBalance`:** читання попереднього балансу й оновлення не
+  атомарні — два одночасні запити можуть записати застаріле `from`.
+- **`InventoryService.create`:** якщо завантаження фото падає посеред
+  створення, річ уже існує, але `INVENTORY_ITEM_CREATED` не записано.
+- **Гонка в `ARCHIVE_JUNAK` (існувала й раніше):** `archiveUser` виконується
+  до «захоплення» запиту (claim), тож паралельне рішення, що програло, лишає
+  `USER_ARCHIVED` без `APPROVAL_APPROVED`.
+- **Міграція `AuditLog`:** `INNER JOIN` на `User` мовчки пропускає старі рядки
+  `ProgressAuditLog`, чий юнак уже не існує (юнаків не видаляють, тож у
+  реальності малоймовірно). Перед деплоєм на проді можна порахувати:
+  `SELECT count(*) FROM "ProgressAuditLog" p LEFT JOIN "User" u ON u.id=p."junakId" WHERE u.id IS NULL`.
+- **Непослідовність `entityId`:** `VYKHOVNYK_*` пишуть id гуртка, а не
+  призначення; `KURIN_PROBY_PROGRAM_CHANGED` дублює `kurinId`;
+  `DEGREE_DATE_CHANGED` і `TREASURY_STARTING_BALANCE_CHANGED` без `entityId`;
+  `DRIVE_DISCONNECTED` пише порожній `details: {}`. Нешкідливо.
+- **Адмін-запити в e2e вимагають `ADMIN_USERNAME`/`ADMIN_PASSWORD`** — див.
+  наступний пункт про запуск тестів.
+
+**Де копати:** `apps/api/src/audit/`, `apps/web/lib/audit.ts`,
+`apps/web/app/audit-log/page.tsx`, `apps/api/test/audit-*.e2e-spec.ts`.
+
+---
+
+## 🔴 Локальний запуск тестів потребує ручних кроків
+
+**Опис:** на чистому клоні `main` тести не запускаються «з коробки»:
+- `npx jest src` у паралельному режимі зависає — працює лише з
+  `--runInBand --forceExit`;
+- e2e (`npm run test:e2e`) падає з *JavaScript heap out of memory* на дефолтних
+  2 ГБ (ts-jest компілює великий `AppModule`) — потрібен
+  `NODE_OPTIONS=--max-old-space-size=8192`;
+- e2e вимагає в оточенні `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (Web Push) та
+  `ADMIN_USERNAME`/`ADMIN_PASSWORD` — вони є в `.env.example`, але старі
+  локальні `.env` їх не мають, і падіння виглядають як
+  `No key set vapidDetails.publicKey` та масові `401` у `admin-*` наборах;
+- після кожного `git pull` з новими міграціями тестову БД `plast_test` треба
+  накочувати окремо: `DATABASE_URL="$DATABASE_URL_TEST" npx prisma migrate deploy`
+  (інакше e2e падають на «table does not exist»).
+
+**Де копати:** `apps/api/package.json` (`test`, `test:e2e`),
+`apps/api/test/jest-global-setup.ts`, README — додати `NODE_OPTIONS` у скрипт,
+fail-fast з поясненням за відсутності VAPID/ADMIN змінних і npm-скрипт
+`test:db:migrate`.
+
+---
+
+## 🔴 Прибрати зайві віддалені гілки `claude/*`
+
+**Опис:** на GitHub лишились `claude/book-import-plan-80k628` (позаду `main`,
+унікальних комітів немає) і `claude/charming-newton-gxi98k` (на 2026-10-27
+збігалась з `main`). Схоже на залишки сесій Claude Cloud. Перед видаленням
+перевірити в Vercel (Settings → Git, вкладка Deployments), що жодна з них не
+є Production/Preview-гілкою деплою.
+
+---
+
+## 🔴 E2E `treasury.spec.ts` «звичайний юнак бачить повідомлення про відсутність доступу» падає на `main`
+
+**Опис:** Playwright-тест `e2e/treasury.spec.ts:40` очікує текст «Немає
+доступу.» на `/treasury` для юнака без посади скарбника, але не знаходить
+його (перевірено 2026-10-29 на `main` `e1635e0` без жодних незакомічених змін
+навігації — падає й без них). Треба з'ясувати, чи це застарілий тест (змінився
+текст/редірект після редизайну чи консолідації) чи реальний дефект сторінки
+`/treasury` (юнак не бачить повідомлення про відсутність доступу).
+
+**Заодно виправлено 2026-10-29:** `e2e/nav-burger-menu.spec.ts` падав, бо
+`getByRole('link', { name: 'Курінь' })` збігався з логотипом-посиланням
+«Курінь ч.75 …» у шапці (воно веде на `/news`) — локатор уточнено через
+`exact: true`.
+
