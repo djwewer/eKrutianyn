@@ -28,6 +28,7 @@ import { KurinCalendarModule } from './kurin-calendar/kurin-calendar.module';
 import { PushNotificationsModule } from './push-notifications/push-notifications.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { SkillsModule } from './skills/skills.module';
+import { JunakHistoryModule } from './junak-history/junak-history.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { SkillsModule } from './skills/skills.module';
     PushNotificationsModule,
     AnnouncementsModule,
     SkillsModule,
+    JunakHistoryModule,
   ],
   controllers: [HealthController],
 })
