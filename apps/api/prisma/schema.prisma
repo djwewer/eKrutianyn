@@ -148,6 +148,9 @@ model User {
   // (derived from closed ProbyStages) there is no proby behind it, so the
   // date is entered by hand.
   skobDate           DateTime?
+  // Історія юнака: дата вступу до УПЮ і дата пластової присяги (вносить звʼязковий / виховник гуртка).
+  upyJoinedAt        DateTime? @db.Date
+  plastOathAt        DateTime? @db.Date
   judgeBookRowNumber Int?
   photoData          Bytes?
   photoMimeType      String?
@@ -190,6 +193,14 @@ model User {
   pushSubscriptions          PushSubscription[]
   junakSkills                JunakSkill[]           @relation("JunakSkills")
   createdJunakSkills         JunakSkill[]           @relation("JunakSkillCreatedBy")
+  vfvEntries                 JunakVfv[]             @relation("JunakVfvEntries")
+  createdVfvEntries          JunakVfv[]             @relation("JunakVfvCreatedBy")
+  camps                      JunakCamp[]            @relation("JunakCamps")
+  createdCamps               JunakCamp[]            @relation("JunakCampCreatedBy")
+  remarks                    JunakRemark[]          @relation("JunakRemarks")
+  createdRemarks             JunakRemark[]          @relation("JunakRemarkCreatedBy")
+  pastPositions              JunakPastPosition[]    @relation("JunakPastPositions")
+  createdPastPositions       JunakPastPosition[]    @relation("JunakPastPositionCreatedBy")
 }
 
 model KurinPosition {
@@ -353,6 +364,73 @@ model JunakSkill {
   createdAt         DateTime   @default(now())
 
   @@unique([junakId, levelId])
+  @@index([junakId])
+}
+
+model JunakVfv {
+  id          String    @id @default(uuid())
+  junakId     String
+  junak       User      @relation("JunakVfvEntries", fields: [junakId], references: [id])
+  achievedAt  DateTime? @db.Date
+  note        String?
+  createdById String
+  createdBy   User      @relation("JunakVfvCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([junakId])
+}
+
+model JunakCamp {
+  id          String            @id @default(uuid())
+  junakId     String
+  junak       User              @relation("JunakCamps", fields: [junakId], references: [id])
+  name        String
+  yearFrom    Int
+  yearTo      Int?
+  // Наявний enum активності: PARTICIPANT (учасник) | PROVID (провід).
+  role        JunakActivityRole
+  createdById String
+  createdBy   User              @relation("JunakCampCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@index([junakId])
+}
+
+enum JunakRemarkKind {
+  AWARD   // відзначення
+  WARNING // пересторога
+}
+
+model JunakRemark {
+  id          String          @id @default(uuid())
+  junakId     String
+  junak       User            @relation("JunakRemarks", fields: [junakId], references: [id])
+  kind        JunakRemarkKind
+  // За що відзначення / за що пересторога.
+  text        String
+  // Лише для WARNING (обовʼязково): що юнак має зробити, щоб виправити.
+  howToFix    String?
+  date        DateTime        @db.Date
+  createdById String
+  createdBy   User            @relation("JunakRemarkCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+
+  @@index([junakId, date])
+}
+
+model JunakPastPosition {
+  id          String        @id @default(uuid())
+  junakId     String
+  junak       User          @relation("JunakPastPositions", fields: [junakId], references: [id])
+  // «Гуртковий», «Курінний суддя» — вільний текст (посади до застосунку).
+  title       String
+  scope       PositionScope
+  yearFrom    Int
+  yearTo      Int?
+  createdById String
+  createdBy   User          @relation("JunakPastPositionCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+
   @@index([junakId])
 }
 
@@ -704,6 +782,19 @@ enum AuditAction {
   CUSTOM_SKILL_CREATED
   CUSTOM_SKILL_UPDATED
   CUSTOM_SKILL_DELETED
+  VFV_ADDED
+  VFV_UPDATED
+  VFV_REMOVED
+  CAMP_ADDED
+  CAMP_UPDATED
+  CAMP_REMOVED
+  REMARK_ADDED
+  REMARK_UPDATED
+  REMARK_REMOVED
+  PAST_POSITION_ADDED
+  PAST_POSITION_UPDATED
+  PAST_POSITION_REMOVED
+  HISTORY_DATES_CHANGED
 }
 
 model AuditLog {

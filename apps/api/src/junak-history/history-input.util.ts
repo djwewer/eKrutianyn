@@ -26,3 +26,23 @@ export function blankToNull(value: string | null | undefined): string | null | u
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
 }
+
+/** Years of camps and past positions: 1990…current (UTC), yearTo (if any) between yearFrom and current. */
+export function assertYearRange(yearFrom: number, yearTo: number | null): void {
+  const current = new Date().getUTCFullYear();
+  if (yearFrom < HISTORY_MIN_YEAR || yearFrom > current) {
+    throw new BadRequestException(`Рік початку має бути між ${HISTORY_MIN_YEAR} і ${current}`);
+  }
+  if (yearTo !== null && (yearTo < yearFrom || yearTo > current)) {
+    throw new BadRequestException(`Рік завершення має бути між роком початку і ${current}`);
+  }
+}
+
+/** Required free text: trimmed, must not be blank. */
+export function requireText(value: string | null | undefined, message: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    throw new BadRequestException(message);
+  }
+  return trimmed;
+}

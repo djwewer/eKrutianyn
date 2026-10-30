@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { blankToNull, parseHistoryDate, patchHistoryDate } from './history-input.util';
+import { assertYearRange, blankToNull, parseHistoryDate, patchHistoryDate, requireText } from './history-input.util';
 
 describe('history input utils', () => {
   it('parses a past calendar date as UTC midnight', () => {
@@ -23,5 +23,31 @@ describe('history input utils', () => {
     expect(blankToNull(null)).toBeNull();
     expect(blankToNull('   ')).toBeNull();
     expect(blankToNull('  Остап ')).toBe('Остап');
+  });
+});
+
+describe('assertYearRange', () => {
+  const current = new Date().getUTCFullYear();
+
+  it('accepts 1990…current with yearTo ≥ yearFrom or no yearTo', () => {
+    expect(() => assertYearRange(1990, null)).not.toThrow();
+    expect(() => assertYearRange(2021, 2024)).not.toThrow();
+    expect(() => assertYearRange(current, current)).not.toThrow();
+  });
+
+  it('rejects years outside the range and yearTo before yearFrom', () => {
+    expect(() => assertYearRange(1989, null)).toThrow(BadRequestException);
+    expect(() => assertYearRange(current + 1, null)).toThrow(BadRequestException);
+    expect(() => assertYearRange(2024, 2023)).toThrow(BadRequestException);
+    expect(() => assertYearRange(2024, current + 1)).toThrow(BadRequestException);
+  });
+});
+
+describe('requireText', () => {
+  it('trims and rejects blank text with the given message', () => {
+    expect(requireText('  Табір ', 'msg')).toBe('Табір');
+    expect(() => requireText('   ', 'Вкажіть назву')).toThrow('Вкажіть назву');
+    expect(() => requireText(undefined, 'Вкажіть назву')).toThrow(BadRequestException);
+    expect(() => requireText(null, 'Вкажіть назву')).toThrow(BadRequestException);
   });
 });

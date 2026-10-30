@@ -1,4 +1,4 @@
-import { JunakSkill, Skill, SkillGroup, SkillLevel } from '@prisma/client';
+import { JunakActivityRole, JunakCamp, JunakSkill, JunakVfv, Skill, SkillGroup, SkillLevel } from '@prisma/client';
 
 export function isoDate(date: Date): string;
 export function isoDate(date: Date | null): string | null;
@@ -40,4 +40,26 @@ export function toJunakSkillView(row: JunakSkillRow): JunakSkillView {
 export interface JunakSkillsView {
   canEdit: boolean;
   items: JunakSkillView[];
+}
+
+export interface JunakVfvView {
+  id: string;
+  achievedAt: string | null;
+  note: string | null;
+}
+
+export function toVfvView(row: JunakVfv): JunakVfvView {
+  return { id: row.id, achievedAt: isoDate(row.achievedAt), note: row.note };
+}
+
+export interface JunakCampView {
+  id: string;
+  name: string;
+  yearFrom: number;
+  yearTo: number | null;
+  role: JunakActivityRole;
+}
+
+export function toCampView(row: JunakCamp): JunakCampView {
+  return { id: row.id, name: row.name, yearFrom: row.yearFrom, yearTo: row.yearTo, role: row.role };
 }
