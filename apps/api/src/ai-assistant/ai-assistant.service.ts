@@ -7,7 +7,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { AiMessageRole, KurinGender, Role } from '@prisma/client';
+import { AiMessageRole, AiUsageKind, KurinGender, Prisma, Role } from '@prisma/client';
 import { APIError } from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
@@ -87,12 +87,19 @@ export class AiAssistantService {
       return { id: existing.id, title: existing.title, probyPointId: existing.probyPointId, messages };
     }
 
-    if (actor.role === Role.JUNAK) {
-      await this.enforceJunakDailyNewChatLimit(actor.userId);
-    }
-    const conversation = await this.prisma.aiConversation.create({
-      data: { userId: actor.userId, probyPointId: dto.probyPointId },
-    });
+    const data = { userId: actor.userId, probyPointId: dto.probyPointId };
+    const conversation =
+      actor.role === Role.JUNAK
+        ? await this.prisma.$transaction(async (tx) => {
+            await this.lockUserQuota(tx, actor.userId);
+            await this.enforceJunakDailyNewChatLimit(tx, actor.userId);
+            const created = await tx.aiConversation.create({ data });
+            await tx.aiUsageEvent.create({
+              data: { userId: actor.userId, kind: AiUsageKind.NEW_CHAT, conversationId: created.id },
+            });
+            return created;
+          })
+        : await this.prisma.aiConversation.create({ data });
     return { id: conversation.id, title: conversation.title, probyPointId: conversation.probyPointId, messages: [] };
   }
 
@@ -110,12 +117,18 @@ export class AiAssistantService {
     if (conversation.probyPointId && conversation.probyPointId !== dto.probyPointId) {
       throw new BadRequestException('This conversation belongs to a different proby point');
     }
-    // Checked before any paid work (prompt build, AI call) so a junak over
-    // their limit never costs a single token or search query.
-    if (actor.role === Role.JUNAK) {
-      await this.enforceJunakMessagesPerChatLimit(conversation.id);
-    }
     const { point, kurinGender } = await this.loadEligiblePoint(dto.probyPointId, actor);
+    // Checked (and recorded) before any paid work (prompt build, AI call) so a
+    // junak over their limit never costs a single token or search query.
+    if (actor.role === Role.JUNAK) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.lockUserQuota(tx, actor.userId);
+        await this.enforceJunakMessagesPerChatLimit(tx, conversation.id);
+        await tx.aiUsageEvent.create({
+          data: { userId: actor.userId, kind: AiUsageKind.MESSAGE, conversationId: conversation.id },
+        });
+      });
+    }
 
     const recentHistory = await this.prisma.aiMessage.findMany({
       where: { conversationId: conversation.id },
@@ -215,10 +228,18 @@ export class AiAssistantService {
     return conversation;
   }
 
-  private async enforceJunakDailyNewChatLimit(userId: string): Promise<void> {
+  // Serialises quota check+insert per user so concurrent requests can't both
+  // pass the count. Uses the tx client only (never this.prisma inside a tx).
+  private async lockUserQuota(tx: Prisma.TransactionClient, userId: string): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+  }
+
+  // Quotas are counted from the append-only AiUsageEvent ledger, not from
+  // AiConversation/AiMessage rows: deleting a chat must not hand quota back.
+  private async enforceJunakDailyNewChatLimit(tx: Prisma.TransactionClient, userId: string): Promise<void> {
     const windowStart = new Date(Date.now() - DAILY_WINDOW_MS);
-    const createdInWindow = await this.prisma.aiConversation.count({
-      where: { userId, createdAt: { gte: windowStart } },
+    const createdInWindow = await tx.aiUsageEvent.count({
+      where: { userId, kind: AiUsageKind.NEW_CHAT, createdAt: { gte: windowStart } },
     });
     if (createdInWindow >= JUNAK_DAILY_NEW_CHAT_LIMIT) {
       throw new HttpException(
@@ -228,9 +249,9 @@ export class AiAssistantService {
     }
   }
 
-  private async enforceJunakMessagesPerChatLimit(conversationId: string): Promise<void> {
-    const sentInChat = await this.prisma.aiMessage.count({
-      where: { conversationId, role: AiMessageRole.USER },
+  private async enforceJunakMessagesPerChatLimit(tx: Prisma.TransactionClient, conversationId: string): Promise<void> {
+    const sentInChat = await tx.aiUsageEvent.count({
+      where: { conversationId, kind: AiUsageKind.MESSAGE },
     });
     if (sentInChat >= JUNAK_MESSAGES_PER_CHAT_LIMIT) {
       throw new HttpException(

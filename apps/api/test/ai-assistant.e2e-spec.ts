@@ -395,13 +395,8 @@ describe('AI assistant (e2e)', () => {
     const token = issueTokenFor(jwtService, junak);
     const conversationId = await createConversation(token, openPoint.id);
     // Default per-chat limit is 25 — seed it directly instead of sending 25 real requests.
-    await prisma.aiMessage.createMany({
-      data: Array.from({ length: 25 }, () => ({
-        conversationId,
-        role: 'USER' as const,
-        content: 'попереднє повідомлення',
-        probyPointId: openPoint.id,
-      })),
+    await prisma.aiUsageEvent.createMany({
+      data: Array.from({ length: 25 }, () => ({ userId: junak.id, kind: 'MESSAGE' as const, conversationId })),
     });
 
     const response = await request(app.getHttpServer())
@@ -431,6 +426,31 @@ describe('AI assistant (e2e)', () => {
 
     const extraPoint = await prisma.probyPoint.create({
       data: { categoryId: category1.id, order: 99, description: 'Точка понад ліміт' },
+    });
+    await request(app.getHttpServer())
+      .post('/ai-assistant/conversations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ probyPointId: extraPoint.id })
+      .expect(429);
+  });
+
+  it('does not hand back the daily new-chat quota when a conversation is deleted (regression: delete reset the count)', async () => {
+    const { kurin, category1 } = await setup();
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, junak);
+    for (let i = 0; i < 5; i++) {
+      const point = await prisma.probyPoint.create({
+        data: { categoryId: category1.id, order: 200 + i, description: `Точка видалення ${i}` },
+      });
+      const conversationId = await createConversation(token, point.id);
+      await request(app.getHttpServer())
+        .delete(`/ai-assistant/conversations/${conversationId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect((res) => expect([200, 204]).toContain(res.status));
+    }
+
+    const extraPoint = await prisma.probyPoint.create({
+      data: { categoryId: category1.id, order: 299, description: 'Точка після видалень' },
     });
     await request(app.getHttpServer())
       .post('/ai-assistant/conversations')

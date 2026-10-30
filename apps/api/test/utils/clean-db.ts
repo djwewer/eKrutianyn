@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 export async function cleanDatabase(prisma: PrismaClient) {
   await prisma.$transaction([
+    prisma.aiUsageEvent.deleteMany(),
     prisma.aiMessage.deleteMany(),
     prisma.aiConversation.deleteMany(),
     prisma.referenceSource.deleteMany(),

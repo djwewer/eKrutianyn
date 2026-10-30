@@ -652,6 +652,24 @@ enum AiMessageRole {
   ASSISTANT
 }
 
+enum AiUsageKind {
+  NEW_CHAT
+  MESSAGE
+}
+
+// Append-only quota ledger for JUNAK AI limits. Deliberately no foreign keys:
+// deleting a conversation (or its messages) must not reset the counters.
+model AiUsageEvent {
+  id             String        @id @default(uuid())
+  userId         String
+  kind           AiUsageKind
+  conversationId String?
+  createdAt      DateTime      @default(now())
+
+  @@index([userId, kind, createdAt])
+  @@index([conversationId, kind])
+}
+
 model AiConversation {
   id           String      @id @default(uuid())
   userId       String
