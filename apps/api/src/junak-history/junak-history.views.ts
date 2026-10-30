@@ -7,6 +7,7 @@ import {
   JunakSkill,
   JunakVfv,
   PositionScope,
+  PositionType,
   Skill,
   SkillGroup,
   SkillLevel,
@@ -103,4 +104,25 @@ export function toPastPositionView(row: JunakPastPosition): JunakPastPositionVie
 export interface HistoryDatesView {
   upyJoinedAt: string | null;
   plastOathAt: string | null;
+}
+
+export interface JunakPositionView {
+  id: string;
+  positionType: PositionType;
+  scope: PositionScope;
+  hurtokName: string | null;
+  assignedAt: string;
+  removedAt: string | null;
+}
+
+export interface JunakHistoryView {
+  canEdit: boolean;
+  upyJoinedAt: string | null;
+  plastOathAt: string | null;
+  skills: JunakSkillView[];
+  vfv: JunakVfvView[];
+  camps: JunakCampView[];
+  remarks: JunakRemarkView[];
+  pastPositions: JunakPastPositionView[];
+  positions: JunakPositionView[];
 }

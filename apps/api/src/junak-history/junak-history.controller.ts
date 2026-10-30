@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { JunakHistoryService } from './junak-history.service';
@@ -8,6 +8,11 @@ import { UpdateHistoryDatesDto } from './dto/update-history-dates.dto';
 @Controller('users/:junakId/history')
 export class JunakHistoryController {
   constructor(private readonly service: JunakHistoryService) {}
+
+  @Get()
+  get(@Param('junakId') junakId: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.get(junakId, user);
+  }
 
   @Patch('dates')
   updateDates(@Param('junakId') junakId: string, @Body() dto: UpdateHistoryDatesDto, @CurrentUser() user: CurrentUserPayload) {
