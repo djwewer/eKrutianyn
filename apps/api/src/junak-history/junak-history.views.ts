@@ -1,4 +1,16 @@
-import { JunakActivityRole, JunakCamp, JunakSkill, JunakVfv, Skill, SkillGroup, SkillLevel } from '@prisma/client';
+import {
+  JunakActivityRole,
+  JunakCamp,
+  JunakPastPosition,
+  JunakRemark,
+  JunakRemarkKind,
+  JunakSkill,
+  JunakVfv,
+  PositionScope,
+  Skill,
+  SkillGroup,
+  SkillLevel,
+} from '@prisma/client';
 
 export function isoDate(date: Date): string;
 export function isoDate(date: Date | null): string | null;
@@ -62,4 +74,33 @@ export interface JunakCampView {
 
 export function toCampView(row: JunakCamp): JunakCampView {
   return { id: row.id, name: row.name, yearFrom: row.yearFrom, yearTo: row.yearTo, role: row.role };
+}
+
+export interface JunakRemarkView {
+  id: string;
+  kind: JunakRemarkKind;
+  text: string;
+  howToFix: string | null;
+  date: string;
+}
+
+export function toRemarkView(row: JunakRemark): JunakRemarkView {
+  return { id: row.id, kind: row.kind, text: row.text, howToFix: row.howToFix, date: isoDate(row.date) };
+}
+
+export interface JunakPastPositionView {
+  id: string;
+  title: string;
+  scope: PositionScope;
+  yearFrom: number;
+  yearTo: number | null;
+}
+
+export function toPastPositionView(row: JunakPastPosition): JunakPastPositionView {
+  return { id: row.id, title: row.title, scope: row.scope, yearFrom: row.yearFrom, yearTo: row.yearTo };
+}
+
+export interface HistoryDatesView {
+  upyJoinedAt: string | null;
+  plastOathAt: string | null;
 }
