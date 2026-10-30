@@ -51,7 +51,7 @@ function CampDialog({ junakId, entry, onClose }: { junakId: string; entry: Junak
   const add = useAddCamp(junakId);
   const update = useUpdateCamp(junakId);
   const mutation = entry ? update : add;
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getUTCFullYear();
   const [name, setName] = useState(entry?.name ?? '');
   const [yearFrom, setYearFrom] = useState(entry ? String(entry.yearFrom) : String(currentYear));
   const [yearTo, setYearTo] = useState(entry?.yearTo ? String(entry.yearTo) : '');

@@ -88,7 +88,9 @@ export class SkillsService {
   async update(id: string, dto: UpdateSkillDto, actor: CurrentUserPayload): Promise<SkillView> {
     this.assertZvyazkovyi(actor);
     const skill = await this.findOwnCustomOrThrow(id, actor);
-    const name = dto.name !== undefined ? this.trimName(dto.name) : undefined;
+    if (dto.name === null) throw new BadRequestException('Назва вмілості не може бути порожньою');
+    if (dto.group === null) throw new BadRequestException('Оберіть групу вмілості');
+    const name = dto.name != null ? this.trimName(dto.name) : undefined;
     if (name !== undefined && name.toLowerCase() !== skill.name.toLowerCase()) {
       await this.assertNameFree(name, actor.kurinId, id);
     }

@@ -505,11 +505,6 @@ export interface JunakSkill {
   certificateNumber: string | null;
 }
 
-export interface JunakSkills {
-  canEdit: boolean;
-  items: JunakSkill[];
-}
-
 export type JunakActivityRole = 'PARTICIPANT' | 'PROVID';
 
 export interface JunakVfv {

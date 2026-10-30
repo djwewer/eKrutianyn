@@ -171,12 +171,14 @@ describe('Junak history — remarks, past positions, dates (e2e)', () => {
         plastOathAt: '2020-02-22',
       });
       expect((await patch({ plastOathAt: null }).expect(200)).body).toEqual({ upyJoinedAt: '2019-09-01', plastOathAt: null });
+      await patch({ upyJoinedAt: '2019-09-01T10:30:00.000Z' }).expect(200);
       await patch({}).expect(400);
       await patch({ upyJoinedAt: '1989-01-01' }).expect(400);
       const entries = await auditOf(w.kurin.id, AuditAction.HISTORY_DATES_CHANGED);
       expect(entries.map((e) => e.details)).toEqual([
         { subjectName: 'Test User', upyJoinedAt: '2019-09-01', plastOathAt: '2020-02-22' },
         { subjectName: 'Test User', plastOathAt: null },
+        { subjectName: 'Test User', upyJoinedAt: '2019-09-01' },
       ]);
     });
 

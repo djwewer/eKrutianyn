@@ -21,7 +21,7 @@ function SkillCard({ skill, canManage, onEdit }: { skill: Skill; canManage: bool
   return (
     <li className="space-y-3 rounded-lg border border-border bg-background p-3" data-testid="skill-card">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-medium">{skill.name}</h3>
+        <h3 className="min-w-0 font-medium [overflow-wrap:anywhere]">{skill.name}</h3>
         {skill.isCustom && <Badge variant="neutral">Власна</Badge>}
       </div>
       <div role="tablist" aria-label={`Рівні вмілості «${skill.name}»`} className="flex flex-wrap gap-1">

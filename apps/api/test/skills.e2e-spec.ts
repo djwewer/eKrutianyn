@@ -172,6 +172,8 @@ describe('Skills catalog and kurin custom skills (e2e)', () => {
       const patch = (name: string) => http().patch(`/skills/${created.body.id}`).set(auth(tokens.zvyazkovyi)).send({ name });
       await patch('   ').expect(400);
       await patch('картографія').expect(409);
+      await http().patch(`/skills/${created.body.id}`).set(auth(tokens.zvyazkovyi)).send({ name: null }).expect(400);
+      await http().patch(`/skills/${created.body.id}`).set(auth(tokens.zvyazkovyi)).send({ group: null }).expect(400);
       expect((await prisma.skill.findUniqueOrThrow({ where: { id: created.body.id } })).name).toBe('Знавець компʼютерів');
     });
 

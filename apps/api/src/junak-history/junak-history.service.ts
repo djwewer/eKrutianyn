@@ -87,8 +87,8 @@ export class JunakHistoryService {
       subjectUserId: junak.id,
       details: {
         subjectName: personLabel(junak),
-        ...(dto.upyJoinedAt !== undefined ? { upyJoinedAt: dto.upyJoinedAt } : {}),
-        ...(dto.plastOathAt !== undefined ? { plastOathAt: dto.plastOathAt } : {}),
+        ...(dto.upyJoinedAt !== undefined ? { upyJoinedAt: isoDate(updated.upyJoinedAt) } : {}),
+        ...(dto.plastOathAt !== undefined ? { plastOathAt: isoDate(updated.plastOathAt) } : {}),
       },
     });
     return { upyJoinedAt: isoDate(updated.upyJoinedAt), plastOathAt: isoDate(updated.plastOathAt) };
