@@ -72,7 +72,7 @@ function RemarkDialog({ junakId, entry, onClose }: { junakId: string; entry: Jun
   const [text, setText] = useState(entry?.text ?? '');
   const [howToFix, setHowToFix] = useState(entry?.howToFix ?? '');
   const isWarning = kind === 'WARNING';
-  const isValid = !!date && date <= today() && text.trim() !== '' && (!isWarning || howToFix.trim() !== '');
+  const isValid = !!date && date >= '1990-01-01' && date <= today() && text.trim() !== '' && (!isWarning || howToFix.trim() !== '');
 
   function submit() {
     const fix = isWarning ? howToFix.trim() : undefined;
@@ -105,7 +105,7 @@ function RemarkDialog({ junakId, entry, onClose }: { junakId: string; entry: Jun
         )}
         <div className="space-y-2">
           <Label htmlFor="remark-date">Дата</Label>
-          <Input id="remark-date" type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} />
+          <Input id="remark-date" type="date" min="1990-01-01" max={today()} value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="remark-text">За що</Label>

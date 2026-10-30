@@ -111,8 +111,13 @@ test('zvyazkovyi records a warning (both fields required), an award, an archive 
   const remarks = page.getByTestId('history-remarks');
   await remarks.getByRole('button', { name: 'Додати запис' }).click();
   await dialog.getByLabel('Тип').selectOption('WARNING');
-  await dialog.getByLabel('Дата').fill('2025-03-10');
+  await expect(dialog.getByLabel('Дата')).toHaveAttribute('min', '1990-01-01');
+  await dialog.getByLabel('Дата').fill('1985-01-01');
   await dialog.getByLabel('За що').fill('Запізнився на три сходини поспіль');
+  await dialog.getByLabel('Як виправити').fill('Відвідати наступні чотири сходини вчасно');
+  await expect(dialog.getByRole('button', { name: 'Зберегти' })).toBeDisabled();
+  await dialog.getByLabel('Як виправити').fill('');
+  await dialog.getByLabel('Дата').fill('2025-03-10');
   await expect(dialog.getByRole('button', { name: 'Зберегти' })).toBeDisabled();
   await dialog.getByLabel('Як виправити').fill('   ');
   await expect(dialog.getByRole('button', { name: 'Зберегти' })).toBeDisabled();

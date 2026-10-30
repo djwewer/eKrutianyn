@@ -64,7 +64,8 @@ function DatesDialog({
   const update = useUpdateHistoryDates(junakId);
   const [joined, setJoined] = useState(upyJoinedAt ?? '');
   const [oath, setOath] = useState(plastOathAt ?? '');
-  const valid = (!joined || joined <= today()) && (!oath || oath <= today());
+  const inRange = (v: string) => !v || (v >= '1990-01-01' && v <= today());
+  const valid = inRange(joined) && inRange(oath);
   return (
     <Dialog
       open
@@ -77,11 +78,11 @@ function DatesDialog({
         <p className="text-xs text-muted-foreground">Порожнє поле прибирає дату.</p>
         <div className="space-y-2">
           <Label htmlFor="history-upy-joined">Дата вступу до УПЮ</Label>
-          <Input id="history-upy-joined" type="date" max={today()} value={joined} onChange={(e) => setJoined(e.target.value)} />
+          <Input id="history-upy-joined" type="date" min="1990-01-01" max={today()} value={joined} onChange={(e) => setJoined(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="history-plast-oath">Дата пластової присяги</Label>
-          <Input id="history-plast-oath" type="date" max={today()} value={oath} onChange={(e) => setOath(e.target.value)} />
+          <Input id="history-plast-oath" type="date" min="1990-01-01" max={today()} value={oath} onChange={(e) => setOath(e.target.value)} />
         </div>
         {update.isError && <p className="text-sm text-destructive">{mutationErrorText(update.error, 'Не вдалося зберегти дати.')}</p>}
         <DialogActions
