@@ -1,4 +1,4 @@
-import type { SkillGroup } from '@/lib/types';
+import type { JunakActivityRole, SkillGroup } from '@/lib/types';
 
 export const SKILL_GROUP_ORDER: SkillGroup[] = [
   'PRACTICAL',
@@ -30,3 +30,13 @@ export const SKILL_LEVEL_LABELS: Record<number, string> = {
   2: 'Друга проба',
   3: 'Третя проба',
 };
+
+export const CAMP_ROLE_LABELS: Record<JunakActivityRole, string> = {
+  PARTICIPANT: 'учасник',
+  PROVID: 'провід',
+};
+
+/** 2021–2024; a single year when there is no (or the same) end year. */
+export function formatYears(from: number, to: number | null): string {
+  return to !== null && to !== from ? `${from}–${to}` : `${from}`;
+}

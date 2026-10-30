@@ -509,3 +509,58 @@ export interface JunakSkills {
   canEdit: boolean;
   items: JunakSkill[];
 }
+
+export type JunakActivityRole = 'PARTICIPANT' | 'PROVID';
+
+export interface JunakVfv {
+  id: string;
+  achievedAt: string | null;
+  note: string | null;
+}
+
+export interface JunakCamp {
+  id: string;
+  name: string;
+  yearFrom: number;
+  yearTo: number | null;
+  role: JunakActivityRole;
+}
+
+export type JunakRemarkKind = 'AWARD' | 'WARNING';
+
+export interface JunakRemark {
+  id: string;
+  kind: JunakRemarkKind;
+  text: string;
+  howToFix: string | null;
+  date: string;
+}
+
+export interface JunakPastPosition {
+  id: string;
+  title: string;
+  scope: PositionScope;
+  yearFrom: number;
+  yearTo: number | null;
+}
+
+export interface JunakPositionHistory {
+  id: string;
+  positionType: PositionType;
+  scope: PositionScope;
+  hurtokName: string | null;
+  assignedAt: string;
+  removedAt: string | null;
+}
+
+export interface JunakHistory {
+  canEdit: boolean;
+  upyJoinedAt: string | null;
+  plastOathAt: string | null;
+  skills: JunakSkill[];
+  vfv: JunakVfv[];
+  camps: JunakCamp[];
+  remarks: JunakRemark[];
+  pastPositions: JunakPastPosition[];
+  positions: JunakPositionHistory[];
+}

@@ -188,6 +188,18 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Змінив дані вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
     case 'SKILL_REMOVED':
       return `Скасував зарахування вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'VFV_ADDED':
+      return `Додав запис ВФВ для ${s(d, 'subjectName')}`;
+    case 'VFV_UPDATED':
+      return `Змінив запис ВФВ для ${s(d, 'subjectName')}`;
+    case 'VFV_REMOVED':
+      return `Видалив запис ВФВ для ${s(d, 'subjectName')}`;
+    case 'CAMP_ADDED':
+      return `Додав табір «${s(d, 'campName')}» для ${s(d, 'subjectName')}`;
+    case 'CAMP_UPDATED':
+      return `Змінив табір «${s(d, 'campName')}» для ${s(d, 'subjectName')}`;
+    case 'CAMP_REMOVED':
+      return `Видалив табір «${s(d, 'campName')}» для ${s(d, 'subjectName')}`;
     default:
       return `Подія: ${item.action}`;
   }
