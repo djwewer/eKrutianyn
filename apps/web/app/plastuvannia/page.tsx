@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flag, Sparkles, CirclePlus, FileText } from 'lucide-react';
+import { Award, Flag, Sparkles, CirclePlus, FileText } from 'lucide-react';
 import { useSession } from '@/lib/session-client';
 
 const TILE_BASE = 'flex min-h-[150px] flex-col justify-between rounded-2xl p-4 text-left';
@@ -9,6 +9,7 @@ const TILES: { href: string; title: string; text: string; icon: typeof Flag; ai?
   { href: '/proby', title: 'Моя проба', text: 'Точки проби та їх стан', icon: Flag },
   { href: '/ai-vykhovnyk', title: 'AI-виховник', text: 'Запитай про будь-яку точку', icon: Sparkles, ai: true },
   { href: '/my-activity', title: 'Додати акцію', text: 'Табір, сходини, акція', icon: CirclePlus },
+  { href: '/skills', title: 'Вмілості', text: 'Каталог вмілостей і вимоги', icon: Award },
 ];
 
 export default function PlastuvanniaPage() {

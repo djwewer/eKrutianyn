@@ -16,6 +16,7 @@ async function expectTiles(page: import('@playwright/test').Page) {
   await expect(main.getByRole('link', { name: /Моя проба/ })).toHaveAttribute('href', '/proby');
   await expect(main.getByRole('link', { name: /AI-виховник/ })).toHaveAttribute('href', '/ai-vykhovnyk');
   await expect(main.getByRole('link', { name: /Додати акцію/ })).toHaveAttribute('href', '/my-activity');
+  await expect(main.getByRole('link', { name: /Вмілості/ })).toHaveAttribute('href', '/skills');
   await expect(main.getByText('Запит', { exact: true })).toBeVisible();
   await expect(page.getByText('Скоро')).toBeVisible();
   await expect(main.getByRole('link', { name: /^Запит(\s|$)/ })).toHaveCount(0);

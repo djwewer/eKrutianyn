@@ -174,6 +174,12 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Змінив оголошення «${s(d, 'title')}»`;
     case 'ANNOUNCEMENT_DELETED':
       return `Видалив оголошення «${s(d, 'title')}»`;
+    case 'CUSTOM_SKILL_CREATED':
+      return `Додав власну вмілість «${s(d, 'skillName')}»`;
+    case 'CUSTOM_SKILL_UPDATED':
+      return `Змінив власну вмілість «${s(d, 'skillName')}»`;
+    case 'CUSTOM_SKILL_DELETED':
+      return `Видалив власну вмілість «${s(d, 'skillName')}»`;
     default:
       return `Подія: ${item.action}`;
   }

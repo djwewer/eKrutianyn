@@ -458,3 +458,36 @@ export interface Announcement {
   images: { id: string }[];
   reactions: { userId: string; emoji: ReactionEmoji }[];
 }
+
+export type SkillGroup = 'PRACTICAL' | 'FIRST_AID' | 'NATURE' | 'SPORT' | 'HOME' | 'SPECIAL' | 'ARTS' | 'AVIATION' | 'SEA';
+
+export interface SkillRequirement {
+  text: string;
+  items?: string[];
+}
+
+export interface SkillLevel {
+  id: string;
+  level: number;
+  note: string | null;
+  requirements: SkillRequirement[];
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+  group: SkillGroup;
+  isCustom: boolean;
+  levels: SkillLevel[];
+}
+
+export interface SkillCatalogGroup {
+  group: SkillGroup;
+  skills: Skill[];
+}
+
+export interface CustomSkillInput {
+  name: string;
+  group: SkillGroup;
+  levels: { level: number; requirements: string[]; note?: string }[];
+}
