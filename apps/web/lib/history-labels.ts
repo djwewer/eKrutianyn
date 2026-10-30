@@ -1,4 +1,4 @@
-import type { JunakActivityRole, SkillGroup } from '@/lib/types';
+import type { JunakActivityRole, JunakRemarkKind, PositionScope, SkillGroup } from '@/lib/types';
 
 export const SKILL_GROUP_ORDER: SkillGroup[] = [
   'PRACTICAL',
@@ -34,6 +34,16 @@ export const SKILL_LEVEL_LABELS: Record<number, string> = {
 export const CAMP_ROLE_LABELS: Record<JunakActivityRole, string> = {
   PARTICIPANT: 'учасник',
   PROVID: 'провід',
+};
+
+export const REMARK_KIND_LABELS: Record<JunakRemarkKind, string> = {
+  AWARD: 'Відзначення',
+  WARNING: 'Пересторога',
+};
+
+export const POSITION_SCOPE_LABELS: Record<PositionScope, string> = {
+  KURIN: 'курінь',
+  HURTOK: 'гурток',
 };
 
 /** 2021–2024; a single year when there is no (or the same) end year. */

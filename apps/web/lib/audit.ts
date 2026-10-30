@@ -55,6 +55,8 @@ const PROGRAM_LABELS: Record<string, string> = { OLD: 'стара', NEW: 'нов
 
 const SKILL_LEVEL_LABELS: Record<string, string> = { '1': 'перша проба', '2': 'друга проба', '3': 'третя проба' };
 
+const REMARK_KIND_ACCUSATIVE: Record<string, string> = { AWARD: 'відзначення', WARNING: 'пересторогу' };
+
 function s(details: Record<string, unknown> | null, key: string): string {
   const value = details && typeof details === 'object' ? details[key] : undefined;
   if (value === null || value === undefined || value === '') return '—';
@@ -200,6 +202,20 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Змінив табір «${s(d, 'campName')}» для ${s(d, 'subjectName')}`;
     case 'CAMP_REMOVED':
       return `Видалив табір «${s(d, 'campName')}» для ${s(d, 'subjectName')}`;
+    case 'REMARK_ADDED':
+      return `Додав ${lookup(REMARK_KIND_ACCUSATIVE, s(d, 'kind'))} для ${s(d, 'subjectName')} (від ${s(d, 'date')})`;
+    case 'REMARK_UPDATED':
+      return `Змінив ${lookup(REMARK_KIND_ACCUSATIVE, s(d, 'kind'))} для ${s(d, 'subjectName')} (від ${s(d, 'date')})`;
+    case 'REMARK_REMOVED':
+      return `Видалив ${lookup(REMARK_KIND_ACCUSATIVE, s(d, 'kind'))} для ${s(d, 'subjectName')} (від ${s(d, 'date')})`;
+    case 'PAST_POSITION_ADDED':
+      return `Додав до архіву діловодства посаду «${s(d, 'title')}» для ${s(d, 'subjectName')}`;
+    case 'PAST_POSITION_UPDATED':
+      return `Змінив запис архіву діловодства «${s(d, 'title')}» для ${s(d, 'subjectName')}`;
+    case 'PAST_POSITION_REMOVED':
+      return `Видалив з архіву діловодства посаду «${s(d, 'title')}» для ${s(d, 'subjectName')}`;
+    case 'HISTORY_DATES_CHANGED':
+      return `Змінив дати вступу до УПЮ та пластової присяги для ${s(d, 'subjectName')}`;
     default:
       return `Подія: ${item.action}`;
   }

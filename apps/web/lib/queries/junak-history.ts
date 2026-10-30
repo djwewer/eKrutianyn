@@ -2,7 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import type { JunakActivityRole, JunakCamp, JunakHistory, JunakSkill, JunakVfv } from '@/lib/types';
+import type {
+  JunakActivityRole,
+  JunakCamp,
+  JunakHistory,
+  JunakPastPosition,
+  JunakRemark,
+  JunakRemarkKind,
+  JunakSkill,
+  JunakVfv,
+  PositionScope,
+} from '@/lib/types';
 
 export const junakHistoryKey = (junakId: string) => ['junak-history', junakId] as const;
 
@@ -100,5 +110,73 @@ export function useUpdateCamp(junakId: string) {
 export function useRemoveCamp(junakId: string) {
   return useHistoryMutation(junakId, (id: string) =>
     apiFetch<{ success: true }>(`/users/${junakId}/camps/${id}`, { method: 'DELETE' }),
+  );
+}
+
+export interface RemarkInput {
+  kind: JunakRemarkKind;
+  text: string;
+  howToFix?: string;
+  date: string;
+}
+
+export interface RemarkPatch {
+  id: string;
+  text: string;
+  howToFix?: string;
+  date: string;
+}
+
+export function useAddRemark(junakId: string) {
+  return useHistoryMutation(junakId, (dto: RemarkInput) =>
+    apiFetch<JunakRemark>(`/users/${junakId}/remarks`, { method: 'POST', body: JSON.stringify(dto) }),
+  );
+}
+
+export function useUpdateRemark(junakId: string) {
+  return useHistoryMutation(junakId, ({ id, ...dto }: RemarkPatch) =>
+    apiFetch<JunakRemark>(`/users/${junakId}/remarks/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
+  );
+}
+
+export function useRemoveRemark(junakId: string) {
+  return useHistoryMutation(junakId, (id: string) =>
+    apiFetch<{ success: true }>(`/users/${junakId}/remarks/${id}`, { method: 'DELETE' }),
+  );
+}
+
+export interface PastPositionInput {
+  title: string;
+  scope: PositionScope;
+  yearFrom: number;
+  yearTo: number | null;
+}
+
+export function useAddPastPosition(junakId: string) {
+  return useHistoryMutation(junakId, (dto: PastPositionInput) =>
+    apiFetch<JunakPastPosition>(`/users/${junakId}/past-positions`, { method: 'POST', body: JSON.stringify(dto) }),
+  );
+}
+
+export function useUpdatePastPosition(junakId: string) {
+  return useHistoryMutation(junakId, ({ id, ...dto }: PastPositionInput & { id: string }) =>
+    apiFetch<JunakPastPosition>(`/users/${junakId}/past-positions/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
+  );
+}
+
+export function useRemovePastPosition(junakId: string) {
+  return useHistoryMutation(junakId, (id: string) =>
+    apiFetch<{ success: true }>(`/users/${junakId}/past-positions/${id}`, { method: 'DELETE' }),
+  );
+}
+
+export interface HistoryDatesInput {
+  upyJoinedAt: string | null;
+  plastOathAt: string | null;
+}
+
+export function useUpdateHistoryDates(junakId: string) {
+  return useHistoryMutation(junakId, (dto: HistoryDatesInput) =>
+    apiFetch<HistoryDatesInput>(`/users/${junakId}/history/dates`, { method: 'PATCH', body: JSON.stringify(dto) }),
   );
 }

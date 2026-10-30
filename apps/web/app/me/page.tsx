@@ -78,22 +78,25 @@ export default function MePage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Діловодство</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {positions.length > 0 ? (
-            <ul className="space-y-1 text-sm">
-              {positions.map((label) => (
-                <li key={label}>{label}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">Посад зараз немає</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Для юнака діловодство (поточне, зняте й до застосунку) показує секція «Історія». */}
+      {session.role !== 'JUNAK' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Діловодство</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {positions.length > 0 ? (
+              <ul className="space-y-1 text-sm">
+                {positions.map((label) => (
+                  <li key={label}>{label}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">Посад зараз немає</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
