@@ -8,8 +8,7 @@ describe('JwtStrategy', () => {
   beforeEach(() => {
     process.env.JWT_SECRET = 'test-secret';
     prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ archivedAt: null }) },
-      kurinPosition: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+      user: { findUnique: jest.fn().mockResolvedValue({ archivedAt: null, positionsHeld: [] }) },
     };
     strategy = new JwtStrategy(prisma);
   });
@@ -43,7 +42,7 @@ describe('JwtStrategy', () => {
   });
 
   it('rejects a token for an archived user, even before the JWT expires', async () => {
-    prisma.user.findUnique.mockResolvedValue({ archivedAt: new Date('2026-01-01') });
+    prisma.user.findUnique.mockResolvedValue({ archivedAt: new Date('2026-01-01'), positionsHeld: [] });
 
     await expect(
       strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any),
@@ -53,9 +52,28 @@ describe('JwtStrategy', () => {
   it('never loads photoData — this runs on every authenticated request', async () => {
     await strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any);
 
-    expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
-      select: { archivedAt: true },
+    const arg = prisma.user.findUnique.mock.calls[0][0];
+    expect(arg.select.photoData).toBeUndefined();
+    expect(arg.select.archivedAt).toBe(true);
+  });
+
+  it('uses a single DB query per request', async () => {
+    await strategy.validate({ sub: 'user-1', role: 'VYKHOVNYK', kurinId: 'kurin-1' } as any);
+    expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('derives isKurinniy from any active KURINNYI position and positions from KURIN scope in the token kurin', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      archivedAt: null,
+      positionsHeld: [
+        { positionType: 'KURINNYI', scope: 'KURIN', kurinId: 'kurin-1' },
+        { positionType: 'SECRETARY', scope: 'KURIN', kurinId: 'kurin-1' },
+        { positionType: 'SECRETARY', scope: 'KURIN', kurinId: 'other-kurin' },
+        { positionType: 'HURTKOVYI', scope: 'HURTOK', kurinId: 'kurin-1' },
+      ],
     });
+    const result = await strategy.validate({ sub: 'user-1', role: 'VYKHOVNYK', kurinId: 'kurin-1' } as any);
+    expect(result.isKurinniy).toBe(true);
+    expect(result.positions).toEqual(['KURINNYI', 'SECRETARY']);
   });
 });
