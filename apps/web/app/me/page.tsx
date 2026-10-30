@@ -5,6 +5,7 @@ import { useOwnProfile } from '@/lib/queries/settings';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
+import { JunakHistory } from '@/components/junak-history';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -20,8 +21,8 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Архів діловодства, вмілості, табори, відзнаки — окремі фічі (docs/backlog.md «Історія юнака»);
-// тут їх свідомо немає, навіть як заглушок.
+// Історія юнака (components/junak-history.tsx) — лише перегляд; редагують звʼязковий
+// і виховник на сторінці юнака /users/[id].
 export default function MePage() {
   const { data: session } = useSession();
   const { data: profile } = useOwnProfile({ enabled: !!session });
@@ -55,6 +56,8 @@ export default function MePage() {
       </div>
 
       {session.role === 'JUNAK' && <JunakDegreesCard junakId={session.userId} canEdit={false} />}
+
+      {session.role === 'JUNAK' && <JunakHistory junakId={session.userId} readOnly />}
 
       {isVykhovnyk && (
         <Card>

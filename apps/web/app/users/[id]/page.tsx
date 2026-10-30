@@ -21,6 +21,7 @@ import {
 } from '@/lib/queries/proby';
 import type { GuardianContact, GuardianRelation, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
+import { JunakHistory } from '@/components/junak-history';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
@@ -602,6 +603,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           canEdit={!!canEditContactInfo || session?.role === 'VYKHOVNYK'}
         />
       )}
+      {isJunak && <JunakHistory junakId={id} />}
       {isJunak && probyProgram && (
         <Card>
           <CardHeader>

@@ -53,6 +53,8 @@ const REQUEST_TYPE_LABELS: Record<string, string> = {
 
 const PROGRAM_LABELS: Record<string, string> = { OLD: 'стара', NEW: 'нова' };
 
+const SKILL_LEVEL_LABELS: Record<string, string> = { '1': 'перша проба', '2': 'друга проба', '3': 'третя проба' };
+
 function s(details: Record<string, unknown> | null, key: string): string {
   const value = details && typeof details === 'object' ? details[key] : undefined;
   if (value === null || value === undefined || value === '') return '—';
@@ -180,6 +182,12 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Змінив власну вмілість «${s(d, 'skillName')}»`;
     case 'CUSTOM_SKILL_DELETED':
       return `Видалив власну вмілість «${s(d, 'skillName')}»`;
+    case 'SKILL_ACHIEVED':
+      return `Зарахував вмілість «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'SKILL_UPDATED':
+      return `Змінив дані вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'SKILL_REMOVED':
+      return `Скасував зарахування вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
     default:
       return `Подія: ${item.action}`;
   }

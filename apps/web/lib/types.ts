@@ -491,3 +491,21 @@ export interface CustomSkillInput {
   group: SkillGroup;
   levels: { level: number; requirements: string[]; note?: string }[];
 }
+
+export interface JunakSkill {
+  id: string;
+  levelId: string;
+  skillId: string;
+  skillName: string;
+  group: SkillGroup;
+  level: number;
+  isCustom: boolean;
+  achievedAt: string;
+  examiner: string | null;
+  certificateNumber: string | null;
+}
+
+export interface JunakSkills {
+  canEdit: boolean;
+  items: JunakSkill[];
+}
