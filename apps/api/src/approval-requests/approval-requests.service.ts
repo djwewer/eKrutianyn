@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ApprovalActionType, AuditAction, ApprovalStatus, PositionScope, PositionType, Role, User } from '@prisma/client';
+import { ApprovalActionType, AuditAction, ApprovalStatus, Prisma, PositionScope, PositionType, Role, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
@@ -186,7 +186,7 @@ export class ApprovalRequestsService {
           hurtokId: string;
           birthDate?: string;
         };
-        await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId);
+        await this.validateHurtokBelongsToKurin(data.hurtokId, actor.kurinId, tx);
         let created;
         try {
           created = await tx.user.create({
@@ -215,7 +215,7 @@ export class ApprovalRequestsService {
             throw new BadRequestException('Юнак архівований');
           }
           if (updateData.hurtokId) {
-            await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId);
+            await this.validateHurtokBelongsToKurin(updateData.hurtokId as string, actor.kurinId, tx);
           }
         }
         try {
@@ -375,8 +375,15 @@ export class ApprovalRequestsService {
     return req;
   }
 
-  private async validateHurtokBelongsToKurin(hurtokId: string, kurinId: string) {
-    const hurtok = await this.prisma.hurtok.findUnique({ where: { id: hurtokId } });
+  // `db` must be the transaction client when called inside $transaction:
+  // using this.prisma there would take a second pooled connection while the
+  // transaction holds one (pool self-deadlock under load).
+  private async validateHurtokBelongsToKurin(
+    hurtokId: string,
+    kurinId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const hurtok = await db.hurtok.findUnique({ where: { id: hurtokId } });
     if (!hurtok || hurtok.kurinId !== kurinId) {
       throw new NotFoundException('Hurtok not found in this kurin');
     }

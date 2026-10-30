@@ -78,8 +78,8 @@ export class JunakImportRowProcessorService {
         }
         if (options.restrictProtectedTargets) {
           const [targetIsKurinniy, targetPositions] = await Promise.all([
-            isKurinniyForUser(this.prisma, target.id),
-            getActiveKurinPositions(this.prisma, target.id, kurinId),
+            isKurinniyForUser(tx, target.id),
+            getActiveKurinPositions(tx, target.id, kurinId),
           ]);
           if (targetIsKurinniy || targetPositions.length > 0) {
             throw new Error(

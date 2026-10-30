@@ -1,8 +1,8 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { PositionScope, PositionType } from '@prisma/client';
+import { Prisma, PositionScope, PositionType } from '@prisma/client';
 
 export async function getActiveKurinPositions(
-  prisma: PrismaService,
+  prisma: PrismaService | Prisma.TransactionClient,
   userId: string,
   kurinId: string,
 ): Promise<PositionType[]> {
@@ -13,7 +13,7 @@ export async function getActiveKurinPositions(
   return rows.map((row) => row.positionType);
 }
 
-export async function hasAnyActivePosition(prisma: PrismaService, userId: string): Promise<boolean> {
+export async function hasAnyActivePosition(prisma: PrismaService | Prisma.TransactionClient, userId: string): Promise<boolean> {
   const active = await prisma.kurinPosition.findFirst({ where: { userId, removedAt: null } });
   return !!active;
 }
