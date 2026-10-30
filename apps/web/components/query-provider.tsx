@@ -22,7 +22,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           onError: onUnauthorized,
         }),
         defaultOptions: {
-          queries: { retry: false },
+          // staleTime + no focus refetch: otherwise every tab returning to focus
+          // refires every query on the page (refetch storm at ~200 users).
+          queries: { retry: false, staleTime: 60_000, refetchOnWindowFocus: false, refetchOnReconnect: 'always' },
         },
       });
     },
