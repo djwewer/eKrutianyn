@@ -9,6 +9,12 @@ export function useLogout() {
   return async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     queryClient.clear();
+    try {
+      sessionStorage.removeItem('plastAdminCredentials');
+      localStorage.removeItem('plastAdminCredentials');
+    } catch {
+      // storage blocked — nothing to clear
+    }
     router.push('/login');
     router.refresh();
   };

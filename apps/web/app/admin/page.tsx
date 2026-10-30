@@ -20,9 +20,13 @@ import type { AdminKurin, AdminProbyPoint, AdminProbyProgram } from '@/lib/types
 
 const STORAGE_KEY = 'plastAdminCredentials';
 
+// sessionStorage (tab-lifetime), not localStorage: admin secrets must not
+// survive closing the browser or a user logout on a shared device.
 function readStoredCredentials(): AdminCredentials | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    // One-time cleanup of the old persistent copy.
+    localStorage.removeItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.key || !parsed?.username || !parsed?.password) return null;
@@ -34,7 +38,7 @@ function readStoredCredentials(): AdminCredentials | null {
 
 export default function AdminProbyCatalogPage() {
   // Starts null on both the server render and the first client render (the
-  // server has no localStorage), then this one-time correction from a
+  // server has no sessionStorage), then this one-time correction from a
   // non-React-owned source runs before paint — not a cascading render loop,
   // which is what the lint rule is meant to catch. Same pattern as
   // components/ui/theme-toggle.tsx's dark-mode sync.
@@ -56,7 +60,7 @@ export default function AdminProbyCatalogPage() {
     };
     if (!next.key || !next.username || !next.password) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       // Private browsing / blocked storage — the credentials just won't persist across reloads.
     }
@@ -65,6 +69,7 @@ export default function AdminProbyCatalogPage() {
 
   function handleClearCredentials() {
     try {
+      sessionStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       // ignore
