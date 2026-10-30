@@ -123,6 +123,8 @@ model Hurtok {
   junaky               User[]            @relation("JunakHurtok")
   vykhovnykAssignments VykhovnykHurtok[]
   positions            KurinPosition[]
+
+  @@index([kurinId])
 }
 
 model User {
@@ -201,6 +203,9 @@ model User {
   createdRemarks             JunakRemark[]          @relation("JunakRemarkCreatedBy")
   pastPositions              JunakPastPosition[]    @relation("JunakPastPositions")
   createdPastPositions       JunakPastPosition[]    @relation("JunakPastPositionCreatedBy")
+
+  @@index([kurinId, role])
+  @@index([hurtokId])
 }
 
 model KurinPosition {
@@ -219,6 +224,10 @@ model KurinPosition {
   removedAt    DateTime?
   removedById  String?
   removedBy    User?         @relation("PositionRemovedBy", fields: [removedById], references: [id])
+
+  @@index([userId, removedAt])
+  @@index([kurinId, scope, removedAt])
+  @@index([hurtokId])
 }
 
 model InventoryItem {
@@ -234,6 +243,8 @@ model InventoryItem {
   updatedAt   DateTime @updatedAt
 
   photos InventoryItemPhoto[]
+
+  @@index([kurinId])
 }
 
 model InventoryItemPhoto {
@@ -454,6 +465,8 @@ model GuardianContact {
   email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([junakId])
 }
 
 model VykhovnykHurtok {
@@ -464,6 +477,8 @@ model VykhovnykHurtok {
   hurtok      Hurtok @relation(fields: [hurtokId], references: [id])
 
   @@unique([vykhovnykId, hurtokId])
+
+  @@index([hurtokId])
 }
 
 model ProbyProgram {
@@ -590,6 +605,9 @@ model ApprovalRequest {
   approvedBy    User?              @relation("DecidedRequests", fields: [approvedById], references: [id])
   decidedAt     DateTime?
   createdAt     DateTime           @default(now())
+
+  @@index([initiatedById])
+  @@index([status, createdAt])
 }
 
 model PasswordResetToken {
@@ -600,6 +618,8 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model EmailChangeRequest {
@@ -611,6 +631,8 @@ model EmailChangeRequest {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model ProfileChangeLog {
@@ -621,6 +643,8 @@ model ProfileChangeLog {
   oldValue  String?
   newValue  String?
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 enum AiMessageRole {
@@ -813,4 +837,6 @@ model AuditLog {
   @@index([kurinId, createdAt, id])
   @@index([kurinId, subjectUserId])
   @@index([kurinId, action])
+
+  @@index([actorId])
 }
