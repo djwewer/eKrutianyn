@@ -15,7 +15,7 @@ function DialogContent({ className, children, ...props }: React.ComponentProps<t
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-xl bg-card p-6 text-card-foreground shadow-lg ring-1 ring-foreground/10',
+          'fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-[8px] border border-line bg-paper p-6 text-card-foreground shadow-[8px_8px_0_rgba(0,0,0,.18)]',
           className,
         )}
         {...props}
@@ -27,7 +27,7 @@ function DialogContent({ className, children, ...props }: React.ComponentProps<t
 }
 
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title className={cn('text-base font-medium', className)} {...props} />;
+  return <DialogPrimitive.Title className={cn('font-display text-[1.2rem] leading-[1.2] font-semibold tracking-[.02em] uppercase', className)} {...props} />;
 }
 
 export { Dialog, DialogContent, DialogTitle };

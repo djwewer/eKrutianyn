@@ -7,9 +7,29 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-pt-sans), system-ui, sans-serif;
+  --font-display: var(--font-oswald), 'Arial Narrow', sans-serif;
+  --font-mono: var(--font-pt-mono), ui-monospace, monospace;
+  --font-heading: var(--font-display);
+  --color-paper: var(--paper);
+  --color-field: var(--field);
+  --color-line: var(--line);
+  --color-ink-2: var(--ink-2);
+  --color-navy: var(--navy);
+  --color-navy-ink: var(--navy-ink);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-sky-ink: var(--sky-ink);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-ink: var(--signal-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-late: var(--late);
+  --color-late-soft: var(--late-soft);
+  --color-band: var(--band);
+  --color-band-ink: var(--band-ink);
+  --color-band-line: var(--band-line);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -53,85 +73,88 @@
 }
 
 :root {
-  --background: #FBFAF8;
-  --foreground: #2B2A27;
-  --card: #FFFFFF;
-  --card-foreground: #2B2A27;
-  --popover: #FFFFFF;
-  --popover-foreground: #2B2A27;
-  --primary: #2F5FD9;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F3F1EC;
-  --secondary-foreground: #2B2A27;
-  --muted: #F3F1EC;
-  --muted-foreground: #6F6C66;
-  --accent: #2F5FD9;
-  --accent-foreground: #FFFFFF;
-  --accent-text: #2F5FD9;
-  --accent-soft: #E8EEFC;
-  /* Same hue as --accent-soft but always opaque, for surfaces (like the
-     AI-виховник gradient-ring fill) that can't tolerate --accent-soft's
-     dark-mode transparency letting whatever's behind them show through. */
-  --accent-soft-solid: #E8EEFC;
-  --warning-soft: #FBF0DC;
-  --warning-foreground: #8A5A12;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #E8E6E1;
-  --input: #E8E6E1;
-  --ring: #2F5FD9;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 8px;
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #2B2A27;
-  --sidebar-primary: #2F5FD9;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F3F1EC;
-  --sidebar-accent-foreground: #2B2A27;
-  --sidebar-border: #E8E6E1;
-  --sidebar-ring: #2F5FD9;
+  --bg: #EBEFF5;
+  --paper: #F8FAFD;
+  --ink: #16202E;
+  --ink-2: #536076;
+  --line: #C8D2E0;
+  --navy: #1B3358;
+  --navy-ink: #F1F5FB;
+  --sky: #4A8FE0;
+  --sky-soft: #DCE9FA;
+  --sky-ink: #174A8B;
+  --signal: #D9520B;
+  --signal-soft: #FBE3D3;
+  --signal-ink: #7A2B00;
+  --ok: #2F7A3E;
+  --ok-soft: #DCEFE0;
+  --late: #B3261E;
+  --late-soft: #F8DAD7;
+  --field: #FFFFFF;
+  --band: #CFE2F6;
+  --band-ink: #13284A;
+  --band-line: #1B3358;
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--navy);
+  --primary-foreground: var(--navy-ink);
+  --secondary: var(--sky-soft);
+  --secondary-foreground: var(--sky-ink);
+  --muted: var(--bg);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--sky-soft);
+  --accent-foreground: var(--sky-ink);
+  --accent-text: var(--sky-ink);
+  --accent-soft: var(--sky-soft);
+  --accent-soft-solid: var(--sky-soft);
+  --warning-soft: var(--signal-soft);
+  --warning-foreground: var(--signal-ink);
+  --destructive: var(--late);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--sky);
+  --chart-1: var(--sky);
+  --chart-2: var(--navy);
+  --chart-3: var(--signal);
+  --chart-4: var(--ok);
+  --chart-5: var(--ink-2);
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--navy);
+  --sidebar-primary-foreground: var(--navy-ink);
+  --sidebar-accent: var(--sky-soft);
+  --sidebar-accent-foreground: var(--sky-ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--sky);
+  --radius: 6px;
 }
 
 .dark {
-  --background: #1C1C1A;
-  --foreground: #EDECE9;
-  --card: #242320;
-  --card-foreground: #EDECE9;
-  --popover: #242320;
-  --popover-foreground: #EDECE9;
-  --primary: #2F5FD9;
-  --primary-foreground: #FFFFFF;
-  --secondary: #191917;
-  --secondary-foreground: #EDECE9;
-  --muted: #191917;
-  --muted-foreground: #9B9890;
-  --accent: #2F5FD9;
-  --accent-foreground: #FFFFFF;
-  --accent-text: #7FA2FF;
-  --accent-soft: rgba(94, 140, 255, 0.16);
-  --accent-soft-solid: #2D3444;
-  --warning-soft: rgba(217, 164, 65, 0.14);
-  --warning-foreground: #E6B766;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.09);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #2F5FD9;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: #242320;
-  --sidebar-foreground: #EDECE9;
-  --sidebar-primary: #2F5FD9;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #191917;
-  --sidebar-accent-foreground: #EDECE9;
-  --sidebar-border: rgba(255, 255, 255, 0.09);
-  --sidebar-ring: #2F5FD9;
+  --bg: #0C121C;
+  --paper: #141C29;
+  --ink: #E2E8F2;
+  --ink-2: #9BA8BC;
+  --line: #26324A;
+  --navy: #8DBBF2;
+  --navy-ink: #0A1424;
+  --sky: #6FA9EE;
+  --sky-soft: #172A45;
+  --sky-ink: #B9D6FA;
+  --signal: #FF8A42;
+  --signal-soft: #3B2213;
+  --signal-ink: #FFC9A3;
+  --ok: #86D49A;
+  --ok-soft: #15301E;
+  --late: #FF8A80;
+  --late-soft: #3A1715;
+  --field: #1A2334;
+  --band: #1B3253;
+  --band-ink: #E6EEF9;
+  --band-line: #9CC4F4;
 }
 
 @layer base {
@@ -140,6 +163,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  a {
+    color: var(--navy);
+  }
+  :focus-visible {
+    outline: 3px solid var(--sky);
+    outline-offset: 2px;
   }
   html {
     @apply font-sans;
@@ -275,11 +307,13 @@
 }
 .announcement-content blockquote {
   margin: 1em 0;
-  padding: 0.25em 1em;
-  border-left: 3px solid var(--accent);
-  color: var(--muted-foreground);
-  font-style: italic;
+  padding: 0.65rem 1rem;
+  border-left: 4px solid var(--navy);
+  background: var(--sky-soft);
+  border-radius: 0 6px 6px 0;
+  font-style: normal;
 }
+.announcement-content blockquote strong { color: var(--sky-ink); }
 .announcement-content code {
   font-family: var(--font-mono);
   font-size: 0.875em;

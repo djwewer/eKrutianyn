@@ -1,15 +1,28 @@
 import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
+import { Oswald, PT_Sans, PT_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import './globals.css';
 import { QueryProvider } from '@/components/query-provider';
 import { AppShell } from '@/components/app-shell';
 import { cn } from '@/lib/utils';
 
-const manrope = Manrope({
+const oswald = Oswald({
   subsets: ['latin', 'cyrillic'],
-  weight: ['500', '600', '700', '800'],
-  variable: '--font-sans',
+  weight: ['500', '600', '700'],
+  variable: '--font-oswald',
+  display: 'swap',
+});
+const ptSans = PT_Sans({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-pt-sans',
+  display: 'swap',
+});
+const ptMono = PT_Mono({
+  subsets: ['latin', 'cyrillic'],
+  weight: '400',
+  variable: '--font-pt-mono',
   display: 'swap',
 });
 
@@ -31,7 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="uk"
-      className={cn(manrope.variable, theme === 'dark' && 'dark')}
+      className={cn(oswald.variable, ptSans.variable, ptMono.variable, theme === 'dark' && 'dark')}
       // For a system-dark visitor with no `theme` cookie yet, the inline
       // script below adds the `dark` class before React hydrates, which
       // makes the server-rendered className intentionally not match the

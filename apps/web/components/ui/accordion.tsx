@@ -26,7 +26,7 @@ function AccordionItem({
     <AccordionPrimitive.Item
       data-slot="accordion-item"
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors data-[open]:border-accent animate-[kmFadeUp_460ms_cubic-bezier(0.2,0.7,0.3,1)_both]",
+        "overflow-hidden rounded-[6px] border border-line bg-paper transition-colors data-[open]:border-navy [&_[data-slot=accordion-item]]:border-dashed [&_[data-slot=accordion-item]]:bg-background animate-[kmFadeUp_460ms_cubic-bezier(0.2,0.7,0.3,1)_both]",
         className
       )}
       {...props}
@@ -44,27 +44,18 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "group flex w-full items-center justify-between gap-3.5 rounded-lg px-5 py-4 text-left font-medium transition-colors outline-none hover:bg-accent-soft focus-visible:inset-ring-2 focus-visible:inset-ring-accent/50 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          "group flex w-full items-center gap-[.8rem] px-4 py-[.85rem] text-left font-display text-[1.12rem] leading-[1.2] font-semibold tracking-[.04em] uppercase transition-colors outline-none hover:bg-sky-soft focus-visible:inset-ring-2 focus-visible:inset-ring-sky data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
           className
         )}
         {...props}
       >
         {children}
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="shrink-0 text-muted-foreground transition-transform duration-260 ease-[cubic-bezier(.4,0,.2,1)] group-data-panel-open:rotate-180"
+        <span
+          aria-hidden="true"
+          className="ml-auto shrink-0 font-display text-[1.4rem] leading-none font-semibold text-ink-2 transition-transform duration-150 group-data-panel-open:rotate-45"
         >
-          <path
-            d="M4 6l4 4 4-4"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          +
+        </span>
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )
@@ -84,7 +75,7 @@ function AccordionContent({
       )}
       {...props}
     >
-      <div className="px-5 pt-4 pb-5">{children}</div>
+      <div className="px-4 pt-1 pb-4">{children}</div>
     </AccordionPrimitive.Panel>
   )
 }

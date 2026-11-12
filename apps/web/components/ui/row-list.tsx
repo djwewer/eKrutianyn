@@ -5,7 +5,7 @@ function RowList({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="row-list"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col overflow-hidden rounded-[6px] border border-line bg-paper", className)}
       {...props}
     />
   )
@@ -29,15 +29,15 @@ function Row({
     <div
       data-slot="row"
       className={cn(
-        "flex items-center gap-3.5 rounded-md border border-transparent bg-muted p-3 transition-colors hover:border-accent",
+        "flex items-center gap-[.8rem] border-b border-dashed border-line px-[.9rem] py-[.65rem] transition-colors last:border-b-0 hover:bg-sky-soft",
         className
       )}
       {...props}
     >
       <Avatar initials={initials} photoUrl={photoUrl} aria-hidden="true" />
       <div className="flex min-w-0 flex-grow flex-col gap-px">
-        <span className="text-sm font-medium">{title}</span>
-        {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+        <span className="text-base leading-tight font-bold">{title}</span>
+        {subtitle && <span className="text-[.82rem] text-ink-2">{subtitle}</span>}
       </div>
       {children}
     </div>

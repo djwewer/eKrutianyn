@@ -3,17 +3,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+  "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[3px] px-2 py-[.15rem] font-display text-[.7rem] font-semibold tracking-[.1em] whitespace-nowrap uppercase",
   {
     variants: {
       variant: {
-        accent: "bg-accent-soft text-accent-text",
-        warning: "bg-warning-soft text-warning-foreground",
-        neutral: "bg-card text-accent-text ring-1 ring-accent-soft",
+        signal: "bg-signal-soft text-signal-ink",
+        ok: "bg-ok-soft text-ok",
+        late: "bg-late-soft text-late",
+        mute: "border border-line bg-background text-ink-2",
+        accent: "border border-line bg-background text-ink-2",
+        warning: "bg-signal-soft text-signal-ink",
+        neutral: "border border-line bg-background text-ink-2",
       },
     },
     defaultVariants: {
-      variant: "accent",
+      variant: "signal",
     },
   }
 )
