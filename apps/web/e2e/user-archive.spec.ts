@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 const API_URL = 'http://localhost:3001';
 
@@ -71,7 +71,7 @@ test('kurinniy sends an archive request for a junak instead of archiving directl
     body: JSON.stringify({ hurtokId: null }),
   });
   const kurinniyEmail = `kurinniy-${Date.now()}@example.com`;
-  const kurinniy = await createUserAs(zvyazkovyiToken, {
+  const kurinniy = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Курінний',
     lastName: `Тест${Date.now()}`,
     email: kurinniyEmail,
@@ -82,7 +82,7 @@ test('kurinniy sends an archive request for a junak instead of archiving directl
   await fetch(`${API_URL}/kurin-positions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zvyazkovyiToken}` },
-    body: JSON.stringify({ userId: kurinniy.id, scope: 'KURIN', positionType: 'KURINNYI' }),
+    body: JSON.stringify({ userId: kurinniy.user.id, scope: 'KURIN', positionType: 'KURINNYI' }),
   });
 
   await loginAs(page, kurinniyEmail, 'password123');

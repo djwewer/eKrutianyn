@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 const API_URL = 'http://localhost:3001';
 
@@ -164,7 +164,7 @@ test('lets a KURIN-scope suddia open and use the hurtok settings dialog', async 
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
   const suddiaEmail = `suddia-${Date.now()}@example.com`;
-  const suddia = await createUserAs(zvyazkovyiToken, {
+  const suddia = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Суд',
     lastName: 'Дя',
     email: suddiaEmail,
@@ -174,7 +174,7 @@ test('lets a KURIN-scope suddia open and use the hurtok settings dialog', async 
   });
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: suddia.id, scope: 'KURIN', positionType: 'SUDDIA' },
+    data: { userId: suddia.user.id, scope: 'KURIN', positionType: 'SUDDIA' },
   });
 
   await loginAs(page, suddiaEmail, 'password123');
@@ -194,7 +194,7 @@ test('a plain member sees hurtok info read-only, with no settings button', async
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Соколи');
   const plainJunakEmail = `plain-${Date.now()}@example.com`;
-  await createUserAs(zvyazkovyiToken, {
+  await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Прост',
     lastName: 'Юнак',
     email: plainJunakEmail,
@@ -221,7 +221,7 @@ test('a HURTOK-scope (not KURIN-scope) suddia sees hurtok info read-only, with n
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Ведмеді');
   const suddiaEmail = `hurtok-suddia-${Date.now()}@example.com`;
-  const suddia = await createUserAs(zvyazkovyiToken, {
+  const suddia = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Гурток',
     lastName: 'Суддя',
     email: suddiaEmail,
@@ -231,7 +231,7 @@ test('a HURTOK-scope (not KURIN-scope) suddia sees hurtok info read-only, with n
   });
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: suddia.id, scope: 'HURTOK', hurtokId: hurtok.id, positionType: 'SUDDIA' },
+    data: { userId: suddia.user.id, scope: 'HURTOK', hurtokId: hurtok.id, positionType: 'SUDDIA' },
   });
 
   await loginAs(page, suddiaEmail, 'password123');

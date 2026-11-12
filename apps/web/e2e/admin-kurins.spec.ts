@@ -26,6 +26,10 @@ test('lets an admin create a kurin, rename/renumber it, and it persists across r
   await section.getByPlaceholder('Назва (напр. «курінь Лісові Мандрівники»)').fill(uniqueName);
   await section.getByPlaceholder('Станиця').fill('Тестова станиця');
   await section.locator('select').nth(1).selectOption({ label: `${program.name} (OLD)` });
+  await section.getByPlaceholder("Ім'я").fill('Перший');
+  await section.getByPlaceholder('Прізвище').fill('Зв’язковий');
+  await section.getByPlaceholder("Пошта зв'язкового").fill(`first-zv-${Date.now()}@example.com`);
+  await section.getByPlaceholder('Тимчасовий пароль (мін. 8 символів)').fill('password123');
 
   // Input value-attribute selectors don't track a React-controlled input's live
   // value, so identify the new row by its real id from the create response

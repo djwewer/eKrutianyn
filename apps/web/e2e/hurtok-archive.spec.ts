@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 const API_URL = 'http://localhost:3001';
 
@@ -47,7 +47,7 @@ test('a vykhovnyk does not see the settings button at all', async ({ page }) => 
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(zvyazkovyiToken, 'Тестові Орли');
   const vykhovnykEmail = `vykhovnyk-${Date.now()}@example.com`;
-  const vykhovnyk = await createUserAs(zvyazkovyiToken, {
+  const vykhovnyk = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Виховник',
     lastName: `Тест${Date.now()}`,
     email: vykhovnykEmail,
@@ -57,7 +57,7 @@ test('a vykhovnyk does not see the settings button at all', async ({ page }) => 
   await fetch(`${API_URL}/vykhovnyk-assignments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zvyazkovyiToken}` },
-    body: JSON.stringify({ vykhovnykId: vykhovnyk.id, hurtokId: hurtok.id }),
+    body: JSON.stringify({ vykhovnykId: vykhovnyk.user.id, hurtokId: hurtok.id }),
   });
 
   await loginAs(page, vykhovnykEmail, 'password123');

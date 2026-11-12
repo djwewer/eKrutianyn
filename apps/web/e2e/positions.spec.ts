@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 test('lets zvyazkovyi assign and remove kurin positions', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -86,7 +86,7 @@ test('lets kurinniy edit a non-Курінний slot but not the Курінни�
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
   const kurinniyEmail = `kurinniy-${Date.now()}@example.com`;
-  const kurinniy = await createUserAs(zvyazkovyiToken, {
+  const kurinniy = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Кур',
     lastName: 'Інний',
     email: kurinniyEmail,
@@ -96,7 +96,7 @@ test('lets kurinniy edit a non-Курінний slot but not the Курінни�
   });
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: kurinniy.id, scope: 'KURIN', positionType: 'KURINNYI' },
+    data: { userId: kurinniy.user.id, scope: 'KURIN', positionType: 'KURINNYI' },
   });
   const otherJunakEmail = `other-${Date.now()}@example.com`;
   await createUserAs(zvyazkovyiToken, {

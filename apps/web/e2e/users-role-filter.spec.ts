@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 test('lets kurinniy view vykhovnyk contacts read-only', async ({ page, request }) => {
   const { program } = await seedProbyProgram();
@@ -16,7 +16,7 @@ test('lets kurinniy view vykhovnyk contacts read-only', async ({ page, request }
     role: 'VYKHOVNYK',
   });
   const kurinnyiEmail = `kurinnyi-${Date.now()}@example.com`;
-  const junak = await createUserAs(zvyazkovyiToken, {
+  const junak = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Кур',
     lastName: 'Інний',
     email: kurinnyiEmail,
@@ -27,7 +27,7 @@ test('lets kurinniy view vykhovnyk contacts read-only', async ({ page, request }
 
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: junak.id, scope: 'KURIN', positionType: 'KURINNYI' },
+    data: { userId: junak.user.id, scope: 'KURIN', positionType: 'KURINNYI' },
   });
 
   await loginAs(page, kurinnyiEmail, 'password123');
@@ -47,7 +47,7 @@ test('a plain member does not see Кадра виховників or Списо�
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Соколи');
   const plainJunakEmail = `plain-${Date.now()}@example.com`;
-  await createUserAs(zvyazkovyiToken, {
+  await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Прост',
     lastName: 'Юнак',
     email: plainJunakEmail,
@@ -71,7 +71,7 @@ test('a plain vykhovnyk sees exactly the three read-only sections', async ({ pag
   const zvyazkovyiToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
 
   const plainVykhovnykEmail = `plain-vykhovnyk-${Date.now()}@example.com`;
-  await createUserAs(zvyazkovyiToken, {
+  await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Прост',
     lastName: 'Виховник',
     email: plainVykhovnykEmail,

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 test('shows zvyazkovyi the hurtok creation in the audit log', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -23,7 +23,7 @@ test('denies a non-zvyazkovyi access to the audit log', async ({ page }) => {
   const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(token, 'Орлики');
   const email = `junak-${Date.now()}@example.com`;
-  await createUserAs(token, { firstName: 'Юн', lastName: 'Ак', email, role: 'JUNAK', hurtokId: hurtok.id, password: 'password123' });
+  await createOnboardedUserAs(token, { firstName: 'Юн', lastName: 'Ак', email, role: 'JUNAK', hurtokId: hurtok.id, password: 'password123' });
 
   await loginAs(page, email, 'password123');
   await page.goto('/audit-log');
