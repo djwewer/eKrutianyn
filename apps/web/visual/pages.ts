@@ -93,8 +93,18 @@ export const VISUAL_PAGES: VisualPage[] = [
     appPath: '/calendar',
     protoHash: 'calendar',
     roles: ALL,
-    // Task 7 adds the previous-year control; add the click-through interaction there.
-    interactions: [],
+    interactions: [
+      {
+        name: 'previous-year',
+        run: async (page) => {
+          const year = String(new Date().getFullYear() - 1);
+          await clickIfPresent(page.getByRole('radio', { name: year }), `«${year}» period radio`);
+          await page.getByRole('button', { name: 'До найближчих подій →' }).waitFor({ state: 'visible', timeout: T }).catch(() => {
+            throw new Error('past-year view did not render');
+          });
+        },
+      },
+    ],
   },
   { key: 'plastuvannia', appPath: '/plastuvannia', protoHash: 'plast', roles: ['JUNAK'] },
   { key: 'proby', appPath: '/proby', protoHash: 'proby', roles: ['JUNAK'] },

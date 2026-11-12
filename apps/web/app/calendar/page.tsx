@@ -1,20 +1,17 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useKurinCalendar, useCreateCalendarEvent, useDeleteCalendarEvent } from '@/lib/queries/kurin-calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { PageHeader } from '@/components/ui/page-header';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
+import { buildTimeline, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
 import type { KurinCalendarEvent } from '@/lib/types';
 
-const MONTH_NAMES = [
-  'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
-  'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень',
-];
 const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
 // A single inline calendar for picking a date range: click one day to start,
@@ -219,56 +216,157 @@ function AddEventDialog({
   );
 }
 
-function TimelineView({ events, kurinId, canEdit }: { events: KurinCalendarEvent[]; kurinId: string; canEdit: boolean }) {
-  const remove = useDeleteCalendarEvent(kurinId);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const sorted = useMemo(() => [...events].sort((a, b) => a.startDate.localeCompare(b.startDate)), [events]);
+function formatShort(iso: string) {
+  return new Date(iso).toLocaleDateString('uk-UA');
+}
 
-  function scrollBy(amount: number) {
-    scrollRef.current?.scrollBy({ left: amount, behavior: 'smooth' });
-  }
+function EventCard({
+  event,
+  past,
+  canEdit,
+  onDelete,
+  deleting,
+}: {
+  event: KurinCalendarEvent;
+  past: boolean;
+  canEdit: boolean;
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const start = new Date(event.startDate);
+  const end = event.endDate ? new Date(event.endDate) : null;
+  const multiDay = !!end && end.toDateString() !== start.toDateString();
+  const dayLabel = multiDay ? `${start.getDate()}–${end.getDate()}` : String(start.getDate());
+  return (
+    <div className="flex items-center gap-[.9rem] rounded-[6px] border border-line bg-paper px-[.9rem] py-[.6rem]">
+      <div className="min-w-[2.2rem] text-center font-display leading-none">
+        <b className={cn('block text-[1.5rem] font-bold', past ? 'text-ink-2' : 'text-navy')}>{dayLabel}</b>
+        <span className="font-mono text-[.66rem] tracking-[.06em] text-ink-2">{WEEKDAY_CODES[start.getDay()]}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <b className="block leading-[1.25] break-words">{event.title}</b>
+        {multiDay && (
+          <small className="block font-mono text-[.76rem] text-ink-2">
+            {formatShort(event.startDate)} – {formatShort(event.endDate!)}
+          </small>
+        )}
+        {event.description && <small className="block text-[.84rem] break-words text-ink-2">{event.description}</small>}
+      </div>
+      {canEdit && (
+        <Button size="sm" variant="outline" disabled={deleting} onClick={onDelete}>
+          Видалити
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function TimelineView({
+  events,
+  kurinId,
+  canEdit,
+  today,
+  view,
+  onViewChange,
+}: {
+  events: KurinCalendarEvent[];
+  kurinId: string;
+  canEdit: boolean;
+  today: Date;
+  view: TimelineView;
+  onViewChange: (view: TimelineView) => void;
+}) {
+  const remove = useDeleteCalendarEvent(kurinId);
+  const months = useMemo(() => buildTimeline(events, view, today), [events, view, today]);
+  const next = view === 'next';
+  const ty = today.getFullYear();
+  const tm = today.getMonth();
+  const views: { value: TimelineView; label: string }[] = [
+    { value: 'next', label: 'Наступні 12 місяців' },
+    { value: ty, label: String(ty) },
+    { value: ty - 1, label: String(ty - 1) },
+    { value: ty - 2, label: String(ty - 2) },
+  ];
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
-        <CardTitle>Таймлайн на рік</CardTitle>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => scrollBy(-320)}>
-            ◂
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => scrollBy(320)}>
-            ▸
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {canEdit
-              ? 'Наразі немає подій. Ви можете додати нову, натиснувши кнопку «Додати подію».'
-              : 'Наразі немає подій.'}
-          </p>
-        ) : (
-          <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2">
-            {sorted.map((event) => (
-              <div key={event.id} className="w-64 shrink-0 space-y-1 overflow-hidden rounded-md border border-border p-3">
-                <p className="text-xs font-semibold text-accent-text">
-                  {new Date(event.startDate).toLocaleDateString('uk-UA')}
-                  {event.endDate && ` – ${new Date(event.endDate).toLocaleDateString('uk-UA')}`}
-                </p>
-                <p className="text-sm font-medium break-words">{event.title}</p>
-                {event.description && <p className="text-xs break-words text-muted-foreground">{event.description}</p>}
-                {canEdit && (
-                  <Button size="sm" variant="outline" disabled={remove.isPending} onClick={() => remove.mutate(event.id)}>
-                    Видалити
-                  </Button>
+    <>
+      <div
+        role="radiogroup"
+        aria-label="Період"
+        className="mb-[1.2rem] inline-flex max-w-full flex-wrap overflow-hidden rounded-[4px] border-2 border-line"
+      >
+        {views.map(({ value, label }) => {
+          const on = value === view;
+          return (
+            <button
+              key={label}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => onViewChange(value)}
+              className={cn(
+                'cursor-pointer border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line',
+                on ? 'bg-navy text-navy-ink' : 'bg-paper text-ink',
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="relative grid gap-[1.1rem] before:absolute before:top-[.4rem] before:bottom-[.4rem] before:left-[6.6rem] before:w-0.5 before:bg-line max-[759px]:before:hidden">
+        {months.map(({ year, month, events: list }) => {
+          const showNow = next && year === ty && month === tm;
+          return (
+            <section
+              key={`${year}-${month}`}
+              className={cn(
+                'relative grid grid-cols-[6.6rem_minmax(0,1fr)] items-start gap-x-[1.2rem] after:absolute after:top-[.8rem] after:left-[calc(6.6rem-5px)] after:size-3 after:rounded-full after:border-2 after:bg-background after:content-[""] max-[759px]:grid-cols-1 max-[759px]:gap-[.4rem] max-[759px]:after:hidden',
+                list.length ? 'after:border-navy' : 'after:border-line max-[759px]:grid-cols-[auto_1fr] max-[759px]:items-baseline max-[759px]:gap-[.8rem]',
+              )}
+            >
+              <h2
+                className={cn(
+                  'm-0 pt-[.6rem] font-display text-base leading-[1.1] font-semibold tracking-[.06em] uppercase max-[759px]:flex max-[759px]:items-baseline max-[759px]:gap-2 max-[759px]:pt-0',
+                  !list.length && 'text-ink-2',
+                )}
+              >
+                {MONTH_NAMES[month]}{' '}
+                <span className="block font-mono text-[.72rem] font-normal tracking-[.04em] text-ink-2 normal-case max-[759px]:inline">
+                  {year}
+                </span>
+              </h2>
+              <div className="grid gap-2 pl-[.6rem] max-[759px]:pl-0">
+                {showNow && (
+                  <p className="m-0 flex items-center gap-2 font-mono text-[.74rem] font-semibold tracking-[.06em] text-signal uppercase after:h-0.5 after:flex-1 after:bg-signal after:opacity-50 after:content-['']">
+                    Сьогодні, {today.getDate()} {MONTH_NAMES_GENITIVE[tm]}
+                  </p>
+                )}
+                {list.length ? (
+                  list.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      past={!next}
+                      canEdit={canEdit}
+                      deleting={remove.isPending}
+                      onDelete={() => remove.mutate(event.id)}
+                    />
+                  ))
+                ) : (
+                  <p className="m-0 py-[.55rem] font-mono text-[.8rem] text-ink-2 max-[759px]:py-0">Подій немає</p>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </section>
+          );
+        })}
+      </div>
+
+      <Button variant="ghost" className="mt-4" onClick={() => onViewChange(next ? ty : 'next')}>
+        {next ? '← Попередні події' : 'До найближчих подій →'}
+      </Button>
+    </>
   );
 }
 
@@ -278,25 +376,30 @@ export default function CalendarPage() {
   const { data: events, isLoading, isError, error } = useKurinCalendar(kurinId);
   const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.isKurinniy;
   const [addEventOpen, setAddEventOpen] = useState(false);
+  const [today] = useState(() => new Date());
+  const [view, setView] = useState<TimelineView>('next');
 
   if (isLoading) return <p>Завантаження...</p>;
   if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
   if (!kurinId) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Календарний план</h1>
-        {canEdit && (
-          <Button size="sm" variant="outline" onClick={() => setAddEventOpen(true)}>
-            + Додати подію
-          </Button>
-        )}
-      </div>
+    <div>
+      <PageHeader
+        title="Календарний план"
+        subtitle={view === 'next' ? 'Збірки, табори та акції куреня на рік уперед' : `Що відбулося в ${view} році`}
+        actions={
+          canEdit && (
+            <Button onClick={() => setAddEventOpen(true)}>
+              + Додати подію
+            </Button>
+          )
+        }
+      />
 
       {canEdit && <AddEventDialog kurinId={kurinId} open={addEventOpen} onOpenChange={setAddEventOpen} />}
 
-      <TimelineView events={events ?? []} kurinId={kurinId} canEdit={canEdit} />
+      <TimelineView events={events ?? []} kurinId={kurinId} canEdit={canEdit} today={today} view={view} onViewChange={setView} />
     </div>
   );
 }
