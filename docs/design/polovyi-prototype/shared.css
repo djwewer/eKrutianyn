@@ -1,0 +1,44 @@
+/* shared structure: carousel, lightbox, reactions base, text scale */
+html { font-size: calc(16px * var(--fs, 1)); }
+html.lb-lock { overflow: hidden; }
+.cz { display: grid; gap: .5rem; min-width: 0; }
+.cz-stage { position: relative; border-radius: var(--cz-radius, 12px); overflow: hidden; background: var(--cz-bg, transparent); }
+.cz-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
+.cz-track::-webkit-scrollbar { display: none; }
+.cz-track:focus-visible { box-shadow: inset 0 0 0 3px var(--cz-dot-on); }
+.cz-slide { flex: 0 0 100%; scroll-snap-align: start; aspect-ratio: var(--cz-ratio, 4/3); max-width: 100%; border: 0; padding: 0; margin: 0; background: none; cursor: zoom-in; display: block; }
+.cz-slide img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; }
+.cz-btn { position: absolute; top: 50%; translate: 0 -50%; width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 0; background: var(--cz-btn-bg); color: var(--cz-btn-fg); font-size: 1.5rem; line-height: 1; display: grid; place-items: center; cursor: pointer; opacity: .92; transition: opacity .15s, transform .15s; padding: 0 0 .15rem; }
+.cz-btn:hover { opacity: 1; transform: scale(1.06); }
+.cz-btn:focus-visible { outline: 3px solid var(--cz-dot-on); outline-offset: 2px; }
+.cz-prev { left: .6rem; } .cz-next { right: .6rem; }
+.cz-count { position: absolute; right: .6rem; bottom: .6rem; background: var(--cz-btn-bg); color: var(--cz-btn-fg); font-size: .75rem; padding: .15rem .5rem; border-radius: 99px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.cz-dots { display: flex; justify-content: center; gap: .4rem; }
+.cz-dot { width: .5rem; height: .5rem; border-radius: 99px; border: 0; padding: 0; background: var(--cz-dot); cursor: pointer; transition: width .2s, background .2s; }
+.cz-dot.on { width: 1.4rem; background: var(--cz-dot-on); }
+.cz-thumbs { display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: thin; padding: .15rem; }
+.cz-thumb { flex: 0 0 4rem; aspect-ratio: 4/3; border: 0; padding: 0; border-radius: calc(var(--cz-radius, 12px) / 2); overflow: hidden; cursor: pointer; opacity: .55; outline: 2px solid transparent; outline-offset: 1px; transition: opacity .15s; background: none; }
+.cz-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cz-thumb.on { opacity: 1; outline-color: var(--cz-dot-on); }
+@media (hover: none) { .cz-dots + .cz-btn, .cz-stage .cz-btn { width: 2.1rem; height: 2.1rem; } }
+
+.lb { position: fixed; inset: 0; z-index: 50; background: var(--lb-bg, rgba(10,12,14,.92)); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lb-inner { width: min(100%, 60rem); }
+.lb .cz-slide { cursor: default; }
+.lb .cz-thumbs { justify-content: center; }
+.lb-close { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 1.75rem; cursor: pointer; }
+.lb-close:focus-visible { outline: 3px solid #fff; }
+
+.rx { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; font: inherit; }
+.rx-e { font-size: 1.05em; line-height: 1; }
+.rx-n { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+.cz-cap { margin: 0; font-size: .85rem; color: var(--cz-cap, inherit); display: flex; gap: .4rem; align-items: baseline; }
+.cz-cap b { font-variant-numeric: tabular-nums; }
+.lb .cz-cap { color: #fff; justify-content: center; }
+.cz-bar { display: flex; align-items: center; justify-content: center; gap: .9rem; }
+.cz-bbtn { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 0; background: var(--cz-btn-bg); color: var(--cz-btn-fg); font-size: 1.4rem; line-height: 1; display: grid; place-items: center; cursor: pointer; padding: 0 0 .15rem; }
+.cz-bbtn:hover { filter: brightness(1.1); }
+.cz-bbtn:focus-visible { outline: 3px solid var(--cz-dot-on); outline-offset: 2px; }
+.lb .cz-bbtn { background: rgba(255,255,255,.16); color: #fff; }
+.lb .cz-dot { background: rgba(255,255,255,.35); } .lb .cz-dot.on { background: #fff; }

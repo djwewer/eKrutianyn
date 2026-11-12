@@ -1,0 +1,214 @@
+<title>єПластун · Польовий</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=PT+Mono&family=PT+Sans:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: field-journal. Topographic header band is the one bold move; content below is a single 46rem column, news as a dated timeline, gear as luggage tags. */
+:root {
+  --bg: #ECEFE4; --paper: #F9FAF5; --ink: #1F251A; --ink-2: #5A6350; --line: #CBD2BC; --topo: #9DAA84;
+  --olive: #45572A; --olive-ink: #F4F7EC; --signal: #D9520B; --signal-soft: #FBE3D3; --signal-ink: #7A2B00;
+  --ok: #3C6E1F; --ok-soft: #DDEBCF; --late: #B3261E; --late-soft: #F8DAD7;
+  --display: 'Oswald', 'Arial Narrow', system-ui, sans-serif; --body: 'PT Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --mono: 'PT Mono', ui-monospace, Menlo, monospace;
+  --cz-radius: 4px; --cz-btn-bg: var(--olive); --cz-btn-fg: var(--olive-ink); --cz-dot: var(--line); --cz-dot-on: var(--signal); --lb-bg: rgba(18,22,15,.95);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11150E; --paper: #181D14; --ink: #E3E8D8; --ink-2: #A3AD94; --line: #2E3626; --topo: #3D4A2E;
+  --olive: #A9C46E; --olive-ink: #12170C; --signal: #FF8A42; --signal-soft: #3B2213; --signal-ink: #FFC9A3;
+  --ok: #9ACD6E; --ok-soft: #1D2B14; --late: #FF8A80; --late-soft: #3A1715; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11150E; --paper: #181D14; --ink: #E3E8D8; --ink-2: #A3AD94; --line: #2E3626; --topo: #3D4A2E;
+  --olive: #A9C46E; --olive-ink: #12170C; --signal: #FF8A42; --signal-soft: #3B2213; --signal-ink: #FFC9A3;
+  --ok: #9ACD6E; --ok-soft: #1D2B14; --late: #FF8A80; --late-soft: #3A1715; color-scheme: dark; }
+/*SHARED_CSS*/
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 1.0625rem; line-height: 1.55; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+.band { position: relative; overflow: hidden; background: var(--olive); color: var(--olive-ink); }
+.band svg.topo { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--olive-ink); opacity: .16; pointer-events: none; }
+.band .in { position: relative; max-width: 46rem; margin: 0 auto; padding: 1.4rem max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); }
+.idrow { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.patch { width: 4.2rem; height: 4.2rem; border-radius: 50%; border: 3px dashed currentColor; display: grid; place-items: center; text-align: center; flex: none; }
+.patch b { font: 700 1.35rem/1 var(--display); display: block; }
+.patch span { font: .55rem/1 var(--mono); letter-spacing: .08em; }
+.idrow h1 { margin: 0; font: 700 2rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+.idrow p { margin: .3rem 0 0; font: .78rem var(--mono); opacity: .85; letter-spacing: .04em; }
+.idrow .grow { flex: 1; min-width: 12rem; }
+.fs { display: flex; align-items: center; gap: .5rem; font: .72rem var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.fs input { width: 7.5rem; accent-color: var(--signal); }
+.tabs { display: flex; gap: .25rem; margin-top: 1.3rem; overflow-x: auto; scrollbar-width: none; }
+.tabs a { text-decoration: none; color: inherit; font: 600 .95rem var(--display); text-transform: uppercase; letter-spacing: .06em; padding: .65rem 1rem; border-radius: 6px 6px 0 0; opacity: .78; white-space: nowrap; }
+.tabs a.on { background: var(--bg); color: var(--ink); opacity: 1; }
+.col { max-width: 46rem; margin: 0 auto; padding: 1.5rem max(16px, env(safe-area-inset-right, 0px)) 3rem max(16px, env(safe-area-inset-left, 0px)); }
+.h { font: 600 .82rem var(--display); text-transform: uppercase; letter-spacing: .12em; color: var(--ink-2); margin: 2rem 0 .8rem; display: flex; align-items: center; gap: .7rem; }
+.h::after { content: ""; flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px); }
+.h:first-child { margin-top: 0; }
+
+/* timeline */
+.tl { position: relative; display: grid; gap: 1.4rem; }
+.tl::before { content: ""; position: absolute; left: 3.1rem; top: .5rem; bottom: 0; width: 2px; background: var(--line); }
+.entry { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr); gap: 1rem; position: relative; }
+.date { text-align: center; font-family: var(--display); line-height: 1; padding-top: .2rem; position: relative; z-index: 1; }
+.date b { display: block; font-size: 1.8rem; font-weight: 700; background: var(--bg); }
+.date span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); background: var(--bg); padding: .2rem 0; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 1.1rem 1.2rem; display: grid; gap: .7rem; min-width: 0; }
+.card.pin { border-color: var(--signal); box-shadow: 4px 4px 0 var(--signal-soft); }
+.kick { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; font: .75rem var(--mono); color: var(--ink-2); letter-spacing: .03em; }
+.stamp { font: 600 .72rem var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--signal-ink); background: var(--signal-soft); padding: .15rem .5rem; border-radius: 3px; }
+.card h2 { margin: 0; font: 600 1.4rem/1.2 var(--display); letter-spacing: .005em; text-wrap: balance; }
+.card p, .card ul { margin: 0; }
+.order { border-left: 4px solid var(--olive); background: var(--bg); padding: .6rem .9rem; display: grid; grid-template-columns: auto 1fr; gap: .2rem .9rem; font-size: .95rem; margin: 0; }
+.order dt { font: .75rem var(--mono); text-transform: uppercase; color: var(--ink-2); padding-top: .15rem; } .order dd { margin: 0; font-weight: 700; }
+.sig { font-size: .88rem; color: var(--ink-2); font-style: italic; }
+.rxs { display: flex; gap: .35rem; flex-wrap: wrap; border-top: 1px dashed var(--line); padding-top: .7rem; }
+.rx { border: 1px solid var(--line); background: transparent; border-radius: 4px; padding: .2rem .55rem; font-size: .88rem; font-family: var(--mono); }
+.rx.on { background: var(--olive); color: var(--olive-ink); border-color: var(--olive); }
+/* film strip thumbs */
+.card .cz-thumbs, .tag .cz-thumbs { background: var(--ink); padding: .55rem .5rem; border-radius: 3px; gap: .3rem; position: relative;
+  background-image: radial-gradient(circle at 50% 50%, var(--paper) .14rem, transparent .16rem), radial-gradient(circle at 50% 50%, var(--paper) .14rem, transparent .16rem);
+  background-size: .8rem .55rem, .8rem .55rem; background-position: 0 0, 0 100%; background-repeat: repeat-x; }
+.cz-thumb { flex-basis: 4.4rem; border-radius: 2px; }
+
+/* kurin */
+.passport { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1.2rem; padding: 1.2rem; }
+.passport .patch { width: 6.5rem; height: 6.5rem; color: var(--olive); border-width: 4px; }
+.passport .patch b { font-size: 2rem; }
+.passport dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: .7rem 1.2rem; }
+.passport dt { font: .7rem var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.passport dd { margin: .1rem 0 0; font-weight: 700; }
+.ranks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: .6rem; }
+.rank { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: .7rem .8rem; display: flex; gap: .7rem; align-items: center; }
+.chev { width: 2.4rem; height: 2.4rem; flex: none; color: var(--olive); }
+.rank b { display: block; font-size: .98rem; line-height: 1.2; } .rank span { font: .72rem var(--mono); text-transform: uppercase; color: var(--ink-2); letter-spacing: .05em; }
+.shields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: .7rem; }
+.shield { background: var(--paper); border: 1px solid var(--line); border-radius: 6px 6px 50% 50% / 6px 6px 22% 22%; padding: 1rem .9rem 1.6rem; text-align: center; display: grid; gap: .25rem; }
+.shield .n { font: 700 2.2rem/1 var(--display); color: hsl(var(--h) 45% 38%); }
+:root[data-theme="dark"] .shield .n { color: hsl(var(--h) 55% 70%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shield .n { color: hsl(var(--h) 55% 70%); } }
+.shield b { font: 600 1.1rem var(--display); text-transform: uppercase; letter-spacing: .04em; }
+.shield span { font-size: .8rem; color: var(--ink-2); }
+.find { width: 100%; height: 2.8rem; border: 2px solid var(--line); border-radius: 6px; background: var(--paper); padding: 0 .9rem; margin-bottom: .7rem; }
+.roll { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+.roll div { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: .7rem; align-items: center; padding: .55rem .9rem; border-bottom: 1px dashed var(--line); }
+.roll div:last-child { border-bottom: 0; }
+.roll i { font: .78rem var(--mono); font-style: normal; color: var(--ink-2); }
+.roll b { font-size: .98rem; } .roll small { display: block; font-size: .8rem; color: var(--ink-2); }
+.roll em { font: 600 .74rem var(--display); text-transform: uppercase; letter-spacing: .08em; font-style: normal; color: var(--olive); }
+
+/* gear tags */
+.cats { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.cats button { border: 2px solid var(--line); background: var(--paper); border-radius: 4px; padding: .25rem .7rem; font: 600 .8rem var(--display); text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+.cats button.on { background: var(--olive); color: var(--olive-ink); border-color: var(--olive); }
+.tags { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1.1rem; }
+.tag { background: var(--paper); border: 1px solid var(--line); border-radius: 8px 8px 8px 8px; padding: 1rem; display: grid; gap: .7rem; position: relative; clip-path: polygon(0 0, calc(100% - 1.6rem) 0, 100% 1.6rem, 100% 100%, 0 100%); }
+.tag::before { content: ""; position: absolute; right: .55rem; top: .55rem; width: .7rem; height: .7rem; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); }
+.code { font: .78rem var(--mono); color: var(--ink-2); letter-spacing: .05em; }
+.tag h3 { margin: 0; font: 600 1.3rem/1.15 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+.spec { display: grid; grid-template-columns: auto 1fr; gap: .2rem .8rem; font-size: .9rem; margin: 0; }
+.spec dt { font: .72rem var(--mono); text-transform: uppercase; color: var(--ink-2); padding-top: .15rem; } .spec dd { margin: 0; }
+.out { font: 600 .82rem var(--display); text-transform: uppercase; letter-spacing: .06em; padding: .4rem .6rem; border-radius: 4px; border: 2px solid currentColor; justify-self: start; }
+.out.free { color: var(--ok); } .out.lent { color: var(--signal); } .out.late { color: var(--late); background: var(--late-soft); }
+.note { margin-top: 2rem; font: .75rem var(--mono); color: var(--ink-2); }
+@media (max-width: 520px) { .tl::before { left: 1.6rem; } .entry { grid-template-columns: 3.2rem minmax(0, 1fr); gap: .7rem; } .date b { font-size: 1.4rem; } .passport { grid-template-columns: 1fr; } .idrow h1 { font-size: 1.6rem; } }
+</style>
+
+<header class="band">
+  <svg class="topo" id="topo" preserveAspectRatio="xMidYMid slice" viewBox="0 0 800 300" aria-hidden="true"></svg>
+  <div class="in">
+    <div class="idrow">
+      <div class="patch"><div><b>307</b><span>ЛЬВІВ</span></div></div>
+      <div class="grow"><h1>Чорногора</h1><p>КУРІНЬ Ч. 307 · 49°50′ Пн, 24°01′ Сх</p></div>
+      <label class="fs" for="fsr">Шрифт <input id="fsr" type="range" min="0" max="4" step="1" value="1" data-fs-range> <span data-fs-label>100%</span></label>
+    </div>
+    <nav class="tabs" aria-label="Розділи"><a href="#news" data-tab="news">Новини</a><a href="#kurin" data-tab="kurin">Курінь</a><a href="#inventory" data-tab="inventory">Інтендантство</a></nav>
+  </div>
+</header>
+<main class="col">
+  <section data-panel="news" id="p-news"></section>
+  <section data-panel="kurin" id="p-kurin" hidden></section>
+  <section data-panel="inventory" id="p-inventory" hidden></section>
+  <p class="note">ВАРІАНТ «ПОЛЬОВИЙ»: польовий журнал. Топографія, хронологія, бирки спорядження з інвентарним кодом, плівка мініатюр під фото. Демо-дані вигадані.</p>
+</main>
+
+<script>
+/*SHARED_JS*/
+</script>
+<script>
+(function () {
+  const D = window.PLAST, esc = D.esc;
+  const MON = ['СІЧ', 'ЛЮТ', 'БЕР', 'КВІ', 'ТРА', 'ЧЕР', 'ЛИП', 'СЕР', 'ВЕР', 'ЖОВ', 'ЛИС', 'ГРУ'];
+
+  // contour lines: perturbed closed curves around two summits
+  (function topo() {
+    const svg = document.getElementById('topo'); let out = '';
+    [[560, 120, 13], [180, 230, 8]].forEach(([cx, cy, n], s) => {
+      for (let k = 1; k <= n; k++) {
+        const r = k * 22, pts = [];
+        for (let a = 0; a <= 64; a++) {
+          const t = (a / 64) * Math.PI * 2;
+          const rr = r * (1 + 0.16 * Math.sin(3 * t + k * 0.5 + s) + 0.09 * Math.cos(5 * t - k * 0.3) + 0.05 * Math.sin(9 * t + s));
+          pts.push((cx + rr * Math.cos(t) * 1.35).toFixed(1) + ',' + (cy + rr * Math.sin(t)).toFixed(1));
+        }
+        out += `<polyline points="${pts.join(' ')}" fill="none" stroke="currentColor" stroke-width="${k % 4 === 0 ? 2 : 1}"/>`;
+      }
+    });
+    svg.innerHTML = out;
+  })();
+
+  function renderNews() {
+    document.getElementById('p-news').innerHTML = `<h2 class="h">Журнал куреня</h2><div class="tl">${D.news.map((p) => {
+      const d = new Date(p.date);
+      return `<div class="entry"><div class="date"><b>${d.getDate()}</b><span>${MON[d.getMonth()]}</span></div>
+      <article class="card${p.pinned ? ' pin' : ''}">
+        <div class="kick">${p.pinned ? '<span class="stamp">Наказ дня</span>' : `<span class="stamp">${esc(p.tag)}</span>`}<span>${d.toTimeString().slice(0, 5)}</span></div>
+        <h2>${esc(p.title)}</h2>
+        ${p.body.map((t) => `<p>${esc(t)}</p>`).join('')}
+        ${p.list ? `<ul>${p.list.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+        ${p.event ? `<dl class="order"><dt>Коли</dt><dd>${esc(p.event.when)}</dd><dt>Де</dt><dd>${esc(p.event.where)}</dd><dt>Форма</dt><dd>Однострій, теплий одяг</dd></dl>` : ''}
+        ${p.photos.length ? D.carousel(p.photos, { label: p.title, nav: p.photos.length > 1 ? 'thumbs' : 'dots', ratio: '16/10' }) : ''}
+        <p class="sig">${esc(p.author.first + ' ' + p.author.last)}${p.author.nick ? ' «' + esc(p.author.nick) + '»' : ''}, ${esc(p.role.toLowerCase())}</p>
+        <div class="rxs" data-rx-bar>${D.reactionsHTML(p)}</div>
+      </article></div>`;
+    }).join('')}</div>`;
+  }
+
+  const chev = '<svg class="chev" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M8 14 20 6l12 8M8 24l12-8 12 8M8 34l12-8 12 8"/></svg>';
+  let rq = '';
+  const roll = () => D.roster.filter((j) => (j.first + ' ' + j.last + ' ' + j.hurtok).toLowerCase().includes(rq.toLowerCase())).map((j, i) => `<div><i>${String(i + 1).padStart(2, '0')}</i><span style="min-width:0"><b>${esc(j.last)} ${esc(j.first)}</b><small>гурток «${esc(j.hurtok)}» · ${j.born} р.н.</small></span><em>${esc(j.degree)}</em></div>`).join('') || '<div><i>—</i><span>Нікого не знайдено.</span></div>';
+  function renderKurin() {
+    const k = D.kurin;
+    document.getElementById('p-kurin').innerHTML = `
+      <h2 class="h">Паспорт куреня</h2>
+      <div class="passport"><div class="patch"><div><b>307</b><span>ЧОРНОГОРА</span></div></div>
+        <dl><div><dt>Назва</dt><dd>${esc(k.name)}</dd></div><div><dt>Станиця</dt><dd>${esc(k.stanytsia)}</dd></div><div><dt>Стать</dt><dd>${esc(k.gender)}</dd></div><div><dt>Програма проби</dt><dd>${esc(k.program)}</dd></div><div><dt>Засновано</dt><dd>${k.founded}</dd></div><div><dt>Google Drive</dt><dd>Підключено</dd></div></dl></div>
+      <h2 class="h">Провід</h2>
+      <div class="ranks">${D.provid.map((r) => `<div class="rank">${chev}<div><span>${esc(r.role)}</span><b>${esc(r.who.first + ' ' + r.who.last)}</b></div></div>`).join('')}</div>
+      <h2 class="h">Гуртки</h2>
+      <div class="shields">${D.hurtky.map((h) => `<div class="shield" style="--h:${h.color}"><span class="n">${h.number}</span><b>${esc(h.name)}</b><span>${h.count} юнаків</span><span>гуртковий ${esc(h.hurtkovyi)}</span></div>`).join('')}</div>
+      <h2 class="h">Список складу</h2>
+      <input class="find" id="rq" type="search" placeholder="Пошук за прізвищем або гуртком" aria-label="Пошук у складі" value="${esc(rq)}">
+      <div class="roll" id="roll">${roll()}</div>`;
+  }
+  document.addEventListener('input', (e) => { if (e.target.id === 'rq') { rq = e.target.value; document.getElementById('roll').innerHTML = roll(); } });
+
+  let cat = 'Усі';
+  function renderInv() {
+    const items = D.inventory.filter((i) => cat === 'Усі' || i.cat === cat);
+    const st = (it) => it.lent ? (it.lent.overdue ? `<span class="out late">Прострочено · ${esc(it.lent.who)} · з ${D.fmtDue(it.lent.due)}</span>` : `<span class="out lent">Видано · ${esc(it.lent.who)} · до ${D.fmtDue(it.lent.due)}</span>`) : '<span class="out free">На складі</span>';
+    document.getElementById('p-inventory').innerHTML = `
+      <h2 class="h">Реманент · ${D.inventory.length} позицій</h2>
+      <div class="cats">${['Усі', ...D.CATS].map((c) => `<button type="button" class="${c === cat ? 'on' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+      <div class="tags">${items.map((it, i) => `<article class="tag">
+        <span class="code">ЧГ-307-${String(D.inventory.indexOf(it) + 1).padStart(3, '0')}</span>
+        <h3>${esc(it.name)}</h3>
+        ${D.carousel(it.photos, { label: it.name, nav: 'thumbs', ratio: '4/3' })}
+        <dl class="spec"><dt>К-сть</dt><dd>${it.qty} шт</dd><dt>Місце</dt><dd>${esc(it.place)}</dd><dt>Стан</dt><dd>${esc(it.condition)}</dd></dl>
+        ${st(it)}
+      </article>`).join('')}</div>`;
+  }
+  document.addEventListener('click', (e) => { const c = e.target.closest('[data-cat]'); if (c) { cat = c.dataset.cat; renderInv(); } });
+
+  renderNews(); renderKurin(); renderInv();
+  D.initFs(); D.initTabs();
+})();
+</script>
