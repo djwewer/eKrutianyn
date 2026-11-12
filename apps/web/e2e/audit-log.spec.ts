@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
+import { createHurtok, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 test('shows zvyazkovyi the hurtok creation in the audit log', async ({ page }) => {
   const { program } = await seedProbyProgram();

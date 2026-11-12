@@ -44,8 +44,10 @@ function degreeMonthYear(iso: string) {
 export default function PlastuvanniaPage() {
   const { data: session } = useSession();
   const { data: program } = useProbyProgram();
-  const { data: progress } = useJunakProgress(session?.userId);
-  const { data: degrees } = useJunakDegrees(session?.userId);
+  // The hooks' `enabled: !!junakId` keeps them idle for roles without access to the hub.
+  const hubUserId = session && (session.role === 'JUNAK' || session.role === 'ZVYAZKOVYI') ? session.userId : undefined;
+  const { data: progress } = useJunakProgress(hubUserId);
+  const { data: degrees } = useJunakDegrees(hubUserId);
   if (!session) return null;
   if (session.role !== 'JUNAK' && session.role !== 'ZVYAZKOVYI') {
     return <p className="text-sm text-destructive">Немає доступу.</p>;
@@ -58,7 +60,7 @@ export default function PlastuvanniaPage() {
       <PageHeader
         title="Моє пластування"
         subtitle="Проба, вмілості, акції і помічник для підготовки"
-        actions={session.role === 'ZVYAZKOVYI' && <Badge>Тестовий режим: хаб юнака</Badge>}
+        actions={session.role === 'ZVYAZKOVYI' && <Badge variant="signal">Тестовий режим: хаб юнака</Badge>}
       />
       {degrees && (
         <div className="grid grid-cols-2 gap-2 min-[760px]:grid-cols-4">

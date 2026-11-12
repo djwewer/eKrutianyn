@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
+import { createHurtok, loginForToken, createOnboardedUserAs } from './helpers/proby-seed';
 
 test('shows a clean access-denied state instead of a crash or false empty state', async ({ page, request }) => {
   const { program } = await seedProbyProgram();

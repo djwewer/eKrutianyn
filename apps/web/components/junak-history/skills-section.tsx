@@ -44,7 +44,7 @@ export function SkillsSection({ junakId, skills, canEdit }: { junakId: string; s
               {items.map((s) => (
                 <li key={s.id} className="flex items-start justify-between gap-2" data-testid="junak-skill">
                   <span className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Badge className="min-w-0 max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">
+                    <Badge variant="mute" className="min-w-0 max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">
                       {s.skillName} {s.level}
                     </Badge>
                     <span className="text-muted-foreground">{formatDate(s.achievedAt)}</span>

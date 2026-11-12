@@ -11,9 +11,6 @@ const badgeVariants = cva(
         ok: "bg-ok-soft text-ok",
         late: "bg-late-soft text-late",
         mute: "border border-line bg-background text-ink-2",
-        accent: "border border-line bg-background text-ink-2",
-        warning: "bg-signal-soft text-signal-ink",
-        neutral: "border border-line bg-background text-ink-2",
       },
     },
     defaultVariants: {

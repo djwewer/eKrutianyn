@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label';
 import type { Role, UserSummary } from '@/lib/types';
 import { nativeSelectClass } from '@/components/ui/native-select';
 
-
 function ZvyazkovyiDirectCreateForm({
   initialHurtokId,
   initialRole,

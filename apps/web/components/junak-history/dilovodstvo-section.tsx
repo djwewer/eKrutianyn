@@ -80,8 +80,8 @@ export function DilovodstvoSection({
                 <span className="text-muted-foreground">
                   {row.context}, {row.period}
                 </span>
-                {row.current && <Badge>зараз</Badge>}
-                {row.past && <Badge variant="neutral">до застосунку</Badge>}
+                {row.current && <Badge variant="ok">зараз</Badge>}
+                {row.past && <Badge variant="mute">до застосунку</Badge>}
               </span>
               {canEdit && row.past && (
                 <RowActions

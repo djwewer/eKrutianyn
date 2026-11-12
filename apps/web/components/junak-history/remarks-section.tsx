@@ -32,7 +32,7 @@ export function RemarksSection({ junakId, entries, canEdit }: { junakId: string;
             <li key={remark.id} className="space-y-1 border-b border-border pb-3 last:border-b-0 last:pb-0" data-testid="history-remark">
               <div className="flex items-start justify-between gap-2">
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <Badge variant={remark.kind === 'WARNING' ? 'warning' : 'accent'}>{REMARK_KIND_LABELS[remark.kind]}</Badge>
+                  <Badge variant={remark.kind === 'WARNING' ? 'signal' : 'mute'}>{REMARK_KIND_LABELS[remark.kind]}</Badge>
                   <span className="text-muted-foreground">{formatDate(remark.date)}</span>
                 </span>
                 {canEdit && (

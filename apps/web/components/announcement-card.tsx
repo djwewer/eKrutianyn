@@ -68,6 +68,11 @@ export function AnnouncementCard({
         <span className="block bg-background py-[.2rem] text-[.72rem] tracking-[.08em] text-ink-2 uppercase">
           {MONTHS[created.getMonth()]}
         </span>
+        {created.getFullYear() !== new Date().getFullYear() && (
+          <span className="block bg-background font-mono text-[.66rem] leading-none tracking-[.04em] text-ink-2">
+            {created.getFullYear()}
+          </span>
+        )}
       </div>
       <article className="grid min-w-0 gap-3 rounded-[6px] border border-line bg-paper p-4">
         <div className="flex flex-wrap items-center gap-[.6rem] font-mono text-[.75rem] tracking-[.03em] text-ink-2">
