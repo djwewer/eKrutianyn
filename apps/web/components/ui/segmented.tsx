@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-type SegmentedOption<T> = { value: T; label: React.ReactNode }
+type SegmentedOption<T> = { value: T; label: React.ReactNode; disabled?: boolean }
 
 // Single-select segmented control following the WAI-ARIA radio group pattern:
 // the checked radio is the only tab stop; arrows/Home/End move and select.
@@ -23,30 +23,40 @@ function Segmented<T extends string | number>({
 }) {
   const refs = React.useRef<(HTMLButtonElement | null)[]>([])
 
+  const enabled = options.map((o, i) => (o.disabled ? -1 : i)).filter((i) => i >= 0)
+  const checkedIndex = options.findIndex((o) => o.value === value)
+  // Tab stop: the checked option, or the first enabled one when nothing matches.
+  const tabStop = checkedIndex >= 0 && !options[checkedIndex].disabled ? checkedIndex : (enabled[0] ?? -1)
+
+  function select(index: number) {
+    if (options[index].value !== value) onChange(options[index].value)
+    refs.current[index]?.focus()
+  }
+
   function onKeyDown(e: React.KeyboardEvent, index: number) {
-    const last = options.length - 1
+    if (enabled.length === 0) return
+    const pos = enabled.indexOf(index)
     let next: number
     switch (e.key) {
       case "ArrowRight":
       case "ArrowDown":
-        next = index === last ? 0 : index + 1
+        next = enabled[(pos + 1) % enabled.length]
         break
       case "ArrowLeft":
       case "ArrowUp":
-        next = index === 0 ? last : index - 1
+        next = enabled[(pos - 1 + enabled.length) % enabled.length]
         break
       case "Home":
-        next = 0
+        next = enabled[0]
         break
       case "End":
-        next = last
+        next = enabled[enabled.length - 1]
         break
       default:
         return
     }
     e.preventDefault()
-    onChange(options[next].value)
-    refs.current[next]?.focus()
+    select(next)
   }
 
   return (
@@ -70,11 +80,12 @@ function Segmented<T extends string | number>({
             type="button"
             role="radio"
             aria-checked={on}
-            tabIndex={on ? 0 : -1}
-            onClick={() => onChange(option.value)}
+            tabIndex={i === tabStop ? 0 : -1}
+            disabled={option.disabled}
+            onClick={() => select(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              "cursor-pointer border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line",
+              "cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line",
               on ? "bg-navy text-navy-ink" : "bg-paper text-ink",
             )}
           >

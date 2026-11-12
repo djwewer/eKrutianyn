@@ -25,6 +25,10 @@ const eventDay = (iso: string) => {
   const { year, month, day } = eventDate(iso);
   return dayNumber(year, month, day);
 };
+// yyyy-mm-dd of the viewer's local date (not the UTC date).
+export function localDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 // dd.mm.yyyy, same shape as toLocaleDateString('uk-UA'), without a timezone shift.
 export function formatEventDate(iso: string) {
   const { year, month, day } = eventDate(iso);

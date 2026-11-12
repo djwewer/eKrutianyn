@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Segmented } from '@/components/ui/segmented';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
-import { buildTimeline, eventDate, formatEventDate, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
+import { buildTimeline, eventDate, formatEventDate, localDateKey, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
 import type { KurinCalendarEvent } from '@/lib/types';
 
 const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -29,8 +29,12 @@ function DateRangeField({
 }) {
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => {
-    const base = startDate ? new Date(startDate) : new Date();
-    return { year: base.getFullYear(), month: base.getMonth() };
+    if (startDate) {
+      const { year, month } = eventDate(startDate);
+      return { year, month };
+    }
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
   });
   const [pendingStart, setPendingStart] = useState<string | null>(startDate || null);
   const [pendingEnd, setPendingEnd] = useState<string | null>(endDate || null);
@@ -70,8 +74,8 @@ function DateRangeField({
   const label = !startDate
     ? 'Оберіть дату'
     : !endDate || endDate === startDate
-      ? new Date(startDate).toLocaleDateString('uk-UA')
-      : `${new Date(startDate).toLocaleDateString('uk-UA')} – ${new Date(endDate).toLocaleDateString('uk-UA')}`;
+      ? formatEventDate(startDate)
+      : `${formatEventDate(startDate)} – ${formatEventDate(endDate)}`;
 
   return (
     <div className="space-y-2">
@@ -136,7 +140,7 @@ function DateRangeField({
           </div>
           {pendingStart && !pendingEnd && (
             <p className="text-xs text-muted-foreground">
-              Обрано {new Date(pendingStart).toLocaleDateString('uk-UA')}. Клікніть ще раз цю саму дату для одноденної
+              Обрано {formatEventDate(pendingStart)}. Клікніть ще раз цю саму дату для одноденної
               події, або іншу дату — для діапазону.
             </p>
           )}
@@ -156,7 +160,7 @@ function AddEventDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [title, setTitle] = useState('');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() => localDateKey(new Date()));
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
   const create = useCreateCalendarEvent(kurinId);
