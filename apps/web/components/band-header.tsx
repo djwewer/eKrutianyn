@@ -124,7 +124,7 @@ export function BandHeader({
   const subtitle = !kurin
     ? ''
     : number
-      ? `КУРІНЬ Ч. ${number} · СТАНИЦЯ ${kurin.stanytsia}`
+      ? `КУРІНЬ Ч. ${number} · СТАНИЦЯ ${kurin.stanytsia.toLocaleUpperCase('uk')}`
       : 'ПІДГОТОВЧИЙ КУРІНЬ';
   const initials = profile ? getInitials(profile.firstName, profile.lastName) : '';
   const photoUrl = profile?.photoUpdatedAt
@@ -133,7 +133,7 @@ export function BandHeader({
   const [photoFailed, setPhotoFailed] = useState(false);
 
   return (
-    <header className="sticky top-[env(safe-area-inset-top,0px)] z-[15] bg-band text-band-ink">
+    <header className="sticky top-0 z-[15] bg-band pt-[env(safe-area-inset-top,0px)] text-band-ink">
       <div className="mx-auto max-w-[72rem] pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pt-[.7rem]">
         <div className="flex items-center gap-[.8rem] pb-[.55rem]">
           <Link
