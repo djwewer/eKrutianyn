@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center min-h-[2.6rem] rounded-[4px] border-2 border-transparent bg-clip-padding font-display text-[.86rem] font-semibold tracking-[.07em] uppercase whitespace-nowrap transition-all outline-none select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center min-h-[2.6rem] rounded-[4px] border-2 border-transparent bg-clip-padding font-display text-[.86rem] font-semibold tracking-[.07em] uppercase whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -18,7 +18,7 @@ const buttonVariants = cva(
         destructive:
           "border-late-soft bg-transparent text-late hover:border-late",
         link: "min-h-0 text-primary underline-offset-4 hover:underline",
-        signal: "border-signal bg-signal text-white hover:bg-signal/90",
+        signal: "border-signal bg-signal text-white hover:bg-signal/90 dark:text-navy-ink",
       },
       size: {
         default:
