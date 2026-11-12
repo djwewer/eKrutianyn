@@ -132,7 +132,7 @@ export function HurtokSettingsDialog({
           <div className="flex gap-2">
             <select
               id="vykhovnyk-select"
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className="min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-sm focus-visible:border-navy focus-visible:outline-none"
               value={currentVykhovnykAssignment?.vykhovnykId ?? ''}
               disabled={vykhovnykSelectDisabled}
               onChange={(e) => handleVykhovnykChange(e.target.value)}
@@ -166,7 +166,7 @@ export function HurtokSettingsDialog({
               <div className="flex items-center gap-2">
                 <select
                   id={`position-${positionType}`}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  className="min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-sm focus-visible:border-navy focus-visible:outline-none"
                   value={current?.user.id ?? ''}
                   disabled={positionSelectsDisabled}
                   onChange={(e) => handlePositionChange(positionType, e.target.value)}
@@ -193,9 +193,9 @@ export function HurtokSettingsDialog({
           );
         })}
 
-        <div className="space-y-2 border-t pt-4">
+        <div className="space-y-2 border-t border-line pt-4">
           <Button
-            variant="outline"
+            variant="destructive"
             disabled={!canArchive || archiveHurtok.isPending}
             onClick={() => {
               if (window.confirm(`Архівувати гурток «${hurtok.name}»?`)) {
@@ -206,7 +206,7 @@ export function HurtokSettingsDialog({
             Розформувати гурток
           </Button>
           {!canArchive && (
-            <p className="text-sm text-muted-foreground">У гуртку ще є юнаки чи виховник — спершу зніміть їх.</p>
+            <p className="text-sm text-ink-2">У гуртку ще є юнаки чи виховник — спершу зніміть їх.</p>
           )}
           {archiveHurtok.isError && (
             <p className="text-sm text-destructive">

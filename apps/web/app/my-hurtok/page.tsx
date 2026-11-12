@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
+import { PageHeader } from '@/components/ui/page-header';
 import { HurtokDetailPanel } from '@/components/hurtok-detail-panel';
 
 export default function MyHurtokPage() {
@@ -24,24 +25,24 @@ export default function MyHurtokPage() {
   const current = mine.find((h) => h.slug === selected) ?? mine[0];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Мій гурток</h1>
+    <div>
+      <PageHeader title="Мій гурток" />
       {mine.length > 1 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Гурток">
+        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Гурток">
           {mine.map((h) => (
             <button
               key={h.id}
               type="button"
               aria-pressed={h.id === current.id}
               onClick={() => setSelected(h.slug)}
-              className={`rounded-full border px-3.5 py-1.5 text-sm font-medium ${h.id === current.id ? 'border-transparent bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-accent-soft'}`}
+              className={`min-h-[2.1rem] rounded-[4px] border-2 px-[.8rem] py-1 font-display text-[.76rem] font-semibold tracking-[.07em] uppercase ${h.id === current.id ? 'border-navy bg-primary text-primary-foreground' : 'border-line bg-paper hover:border-navy'}`}
             >
               {h.name}
             </button>
           ))}
         </div>
       )}
-      <HurtokDetailPanel slug={current.slug!} />
+      <HurtokDetailPanel slug={current.slug!} heading="section" />
     </div>
   );
 }

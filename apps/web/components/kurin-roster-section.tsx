@@ -40,13 +40,14 @@ export function KurinRosterSection({ role }: { role: Extract<Role, 'VYKHOVNYK' |
       )}
       <RowList>
         {rosterUsers.map((u) => (
-          <Link key={u.id} href={`/users/${u.id}`}>
+          <Link key={u.id} href={`/users/${u.id}`} className="block border-b border-dashed border-line last:border-b-0">
             <Row
+              className="border-b-0"
               initials={getInitials(u.firstName, u.lastName)}
               photoUrl={u.photoUpdatedAt ? `/api/backend/users/${u.id}/photo?v=${u.photoUpdatedAt}` : null}
               title={`${u.lastName} ${u.firstName}`}
             >
-              <Badge variant="neutral">{ROLE_LABELS[u.role]}</Badge>
+              <Badge variant="mute">{ROLE_LABELS[u.role]}</Badge>
             </Row>
           </Link>
         ))}

@@ -11,6 +11,11 @@ import { accessErrorMessage } from '@/lib/error-message';
 import { HurtokDetailPanel } from '@/components/hurtok-detail-panel';
 import type { Hurtok } from '@/lib/types';
 
+function hurtokHue(h: Hurtok) {
+  const n = parseInt(h.number ?? '', 10);
+  return ((Number.isNaN(n) ? (h.name.codePointAt(0) ?? 0) : n) * 47) % 360;
+}
+
 export function KurinHurtkySection() {
   const { data: session } = useSession();
   const {
@@ -37,29 +42,35 @@ export function KurinHurtkySection() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-[.9rem]">
       {session?.role === 'ZVYAZKOVYI' && (
         <Link href="/hurtky/new" className="inline-block">
           <Button size="sm">Новий гурток</Button>
         </Link>
       )}
-      <AccordionRoot multiple>
+      <AccordionRoot multiple className="gap-[.6rem]">
         {displayedHurtky.map((h) => (
           <AccordionItem key={h.id} value={h.slug ?? h.id} disabled={!h.slug}>
             <AccordionTrigger>
-              <span className="min-w-0 flex-1 truncate">
-                {h.name}
-                {h.number ? ` №${h.number}` : ''}
+              <span
+                aria-hidden="true"
+                style={{ '--h': hurtokHue(h) } as React.CSSProperties}
+                className="grid size-[2.3rem] shrink-0 place-items-center rounded-[4px] bg-[hsl(var(--h)_40%_88%)] font-display text-[1.5rem] leading-none font-bold tracking-normal text-[hsl(var(--h)_45%_25%)] dark:bg-[hsl(var(--h)_25%_20%)] dark:text-[hsl(var(--h)_55%_75%)]"
+              >
+                {h.number ?? h.name.charAt(0).toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-base">{h.name}</span>
                 {vykhovnykNameByHurtokId[h.id] && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    · {vykhovnykNameByHurtokId[h.id]}
+                  <span className="block font-sans text-[.85rem] font-normal tracking-normal text-ink-2 normal-case">
+                    виховник {vykhovnykNameByHurtokId[h.id]}
                   </span>
                 )}
               </span>
             </AccordionTrigger>
             {h.slug && (
               <AccordionContent>
-                <HurtokDetailPanel slug={h.slug} />
+                <HurtokDetailPanel slug={h.slug} heading="none" />
               </AccordionContent>
             )}
           </AccordionItem>

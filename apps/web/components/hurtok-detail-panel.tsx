@@ -7,12 +7,18 @@ import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
 import { useUser } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { ROLE_LABELS, POSITION_LABELS } from '@/lib/role-labels';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RowList, Row } from '@/components/ui/row-list';
+import { PageHeader } from '@/components/ui/page-header';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { Button } from '@/components/ui/button';
+import { getInitials } from '@/lib/utils';
 import { accessErrorMessage } from '@/lib/error-message';
 import { HurtokSettingsDialog } from '@/components/hurtok-settings-dialog';
 
-export function HurtokDetailPanel({ slug }: { slug: string }) {
+// heading: 'page' renders the hurtok name as the page h1 (own route), 'section'
+// as an h2 (under another page's h1), 'none' omits it (inside the kurin accordion,
+// whose trigger already names the hurtok).
+export function HurtokDetailPanel({ slug, heading = 'page' }: { slug: string; heading?: 'page' | 'section' | 'none' }) {
   const { data, isLoading, isError, error } = useHurtokBySlug(slug);
   const { data: session } = useSession();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -40,35 +46,15 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
     return a.lastName.localeCompare(b.lastName, 'uk');
   });
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-2xl font-bold">
-          {data.hurtok.name}
-          {data.hurtok.number ? ` №${data.hurtok.number}` : ''}
-        </h1>
-        {vykhovnyk && (
-          <p className="text-sm text-muted-foreground">
-            Виховник: {vykhovnyk.lastName} {vykhovnyk.firstName}
-          </p>
-        )}
-      </div>
-      {data.hurtok.foundedAt && (
-        <p className="text-sm text-muted-foreground">
-          Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA', { timeZone: 'UTC' })}
-        </p>
-      )}
-      {data.hurtok.archivedAt && (
-        <p className="text-sm text-muted-foreground">
-          Архівовано {new Date(data.hurtok.archivedAt).toLocaleDateString('uk-UA')}
-        </p>
-      )}
-      <div className="flex gap-2">
+  const title = `${data.hurtok.name}${data.hurtok.number ? ` №${data.hurtok.number}` : ''}`;
+  const vykhovnykLine = vykhovnyk ? `Виховник: ${vykhovnyk.lastName} ${vykhovnyk.firstName}` : null;
+
+  const actions =
+    canAddJunak || canConfigure ? (
+      <>
         {canAddJunak && (
           <Link href={`/users/new?hurtokId=${data.hurtok.id}`}>
-            <Button size="sm" variant="outline">
-              Додати юнака/чку
-            </Button>
+            <Button size="sm">+ Додати юнака/чку</Button>
           </Link>
         )}
         {canConfigure && (
@@ -76,7 +62,33 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
             Налаштування
           </Button>
         )}
-      </div>
+      </>
+    ) : null;
+
+  const meta = (
+    <>
+      {data.hurtok.foundedAt && (
+        <p className="m-0 text-sm text-ink-2">
+          Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA', { timeZone: 'UTC' })}
+        </p>
+      )}
+      {data.hurtok.archivedAt && (
+        <p className="m-0 text-sm text-ink-2">Архівовано {new Date(data.hurtok.archivedAt).toLocaleDateString('uk-UA')}</p>
+      )}
+    </>
+  );
+
+  return (
+    <div className="space-y-[.9rem]">
+      {heading === 'page' && <PageHeader title={title} subtitle={vykhovnykLine} actions={actions} />}
+      {heading === 'section' && (
+        <>
+          <SectionHeading>{title}</SectionHeading>
+          {vykhovnykLine && <p className="m-0 text-sm text-ink-2">{vykhovnykLine}</p>}
+        </>
+      )}
+      {meta}
+      {heading !== 'page' && actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       {canConfigure && (
         <HurtokSettingsDialog
           hurtok={data.hurtok}
@@ -85,24 +97,23 @@ export function HurtokDetailPanel({ slug }: { slug: string }) {
           onOpenChange={setSettingsOpen}
         />
       )}
-      <div className="space-y-2">
+      <RowList>
         {sortedMembers.map((member) => (
-          <Link key={member.id} href={`/users/${member.id}`}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {member.lastName} {member.firstName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                {ROLE_LABELS[member.role]}
-                {member.positions.length > 0 &&
-                  ` · ${member.positions.map((p) => POSITION_LABELS[p.positionType]).join(', ')}`}
-              </CardContent>
-            </Card>
+          <Link key={member.id} href={`/users/${member.id}`} className="block border-b border-dashed border-line last:border-b-0">
+            <Row
+              className="border-b-0"
+              initials={getInitials(member.firstName, member.lastName)}
+              photoUrl={member.photoUpdatedAt ? `/api/backend/users/${member.id}/photo?v=${member.photoUpdatedAt}` : null}
+              title={`${member.lastName} ${member.firstName}`}
+              subtitle={`${ROLE_LABELS[member.role]}${
+                member.positions.length > 0 ? ` · ${member.positions.map((p) => POSITION_LABELS[p.positionType]).join(', ')}` : ''
+              }`}
+            >
+              <span aria-hidden="true" className="text-[1.2rem] text-ink-2">›</span>
+            </Row>
           </Link>
         ))}
-      </div>
+      </RowList>
     </div>
   );
 }

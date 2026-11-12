@@ -6,6 +6,8 @@ import { useUsers } from '@/lib/queries/users';
 import { useSession } from '@/lib/session-client';
 import { accessErrorMessage } from '@/lib/error-message';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
+import { getInitials } from '@/lib/utils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { KurinPosition, PositionType } from '@/lib/types';
 
@@ -53,14 +55,16 @@ function ProvidSlot({
   const removeErrorMsg = remove.isError ? (accessErrorMessage(remove.error) ?? 'Помилка при зняттю.') : null;
 
   return (
-    <div className="border-b py-2 last:border-b-0">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="w-20 shrink-0 font-medium sm:w-32">{label}</span>
+    <div className="min-w-0 rounded-[6px] border border-line bg-background px-[.8rem] py-[.7rem]">
+      <div className="flex items-center gap-[.7rem] text-sm">
+        <Avatar initials={current ? getInitials(current.user.firstName, current.user.lastName) : '—'} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="w-full font-mono text-[.7rem] tracking-[.05em] text-ink-2 uppercase">{label}</span>
         {current ? (
           <>
-            <span className="min-w-0 flex-1 truncate">
+            <b className="min-w-0 flex-1 text-[.98rem] leading-tight">
               {current.user.lastName} {current.user.firstName}
-            </span>
+            </b>
             {canEdit && (
               <Button variant="outline" size="sm" onClick={() => remove.mutate(current.id)} disabled={remove.isPending}>
                 Зняти
@@ -107,8 +111,9 @@ function ProvidSlot({
             </Button>
           </>
         ) : (
-          <span className="flex-1 text-muted-foreground">— немає —</span>
+          <span className="flex-1 text-ink-2">— немає —</span>
         )}
+        </div>
       </div>
       {assignErrorMsg && <p className="mt-1 text-xs text-destructive">{assignErrorMsg}</p>}
       {removeErrorMsg && <p className="mt-1 text-xs text-destructive">{removeErrorMsg}</p>}
@@ -134,7 +139,7 @@ export function KurinProvidSection() {
   }
 
   return (
-    <div>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-[.6rem]">
       {KURIN_POSITION_TYPES.map((p) => (
         <ProvidSlot
           key={p.value}

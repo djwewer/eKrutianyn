@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSession } from '@/lib/session-client';
+import { PageHeader } from '@/components/ui/page-header';
 import { AccordionRoot, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { KurinInfoSection } from '@/components/kurin-info-section';
 import { KurinProvidSection } from '@/components/kurin-provid-section';
@@ -22,9 +23,10 @@ function KurinPageContent() {
   const hasFullAccess =
     session?.role === 'ZVYAZKOVYI' || session?.isKurinniy || (session?.positions ?? []).includes('SUDDIA');
 
-  const sections: { key: string; title: string; icon: React.ReactNode; render: () => React.ReactNode }[] = [
+  const sections: { key: string; title: string; sub: string; icon: React.ReactNode; render: () => React.ReactNode }[] = [
     {
       key: 'info',
+      sub: 'Номер, станиця, програма проби, Google Drive',
       title: 'Інформація про курінь',
       icon: (
         <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -36,6 +38,7 @@ function KurinPageContent() {
     },
     {
       key: 'provid',
+      sub: 'Посади куреня',
       title: 'Провід куреня',
       icon: (
         <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -46,6 +49,7 @@ function KurinPageContent() {
     },
     {
       key: 'hurtky',
+      sub: 'Виховники та юнаки по гуртках',
       title: 'Гуртки',
       icon: (
         <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -60,6 +64,7 @@ function KurinPageContent() {
       ? [
           {
             key: 'vykhovnyky',
+            sub: 'Виховники та звʼязковий',
             title: 'Кадра виховників',
             icon: (
               <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -71,6 +76,7 @@ function KurinPageContent() {
           },
           {
             key: 'junatstvo',
+            sub: 'Усі юнаки куреня',
             title: 'Список юнацтва',
             icon: (
               <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -87,16 +93,19 @@ function KurinPageContent() {
   ];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Курінь</h1>
+    <div>
+      <PageHeader title="Курінь" />
       <AccordionRoot multiple>
         {sections.map((section) => (
           <AccordionItem key={section.key} value={section.key}>
             <AccordionTrigger>
-              <span className="flex size-[34px] shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-text">
+              <span className="grid size-[2.3rem] shrink-0 place-items-center rounded-[4px] border border-line bg-background text-navy [&_svg]:size-[1.2rem]">
                 {section.icon}
               </span>
-              <span className="min-w-0 flex-1">{section.title}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block">{section.title}</span>
+                <span className="block font-sans text-[.85rem] font-normal tracking-normal text-ink-2 normal-case">{section.sub}</span>
+              </span>
             </AccordionTrigger>
             <AccordionContent>{section.render()}</AccordionContent>
           </AccordionItem>

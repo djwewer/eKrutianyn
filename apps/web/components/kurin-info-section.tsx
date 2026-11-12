@@ -12,9 +12,9 @@ import { useGoogleDriveStatus, useConnectGoogleDrive, useDisconnectGoogleDrive }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-medium">{children}</span>
+    <div>
+      <dt className="font-mono text-[.7rem] tracking-[.06em] text-ink-2 uppercase">{label}</dt>
+      <dd className="m-0 mt-[.1rem] font-bold [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }
@@ -50,10 +50,10 @@ export function KurinInfoSection() {
   }
 
   return (
-    <div className="space-y-6 text-sm">
+    <div className="space-y-[.9rem]">
       <div className="space-y-4">
-        <h4 className="font-heading text-sm font-semibold">Дані куреня</h4>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <h4 className="sr-only">Дані куреня</h4>
+        <dl className="m-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]">
           <InfoRow label="Назва">{kurin.name}</InfoRow>
           <InfoRow label="Номер">{kurin.kurinNumber ?? 'Підготовчий (ще не присвоєно)'}</InfoRow>
           <InfoRow label="Станиця">{kurin.stanytsia}</InfoRow>
@@ -61,12 +61,12 @@ export function KurinInfoSection() {
           <InfoRow label="Програма проби">{kurin.probyProgram.version === 'OLD' ? 'Стара' : 'Нова'}</InfoRow>
           {canSeeDriveStatus && (
             <InfoRow label="Google Drive">
-              <Badge variant={driveStatus.data?.connected ? 'accent' : 'neutral'}>
+              <Badge variant={driveStatus.data?.connected ? 'ok' : 'mute'}>
                 {driveStatus.data?.connected ? 'Підключено' : 'Не підключено'}
               </Badge>
             </InfoRow>
           )}
-        </div>
+        </dl>
       </div>
 
       {canEdit && !isEditing && (
@@ -76,17 +76,17 @@ export function KurinInfoSection() {
       )}
 
       {canEdit && isEditing && (
-        <div className="space-y-4 rounded-lg border p-4">
+        <div className="space-y-4 rounded-[6px] border border-line bg-background p-4">
           <div className="space-y-2">
-            <h4 className="font-heading text-sm font-semibold">Google Drive</h4>
+            <h4 className="font-display text-[1.05rem] font-semibold tracking-[.02em]">Google Drive</h4>
             {driveStatus.data?.connected ? (
               <>
-                <p className="text-sm text-muted-foreground">Підключено як: {driveStatus.data.email}</p>
+                <p className="text-sm text-ink-2">Підключено як: {driveStatus.data.email}</p>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={connectDrive.isPending} onClick={() => connectDrive.mutate()}>
                     Перепідключити
                   </Button>
-                  <Button size="sm" variant="outline" disabled={disconnectDrive.isPending} onClick={handleDisconnectDrive}>
+                  <Button size="sm" variant="destructive" disabled={disconnectDrive.isPending} onClick={handleDisconnectDrive}>
                     Відключити
                   </Button>
                 </div>

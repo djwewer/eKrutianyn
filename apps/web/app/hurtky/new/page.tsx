@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type { Hurtok } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +30,9 @@ export default function NewHurtokPage() {
   });
 
   return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle>Новий гурток</CardTitle>
-      </CardHeader>
+    <>
+      <PageHeader title="Новий гурток" crumb={{ href: '/kurin', label: 'Курінь' }} />
+      <Card className="max-w-md">
       <CardContent>
         <form
           onSubmit={(e) => {
@@ -55,5 +55,6 @@ export default function NewHurtokPage() {
         </form>
       </CardContent>
     </Card>
+    </>
   );
 }
