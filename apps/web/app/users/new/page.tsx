@@ -7,11 +7,15 @@ import { apiFetch } from '@/lib/api-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Role, UserSummary } from '@/lib/types';
+
+const SELECT_CLASS =
+  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
 
 function ZvyazkovyiDirectCreateForm({
   initialHurtokId,
@@ -52,72 +56,72 @@ function ZvyazkovyiDirectCreateForm({
   const needsHurtok = role === 'JUNAK';
 
   return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle>Новий користувач</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createUser.mutate();
-          }}
-          className="space-y-4"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="role">Роль</Label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="JUNAK">Юнак</option>
-              <option value="VYKHOVNYK">Виховник</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Ім&apos;я</Label>
-            <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Прізвище</Label>
-            <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Пароль (опційно, можна додати пізніше)</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          {needsHurtok && (
-            <div className="space-y-2">
-              <Label htmlFor="hurtokId">Гурток</Label>
+    <>
+      <PageHeader title="Новий користувач" subtitle="Юнак або виховник зʼявиться в курені одразу" crumb={{ href: '/kurin', label: 'Курінь' }} />
+      <Card>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createUser.mutate();
+            }}
+            className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-[.8rem]"
+          >
+            <div className="col-span-full space-y-2">
+              <Label htmlFor="role">Роль</Label>
               <select
-                id="hurtokId"
-                value={hurtokId}
-                onChange={(e) => setHurtokId(e.target.value)}
-                required
-                className="w-full rounded-md border px-3 py-2 text-sm"
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
+                className={SELECT_CLASS}
               >
-                <option value="">Оберіть гурток</option>
-                {(hurtky ?? []).map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                  </option>
-                ))}
+                <option value="JUNAK">Юнак</option>
+                <option value="VYKHOVNYK">Виховник</option>
               </select>
             </div>
-          )}
-          {createUser.isError && <p className="text-sm text-destructive">Не вдалося створити користувача.</p>}
-          <Button type="submit" disabled={createUser.isPending}>
-            Створити
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Ім&apos;я</Label>
+              <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Прізвище</Label>
+              <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль (опційно, можна додати пізніше)</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            {needsHurtok && (
+              <div className="space-y-2">
+                <Label htmlFor="hurtokId">Гурток</Label>
+                <select
+                  id="hurtokId"
+                  value={hurtokId}
+                  onChange={(e) => setHurtokId(e.target.value)}
+                  required
+                  className={SELECT_CLASS}
+                >
+                  <option value="">Оберіть гурток</option>
+                  {(hurtky ?? []).map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {createUser.isError && <p className="col-span-full text-sm text-destructive">Не вдалося створити користувача.</p>}
+            <Button type="submit" className="col-span-full justify-self-start" disabled={createUser.isPending}>
+              Створити
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -158,47 +162,51 @@ function KurinnyiApprovalRequestForm({ initialHurtokId }: { initialHurtokId: str
   }
 
   return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle>Запит на створення юнака</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Ім&apos;я</Label>
-            <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Прізвище</Label>
-            <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hurtokId">Гурток</Label>
-            <select
-              id="hurtokId"
-              value={hurtokId}
-              onChange={(e) => setHurtokId(e.target.value)}
-              required
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">Оберіть гурток</option>
-              {(hurtky ?? []).map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button type="submit" disabled={createRequest.isPending}>
-            Надіслати запит
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <>
+      <PageHeader
+        title="Запит на створення юнака"
+        subtitle="Юнак зʼявиться після затвердження звʼязковим"
+        crumb={{ href: '/kurin', label: 'Курінь' }}
+      />
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-[.8rem]">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Ім&apos;я</Label>
+              <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Прізвище</Label>
+              <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hurtokId">Гурток</Label>
+              <select
+                id="hurtokId"
+                value={hurtokId}
+                onChange={(e) => setHurtokId(e.target.value)}
+                required
+                className={SELECT_CLASS}
+              >
+                <option value="">Оберіть гурток</option>
+                {(hurtky ?? []).map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="submit" className="col-span-full justify-self-start" disabled={createRequest.isPending}>
+              Надіслати запит
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 

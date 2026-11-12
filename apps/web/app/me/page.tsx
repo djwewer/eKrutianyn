@@ -14,9 +14,9 @@ import { POSITION_LABELS, ROLE_LABELS } from '@/lib/role-labels';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-2 gap-3 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{value}</dd>
+    <div>
+      <dt className="font-mono text-[.7rem] tracking-[.06em] text-ink-2 uppercase">{label}</dt>
+      <dd className="m-0 mt-[.1rem] font-bold [overflow-wrap:anywhere]">{value}</dd>
     </div>
   );
 }
@@ -38,19 +38,19 @@ export default function MePage() {
   if (session.role === 'ZVYAZKOVYI') positions.unshift(ROLE_LABELS.ZVYAZKOVYI);
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
+    <div className="space-y-4">
       <h1 className="sr-only">Моя сторінка</h1>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Avatar
           initials={getInitials(profile.firstName, profile.lastName)}
           photoUrl={profile.photoUpdatedAt ? `/api/backend/users/${profile.id}/photo?v=${profile.photoUpdatedAt}` : null}
-          className="size-16 text-base"
+          className="size-20 border-[3px] border-dashed border-navy bg-transparent font-display text-[1.6rem] font-bold text-navy"
         />
-        <div className="min-w-0">
-          <p className="truncate text-lg font-bold">
+        <div className="min-w-0 flex-1">
+          <p className="m-0 font-display text-[1.8rem] leading-[1.05] font-bold uppercase [overflow-wrap:anywhere]">
             {profile.lastName} {profile.firstName}
           </p>
-          <p className="truncate text-sm text-muted-foreground">{profile.email}</p>
+          <p className="mt-[.3rem] mb-0 truncate text-ink-2">{profile.email}</p>
           <Badge className="mt-1">{ROLE_LABELS[profile.role]}</Badge>
         </div>
       </div>
@@ -66,13 +66,15 @@ export default function MePage() {
           </CardHeader>
           <CardContent>
             {myHurtky.length > 0 ? (
-              <ul className="space-y-1 text-sm">
+              <ul className="m-0 list-none p-0 text-sm">
                 {myHurtky.map((h) => (
-                  <li key={h.id}>{h.name}</li>
+                  <li key={h.id} className="border-b border-dashed border-line py-[.45rem] font-bold last:border-b-0">
+                    {h.name}
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">Вас ще не прикріплено до жодного гуртка.</p>
+              <p className="text-sm text-ink-2">Вас ще не прикріплено до жодного гуртка.</p>
             )}
           </CardContent>
         </Card>
@@ -86,13 +88,15 @@ export default function MePage() {
           </CardHeader>
           <CardContent>
             {positions.length > 0 ? (
-              <ul className="space-y-1 text-sm">
+              <ul className="m-0 list-none p-0 text-sm">
                 {positions.map((label) => (
-                  <li key={label}>{label}</li>
+                  <li key={label} className="border-b border-dashed border-line py-[.45rem] last:border-b-0">
+                    <Badge variant="ok">{label}</Badge>
+                  </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">Посад зараз немає</p>
+              <p className="text-sm text-ink-2">Посад зараз немає</p>
             )}
           </CardContent>
         </Card>
@@ -103,10 +107,10 @@ export default function MePage() {
           <CardTitle>Дані</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="space-y-2">
+          <dl className="m-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]">
             {hurtokName && <Row label="Гурток" value={hurtokName} />}
             {profile.birthDate && (
-              <Row label="Дата народження" value={new Date(profile.birthDate).toLocaleDateString('uk-UA')} />
+              <Row label="Дата народження" value={new Date(profile.birthDate).toLocaleDateString('uk-UA', { timeZone: 'UTC' })} />
             )}
             {profile.phone && <Row label="Телефон" value={profile.phone} />}
             {profile.residence && <Row label="Проживання" value={profile.residence} />}

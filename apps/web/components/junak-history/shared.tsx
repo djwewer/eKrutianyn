@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 
 export function today(): string {
@@ -32,21 +32,27 @@ export function HistoryCard({
   children: ReactNode;
 }) {
   return (
-    <Card data-testid={testId}>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle>{title}</CardTitle>
-        <span className="flex items-center gap-2">
-          {extra}
-          {onAdd && addLabel && (
-            <Button size="sm" variant="outline" onClick={onAdd}>
-              <Plus aria-hidden />
-              {addLabel}
-            </Button>
+    <AccordionItem value={testId} data-testid={testId}>
+      <AccordionTrigger>
+        <span>{title}</span>
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="space-y-3 text-sm">
+          {(extra || (onAdd && addLabel)) && (
+            <span className="flex flex-wrap items-center gap-2">
+              {extra}
+              {onAdd && addLabel && (
+                <Button size="sm" variant="outline" onClick={onAdd}>
+                  <Plus aria-hidden />
+                  {addLabel}
+                </Button>
+              )}
+            </span>
           )}
-        </span>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">{children}</CardContent>
-    </Card>
+          {children}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 

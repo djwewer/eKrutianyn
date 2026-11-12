@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useUser, useUpdateContactInfo, useUpdateHurtok, useArchiveUser } from '@/lib/queries/users';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
@@ -29,6 +30,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Avatar } from '@/components/ui/avatar';
+import { WideContent } from '@/components/app-shell';
+import { getInitials } from '@/lib/utils';
+
+const SELECT_CLASS =
+  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
+
+const KV_CLASS = 'm-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]';
+
+/** Birth date is stored as UTC midnight — format from UTC components. */
+function formatBirthDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('uk-UA', { timeZone: 'UTC' });
+}
+
+function KvItem({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={wide ? 'col-span-full' : undefined}>
+      <dt className="font-mono text-[.7rem] tracking-[.06em] text-ink-2 uppercase">{label}</dt>
+      <dd className="m-0 mt-[.1rem] font-bold [overflow-wrap:anywhere]">{children}</dd>
+    </div>
+  );
+}
 
 const RELATION_LABELS: Record<GuardianRelation, string> = {
   MOTHER: 'Мама',
@@ -54,7 +77,7 @@ function GuardianRelationSelect({
       aria-label="Хто це"
       value={value}
       onChange={(e) => onChange(e.target.value as GuardianRelation)}
-      className="w-full rounded-md border px-3 py-2 text-sm"
+      className={SELECT_CLASS}
     >
       {(Object.keys(RELATION_LABELS) as GuardianRelation[]).map((relation) => (
         <option key={relation} value={relation} disabled={relation !== value && taken.includes(relation)}>
@@ -93,7 +116,7 @@ function GuardianContactRow({
 
   if (isEditing) {
     return (
-      <div className="space-y-2 border-b py-2 last:border-b-0">
+      <div className="col-span-full space-y-2 rounded-[6px] border border-line bg-background p-[.7rem_.8rem]">
         <GuardianRelationSelect value={relation} onChange={setRelation} taken={takenByOthers} />
         {relation === 'GUARDIAN' && (
           <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Хто саме (бабуся, тітка...)" />
@@ -132,13 +155,16 @@ function GuardianContactRow({
 
   const contactLine = [contact.phone, contact.email].filter(Boolean).join(' · ');
   return (
-    <div className="flex items-center justify-between border-b py-2 text-sm last:border-b-0" data-testid="guardian-row">
+    <div
+      className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-line bg-background p-[.7rem_.8rem] text-sm"
+      data-testid="guardian-row"
+    >
       <div>
-        <p className="font-medium">
+        <p className="font-bold">
           {RELATION_LABELS[contact.relation]}
           {contact.relation === 'GUARDIAN' && contact.role && ` (${contact.role})`}: {contact.name}
         </p>
-        <p className="text-muted-foreground">{contactLine || 'Телефон і email ще не вказані'}</p>
+        <p className="font-mono text-[.8rem] text-ink-2">{contactLine || 'Телефон і email ще не вказані'}</p>
       </div>
       <div className="flex gap-2">
         <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
@@ -176,7 +202,7 @@ function AddGuardianContactForm({ junakId, existing }: { junakId: string; existi
   const effectiveRelation = relation ?? suggested;
 
   return (
-    <div className="space-y-2 pt-2">
+    <div className="col-span-full space-y-2 pt-2">
       <GuardianRelationSelect value={effectiveRelation} onChange={setRelation} taken={takenRelations} />
       {effectiveRelation === 'GUARDIAN' && (
         <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Хто саме (бабуся, тітка...)" />
@@ -312,7 +338,7 @@ function ArchiveUserCard({
         <CardHeader>
           <CardTitle>Архівація</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-ink-2">
           Архівовано {new Date(user.archivedAt).toLocaleDateString('uk-UA')}
         </CardContent>
       </Card>
@@ -332,7 +358,7 @@ function ArchiveUserCard({
         <CardHeader>
           <CardTitle>Архівація</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-ink-2">
           Щоб архівувати юнака, спершу зніміть його з гуртка та посад.
         </CardContent>
       </Card>
@@ -345,7 +371,7 @@ function ArchiveUserCard({
         <CardHeader>
           <CardTitle>Архівація</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-ink-2">
           Запит на архівацію надіслано, очікує затвердження зв&apos;язковим.
         </CardContent>
       </Card>
@@ -455,33 +481,54 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   if (!user) return <p>Не знайдено.</p>;
 
   return (
-    <div className="max-w-md space-y-4">
-      <h1 className="text-2xl font-bold">
-        {user.lastName} {user.firstName}
-      </h1>
+    <WideContent>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-4">
+        <Avatar
+          initials={getInitials(user.firstName, user.lastName)}
+          photoUrl={user.photoUpdatedAt ? `/api/backend/users/${user.id}/photo?v=${user.photoUpdatedAt}` : null}
+          className="size-20 border-[3px] border-dashed border-navy bg-transparent font-display text-[1.6rem] font-bold text-navy"
+        />
+        <div className="min-w-0 flex-1">
+          <Link
+            href="/kurin"
+            className="mb-[.3rem] inline-block font-mono text-[.74rem] tracking-[.04em] text-ink-2 no-underline"
+          >
+            ← КУРІНЬ
+          </Link>
+          <h1 className="m-0 font-display text-[1.9rem] leading-[1.05] font-bold uppercase [overflow-wrap:anywhere]">
+            {user.lastName} {user.firstName}
+          </h1>
+          <p className="mt-[.3rem] mb-0 font-mono text-[.8rem] tracking-[.04em] text-ink-2 uppercase">
+            {ROLE_LABELS[user.role]}
+          </p>
+        </div>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Дані</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>Email: {user.email}</p>
-          <p>Роль: {ROLE_LABELS[user.role]}</p>
-          {user.birthDate && <p>Дата народження: {new Date(user.birthDate).toLocaleDateString('uk-UA')}</p>}
+        <CardContent className="text-sm">
+          <dl className={KV_CLASS}>
+            <KvItem label="Email">{user.email}</KvItem>
+            <KvItem label="Роль">{ROLE_LABELS[user.role]}</KvItem>
+            {user.birthDate && <KvItem label="Дата народження">{formatBirthDate(user.birthDate)}</KvItem>}
+          </dl>
           {isJunak && (
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-4">
               <Label htmlFor="hurtok">Гурток</Label>
               {canMoveHurtok ? (
                 hurtokRequestSent ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-ink-2">
                     Запит на переведення надіслано, очікує затвердження зв&apos;язковим.
                   </p>
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <select
                       id="hurtok"
                       value={selectedHurtokId}
                       onChange={(e) => setSelectedHurtokId(e.target.value)}
-                      className="flex-1 rounded-md border px-2 py-1 text-sm"
+                      className={`${SELECT_CLASS} flex-1 basis-48`}
                     >
                       <option value="">Без гуртка</option>
                       {(hurtky ?? []).map((h) => (
@@ -530,7 +577,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <CardHeader>
           <CardTitle>Контакти</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-[.8rem]">
           <div className="space-y-2">
             <Label htmlFor="phone">Телефон</Label>
             <Input
@@ -568,7 +615,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             />
           </div>
           {canEditContactInfo && (
-            <Button onClick={() => updateContactInfo.mutate({ notes, phone, residence, studyPlace })}>
+            <Button className="col-span-full justify-self-start" onClick={() => updateContactInfo.mutate({ notes, phone, residence, studyPlace })}>
               Зберегти
             </Button>
           )}
@@ -583,6 +630,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             {isError && (
               <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження опікунів.'}</p>
             )}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-[.6rem]">
             {(guardianContacts ?? []).map((contact) => (
               <GuardianContactRow
                 key={contact.id}
@@ -594,6 +642,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               />
             ))}
             <AddGuardianContactForm junakId={id} existing={guardianContacts ?? []} />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -635,10 +684,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     if (status === 'LOCKED' || status === undefined) {
                       return (
                         <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
-                          <h3 className="text-sm font-bold uppercase text-muted-foreground">
+                          <h3 className="text-sm font-bold uppercase text-ink-2">
                             🔒 {stage.name}
                           </h3>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-ink-2">
                             Розблокується після закриття попередньої проби
                           </p>
                         </div>
@@ -647,14 +696,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     return (
                       <div key={stage.id} className="mb-4 last:mb-0">
                         <div className="mb-2 flex items-center justify-between">
-                          <h3 className="text-sm font-bold uppercase text-muted-foreground">{stage.name}</h3>
+                          <h3 className="text-sm font-bold uppercase text-ink-2">{stage.name}</h3>
                           {canConfirmProby &&
                             (status === 'CLOSED' ? (
                               <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
                                 🔓 Перевідкрити пробу
                               </Button>
                             ) : hasDebt ? (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-ink-2">
                                 Закрито (є непідтверджені точки)
                               </span>
                             ) : (
@@ -735,5 +784,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       )}
       <ArchiveUserCard user={user} session={session} />
     </div>
+    </WideContent>
   );
 }

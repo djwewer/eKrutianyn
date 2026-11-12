@@ -59,7 +59,7 @@ function DegreeRow({
   }
 
   return (
-    <li className="space-y-1 border-b py-2 text-sm last:border-b-0" data-testid={`degree-${degreeKey}`}>
+    <li className="space-y-1 border-b border-dashed border-line py-2 text-sm last:border-b-0" data-testid={`degree-${degreeKey}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium">{DEGREE_LABELS[degreeKey]}</span>
         {isEditing ? (
@@ -87,7 +87,7 @@ function DegreeRow({
           </span>
         ) : (
           <span className="flex items-center gap-2">
-            <span className={date ? '' : 'text-muted-foreground'}>{date ? formatDate(date) : '—'}</span>
+            <span className={date ? 'font-mono' : 'text-ink-2'}>{date ? formatDate(date) : '—'}</span>
             {canEdit && (date || isSkob) && (
               <Button size="sm" variant="outline" onClick={startEditing}>
                 {date ? 'Змінити дату' : 'Вказати дату'}
