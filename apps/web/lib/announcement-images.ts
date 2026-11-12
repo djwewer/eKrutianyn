@@ -1,11 +1,13 @@
 import type { JSONContent } from '@tiptap/core';
 
+const PRUNABLE = new Set(['paragraph', 'blockquote', 'listItem', 'taskItem', 'bulletList', 'orderedList', 'taskList']);
+
 export type AnnouncementImage = { id: string; src: string; alt?: string };
 
 /**
  * Pulls every `image` node out of a Tiptap document (recursively), returning
- * them in document order. Paragraphs left empty by the removal are dropped;
- * other nodes are kept.
+ * them in document order. Paragraphs, quotes and lists left empty by the removal are dropped;
+ * originally empty nodes and table structure are kept.
  */
 export function splitAnnouncementImages(doc: JSONContent): {
   doc: JSONContent;
@@ -26,9 +28,8 @@ export function splitAnnouncementImages(doc: JSONContent): {
         continue;
       }
       const walked = walk(child);
-      // Only a paragraph that held nothing but images is pruned; structural
-      // containers (cells, rows, list items, quotes) are never emptied out.
-      if (child.type === 'paragraph' && child.content && child.content.length > 0 && walked.content?.length === 0) continue;
+      // Prune a block only when it became empty because its images were removed.
+      if (PRUNABLE.has(child.type ?? '') && child.content && child.content.length > 0 && walked.content?.length === 0) continue;
       next.push(walked);
     }
     return { ...node, content: next };

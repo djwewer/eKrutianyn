@@ -267,7 +267,7 @@
 }
 .announcement-content > *:first-child { margin-top: 0; }
 .announcement-content > *:last-child { margin-bottom: 0; }
-.announcement-content > * + * { margin-top: 0.75rem; }
+.announcement-content > *:not(:first-child) { margin-top: 0.75rem; }
 .announcement-content p { margin: 0; }
 .announcement-content h1,
 .announcement-content h2,
