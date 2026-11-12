@@ -12,7 +12,9 @@ import {
   useSendAiMessage,
   useDeleteAiConversation,
 } from '@/lib/queries/ai-assistant';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { PageHeader } from '@/components/ui/page-header';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -154,66 +156,57 @@ export default function AiVykhovnykPage() {
   if (!program) return <p>Не вдалося завантажити програму проб.</p>;
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <Card className="lg:w-64 lg:shrink-0">
-        <CardHeader>
-          <CardTitle className="text-base">Розмови</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+    <div>
+      <PageHeader
+        title={<span className="ai-gradient-text">AI-виховник</span>}
+        subtitle="Допомагає підготуватися до точок проби"
+        crumb={{ href: '/plastuvannia', label: 'Моє пластування' }}
+      />
+      <div className="grid items-start gap-4 min-[760px]:grid-cols-[15rem_minmax(0,1fr)]">
+        <div className="grid gap-[.3rem]">
+          <SectionHeading className="mt-0 mb-1">Розмови</SectionHeading>
           <Button size="sm" variant="outline" className="w-full" onClick={handleNewConversation}>
             + Нова розмова
           </Button>
-          <div className="space-y-1">
-            {conversationsLoading && <p className="text-sm text-muted-foreground">Завантаження...</p>}
-            {!conversationsLoading && (conversations ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground">Ще немає розмов.</p>
-            )}
-            {(conversations ?? []).map((c) => (
-              <div
-                key={c.id}
-                className={cn(
-                  'flex items-center gap-1 rounded-md',
-                  c.id === activeConversationId ? 'bg-accent-soft' : 'hover:bg-accent-soft/50',
-                )}
+          {conversationsLoading && <p className="text-sm text-ink-2">Завантаження...</p>}
+          {!conversationsLoading && (conversations ?? []).length === 0 && (
+            <p className="text-sm text-ink-2">Ще немає розмов.</p>
+          )}
+          {(conversations ?? []).map((c) => (
+            <div
+              key={c.id}
+              className={cn(
+                'flex items-center rounded-[4px] border',
+                c.id === activeConversationId
+                  ? 'border-navy bg-[color-mix(in_srgb,var(--navy)_10%,var(--paper))]'
+                  : 'border-line bg-paper',
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelectConversation(c.id)}
+                className="min-w-0 flex-1 truncate px-[.7rem] py-[.55rem] text-left text-[.9rem]"
               >
-                <button
-                  type="button"
-                  onClick={() => handleSelectConversation(c.id)}
-                  className={cn(
-                    'min-w-0 flex-1 truncate px-2.5 py-1.5 text-left text-sm',
-                    c.id === activeConversationId ? 'font-medium text-accent-text' : '',
-                  )}
-                >
-                  {(c.probyPointId && pointLabelById[c.probyPointId]) ?? c.title ?? 'Нова розмова'}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Видалити розмову"
-                  title="Видалити розмову"
-                  onClick={() => handleDeleteConversation(c.id)}
-                  className="shrink-0 rounded px-2 py-1 text-lg leading-none text-muted-foreground hover:text-destructive"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="min-w-0 flex-1 space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">AI-виховник</h1>
-          <p className="text-xs text-muted-foreground">
-            AI-виховник старається бути щоразу кращим, проте може помилятися. Перевіряй його відповідь.
-          </p>
+                {(c.probyPointId && pointLabelById[c.probyPointId]) ?? c.title ?? 'Нова розмова'}
+              </button>
+              <button
+                type="button"
+                aria-label="Видалити розмову"
+                title="Видалити розмову"
+                onClick={() => handleDeleteConversation(c.id)}
+                className="shrink-0 px-2 py-1 text-lg leading-none text-ink-2 hover:text-late"
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Точка проби</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="min-w-0 gap-3 px-[1.1rem]">
+          <div className="grid gap-[.3rem]">
+            <span className="font-display text-[.8rem] font-semibold tracking-[.1em] text-ink-2 uppercase">
+              Точка проби
+            </span>
             <Select value={selectedPointId} onValueChange={handlePointChange} items={pointLabelById}>
               <SelectTrigger>
                 <SelectValue placeholder="Оберіть точку проби" />
@@ -244,15 +237,15 @@ export default function AiVykhovnykPage() {
                 ))}
               </SelectContent>
             </Select>
-          </CardContent>
-        </Card>
+          </div>
 
-        <ConversationPanel
-          key={panelKey}
-          initialConversationId={activeConversationId}
-          onConversationCreated={setActiveConversationId}
-          selectedPointId={selectedPointId}
-        />
+          <ConversationPanel
+            key={panelKey}
+            initialConversationId={activeConversationId}
+            onConversationCreated={setActiveConversationId}
+            selectedPointId={selectedPointId}
+          />
+        </Card>
       </div>
     </div>
   );
@@ -261,12 +254,16 @@ export default function AiVykhovnykPage() {
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div role="status" aria-label="Генерує відповідь" className="flex items-center gap-1 rounded-lg bg-muted px-3.5 py-3">
+      <div
+        role="status"
+        aria-label="Генерує відповідь"
+        className="flex items-center gap-1 rounded-[6px] rounded-bl-none border border-line bg-paper px-3.5 py-3"
+      >
         {[0, 1, 2].map((i) => (
           <span
             key={i}
             aria-hidden="true"
-            className="size-1.5 animate-bounce rounded-full bg-muted-foreground"
+            className="size-1.5 animate-bounce rounded-full bg-ink-2"
             style={{ animationDelay: `${i * 0.15}s` }}
           />
         ))}
@@ -360,74 +357,64 @@ function ConversationPanel({
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Розмова</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {conversationLoading && <p className="text-sm text-muted-foreground">Завантаження розмови...</p>}
-          {conversationIsError && (
-            <p className="text-sm text-destructive">
-              {accessErrorMessage(conversationError) ?? 'Не вдалося завантажити розмову.'}
-            </p>
-          )}
-          {!conversationLoading && !conversationIsError && messages.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Оберіть точку проби та опишіть, що хочете підготувати — AI-виховник допоможе скласти план.
-            </p>
-          )}
-          <div className="space-y-2">
-            {messages.map((message, index) => (
-              <div key={index} className={cn('flex', message.role === 'USER' ? 'justify-end' : 'justify-start')}>
-                <div
-                  className={cn(
-                    'ai-gradient-ring max-w-[85%] rounded-lg px-3 py-2 text-sm',
-                    message.role === 'USER'
-                      ? 'whitespace-pre-wrap text-foreground'
-                      : cn('text-foreground', MARKDOWN_CLASSES),
-                  )}
-                  style={
-                    {
-                      '--ai-ring-fill': message.role === 'USER' ? 'var(--accent-soft-solid)' : 'var(--muted)',
-                    } as React.CSSProperties
-                  }
-                >
-                  {message.role === 'USER' ? (
-                    message.content
-                  ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isAwaitingReply && <TypingIndicator />}
-          </div>
-
-          <div className="space-y-2 pt-2">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              placeholder="Опишіть, що хочете підготувати..."
-              rows={3}
-              className="ai-gradient-ring ai-gradient-glow w-full min-w-0 rounded-md bg-background px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
-            />
-            <div className="flex items-center justify-between gap-2">
-              <Button size="sm" disabled={!canSend} onClick={handleSend}>
-                Надіслати
-              </Button>
-              {!selectedPointId && (
-                <span className="text-xs text-muted-foreground">Спершу оберіть точку проби</span>
-              )}
-            </div>
-            {sendError !== null && (
-              <p className="text-sm text-destructive">
-                {accessErrorMessage(sendError) ?? 'Не вдалося надіслати повідомлення. Спробуйте ще раз.'}
-              </p>
+      {conversationLoading && <p className="text-sm text-ink-2">Завантаження розмови...</p>}
+      {conversationIsError && (
+        <p className="text-sm text-destructive">
+          {accessErrorMessage(conversationError) ?? 'Не вдалося завантажити розмову.'}
+        </p>
+      )}
+      {!conversationLoading && !conversationIsError && messages.length === 0 && (
+        <p className="text-sm text-ink-2">
+          Оберіть точку проби та опишіть, що хочете підготувати — AI-виховник допоможе скласти план.
+        </p>
+      )}
+      <div className="grid max-h-[30rem] gap-[.8rem] overflow-auto p-[.2rem]">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={cn(
+              'max-w-[85%] rounded-[6px] px-[.9rem] py-[.7rem] leading-[1.5]',
+              message.role === 'USER'
+                ? 'justify-self-end rounded-br-none bg-navy whitespace-pre-wrap text-navy-ink'
+                : cn('ai-gradient-ring justify-self-start rounded-bl-none text-ink', MARKDOWN_CLASSES),
+            )}
+            style={message.role === 'USER' ? undefined : ({ '--ai-ring-fill': 'var(--paper)' } as React.CSSProperties)}
+          >
+            {message.role === 'USER' ? (
+              message.content
+            ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             )}
           </div>
-        </CardContent>
-      </Card>
+        ))}
+        {isAwaitingReply && <TypingIndicator />}
+      </div>
+
+      <div className="grid gap-2">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleComposerKeyDown}
+            placeholder="Опишіть, що хочете підготувати..."
+            rows={1}
+            style={{ '--ai-ring-fill': 'var(--field)' } as React.CSSProperties}
+            className="ai-gradient-ring ai-gradient-glow max-h-40 min-h-[2.75rem] w-full min-w-0 flex-1 rounded-[4px] bg-field px-3 py-2.5 text-base outline-none [field-sizing:content] placeholder:text-ink-2"
+          />
+          <Button disabled={!canSend} onClick={handleSend}>
+            Надіслати
+          </Button>
+        </div>
+        {!selectedPointId && <span className="text-xs text-ink-2">Спершу оберіть точку проби</span>}
+        {sendError !== null && (
+          <p className="text-sm text-destructive">
+            {accessErrorMessage(sendError) ?? 'Не вдалося надіслати повідомлення. Спробуйте ще раз.'}
+          </p>
+        )}
+        <p className="text-xs text-ink-2">
+          AI-виховник старається бути щоразу кращим, проте може помилятися. Перевіряй його відповідь.
+        </p>
+      </div>
     </>
   );
 }

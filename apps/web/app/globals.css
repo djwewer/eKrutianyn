@@ -229,6 +229,20 @@
   animation: kmGradientShift 6s ease-in-out infinite;
 }
 
+/* The same gradient as text (AI-виховник titles/links); dark mode uses
+   lighter stops so it stays readable on the dark surface. */
+.ai-gradient-text {
+  background-image: linear-gradient(120deg, #7c3aed, #2f5fd9, #06b6d4, #7c3aed);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: kmGradientShift 6s ease-in-out infinite;
+}
+.dark .ai-gradient-text {
+  background-image: linear-gradient(120deg, #b18cff, #7fa8ff, #5fe0f0, #b18cff);
+}
+
 /* A soft pulsing glow via box-shadow (never overlaps the host's own face,
    unlike a pseudo-element) — used on the chat input only; repeating this
    per message bubble in a long scrolling list would be needless paint
@@ -250,7 +264,8 @@
     animation: none !important;
   }
   .ai-gradient-ring,
-  .ai-gradient-glow {
+  .ai-gradient-glow,
+  .ai-gradient-text {
     animation: none !important;
   }
 }
