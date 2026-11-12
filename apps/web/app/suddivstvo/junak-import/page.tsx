@@ -26,6 +26,12 @@ import { POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { WideContent } from '@/components/app-shell';
+
+const SELECT_CLASS =
+  'min-h-[2.75rem] min-w-0 rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
+const MONO_HEAD = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
 const FIELD_OPTIONS = Object.keys(JUNAK_IMPORT_FIELD_LABELS) as JunakImportField[];
 const POSITION_TYPES: PositionType[] = ['SUDDIA', 'PYSAR', 'SKARBNYK', 'INTENDANT', 'KHORUNZHYI', 'SMM', 'HURTKOVYI'];
@@ -89,7 +95,7 @@ function WizardRowMatchPicker({
 
   return (
     <select
-      className="w-full rounded border p-1 text-xs sm:w-auto"
+      className={`${SELECT_CLASS} w-full sm:w-auto`}
       value={value ?? (soleCandidateId ? soleCandidateId : 'new')}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -289,7 +295,7 @@ export default function JunakImportPage() {
   if (!kurinId) return <p>Завантаження...</p>;
   if (!status.data?.connectedSpreadsheetId) {
     return (
-      <p className="text-sm text-destructive">
+      <p className="text-sm text-late">
         Спершу підключіть Книгу судді на сторінці{' '}
         <a href="/suddivstvo" className="underline">
           «Суддівство»
@@ -306,17 +312,22 @@ export default function JunakImportPage() {
         : undefined;
     return (
       <div className="max-w-3xl space-y-1">
-        <p className="text-sm text-destructive">
+        <p className="text-sm text-late">
           {accessErrorMessage(sheetData.error) ?? 'Не вдалося завантажити таблицю з Google Sheets.'}
         </p>
-        {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
+        {detail && <p className="text-xs text-ink-2">{detail}</p>}
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <h1 className="text-2xl font-bold">Імпорт юнаків з Книги судді</h1>
+    <WideContent>
+    <div className="space-y-4">
+      <PageHeader
+        title="Імпорт юнаків з Книги судді"
+        subtitle="Перегляньте, що зміниться, перш ніж надсилати"
+        crumb={{ href: '/suddivstvo', label: 'Суддівство' }}
+      />
 
       {step === 1 && (
         <Card>
@@ -326,9 +337,9 @@ export default function JunakImportPage() {
           <CardContent className="space-y-2">
             {header.map((h, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="w-48 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
+                <span className="w-48 shrink-0 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
                 <select
-                  className="rounded border p-1 text-sm"
+                  className={`${SELECT_CLASS} max-w-full flex-1`}
                   value={columnMapping[i] ?? ''}
                   onChange={(e) => setColumnMapping((prev) => ({ ...prev, [i]: e.target.value as JunakImportField }))}
                 >
@@ -342,7 +353,7 @@ export default function JunakImportPage() {
               </div>
             ))}
             <Button
-              size="sm"
+              variant="signal"
               onClick={() => (uniquePositionValues.length > 0 ? setStep(2) : handleSaveMapping())}
             >
               Далі
@@ -359,9 +370,9 @@ export default function JunakImportPage() {
           <CardContent className="space-y-2">
             {uniquePositionValues.map((value) => (
               <div key={value} className="flex items-center gap-2">
-                <span className="w-48 truncate text-sm">{value}</span>
+                <span className="w-48 shrink-0 truncate text-sm">{value}</span>
                 <select
-                  className="rounded border p-1 text-sm"
+                  className={`${SELECT_CLASS} max-w-full flex-1`}
                   value={positionValueMapping[value] ?? ''}
                   onChange={(e) => setPositionValueMapping((prev) => ({ ...prev, [value]: e.target.value }))}
                 >
@@ -374,11 +385,11 @@ export default function JunakImportPage() {
                 </select>
               </div>
             ))}
-            <Button size="sm" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
+            <Button variant="signal" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
               Далі
             </Button>
             {saveMapping.isError && (
-              <p className="text-sm text-destructive">{accessErrorMessage(saveMapping.error)}</p>
+              <p className="text-sm text-late">{accessErrorMessage(saveMapping.error)}</p>
             )}
           </CardContent>
         </Card>
@@ -390,18 +401,24 @@ export default function JunakImportPage() {
             <CardTitle>Крок 3: Перегляд</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">Рядків до імпорту: {wizardRows.length}</p>
+            <p className="text-sm text-ink-2">Рядків до імпорту: {wizardRows.length}</p>
+            <div className={`hidden gap-2 border-b-2 border-line pb-1 lg:flex ${MONO_HEAD}`} aria-hidden="true">
+              <span className="w-40">Юнак</span>
+              <span className="w-24">Гурток</span>
+              <span className="w-56">Email</span>
+              <span>Що зміниться</span>
+            </div>
             {wizardRows.map((row) => {
               const emailColIndex = colIndexFor('EMAIL');
               const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
               const i = row.rowIndex;
               return (
-              <div key={i} className="flex flex-col gap-2 border-b pb-2 text-sm lg:flex-row lg:items-center lg:pb-1">
+              <div key={i} className="flex flex-col gap-2 border-b border-dashed border-line pb-2 text-sm lg:flex-row lg:items-center lg:pb-1">
                 <div className="flex items-center gap-2 lg:contents">
                   <span className="min-w-0 flex-1 truncate lg:w-40 lg:flex-none">
                     {row.firstName} {row.lastName}
                   </span>
-                  <span className="shrink-0 truncate text-muted-foreground lg:w-24">{row.hurtokName || '—'}</span>
+                  <span className="shrink-0 truncate text-ink-2 lg:w-24">{row.hurtokName || '—'}</span>
                 </div>
                 <Input
                   className="w-full lg:w-56"
@@ -419,8 +436,8 @@ export default function JunakImportPage() {
               </div>
               );
             })}
-            {submitError && <p className="text-sm text-destructive">{submitError}</p>}
-            <Button onClick={handleImport} disabled={importRows.isPending || createApprovalRequest.isPending}>
+            {submitError && <p className="text-sm text-late">{submitError}</p>}
+            <Button variant="signal" onClick={handleImport} disabled={importRows.isPending || createApprovalRequest.isPending}>
               {isZvyazkovyi ? 'Імпортувати' : 'Надіслати на затвердження звʼязковому'}
             </Button>
           </CardContent>
@@ -434,7 +451,7 @@ export default function JunakImportPage() {
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             {results.map((r) => (
-              <p key={r.row} className={r.error ? 'text-destructive' : ''}>
+              <p key={r.row} className={r.error ? 'text-late' : ''}>
                 Рядок {r.row + 2}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
               </p>
             ))}
@@ -443,10 +460,11 @@ export default function JunakImportPage() {
       )}
 
       {!isZvyazkovyi && results === null && createApprovalRequest.isSuccess && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-2">
           Запит надіслано звʼязковому на затвердження.
         </p>
       )}
     </div>
+    </WideContent>
   );
 }

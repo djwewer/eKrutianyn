@@ -6,7 +6,13 @@ import { useTreasury, useUpdateStartingBalance, useCreateTransaction, useDeleteT
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { accessErrorMessage } from '@/lib/error-message';
+import { formatEventDate } from '@/lib/calendar-timeline';
+
+const SELECT_CLASS =
+  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
+const LABEL_CLASS = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
 function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -33,7 +39,7 @@ function StartingBalanceCard({ kurinId, startingBalanceCents, canEdit }: { kurin
         <CardTitle>Початковий баланс</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-2">
           Сума готівки й коштів на рахунку куреня на момент, коли ви почали вести облік тут — до неї додаються/віднімаються
           записані прибутки й витрати.
         </p>
@@ -42,6 +48,7 @@ function StartingBalanceCard({ kurinId, startingBalanceCents, canEdit }: { kurin
             <Input type="number" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} className="max-w-40" />
             <Button
               size="sm"
+              variant="signal"
               disabled={update.isPending}
               onClick={() => {
                 const cents = parseToCents(value);
@@ -57,13 +64,13 @@ function StartingBalanceCard({ kurinId, startingBalanceCents, canEdit }: { kurin
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">{formatCents(startingBalanceCents)} грн</p>
+            <p className="font-mono text-base font-bold">{formatCents(startingBalanceCents)} грн</p>
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
               Змінити
             </Button>
           </div>
         )}
-        {update.isError && <p className="text-sm text-destructive">{accessErrorMessage(update.error) ?? 'Не вдалося зберегти.'}</p>}
+        {update.isError && <p className="text-sm text-late">{accessErrorMessage(update.error) ?? 'Не вдалося зберегти.'}</p>}
       </CardContent>
     </Card>
   );
@@ -88,7 +95,8 @@ function AddTransactionForm({ kurinId }: { kurinId: string }) {
         <select
           value={type}
           onChange={(e) => setType(e.target.value as 'INCOME' | 'EXPENSE')}
-          className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+          className={SELECT_CLASS}
+          aria-label="Тип запису"
         >
           <option value="EXPENSE">Витрата</option>
           <option value="INCOME">Прибуток</option>
@@ -97,7 +105,7 @@ function AddTransactionForm({ kurinId }: { kurinId: string }) {
         <Input placeholder="Опис (напр. «вкладка за теренівку»)" value={description} onChange={(e) => setDescription(e.target.value)} />
         <Input type="date" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         <Button
-          size="sm"
+          variant="signal"
           disabled={!canSubmit}
           onClick={() =>
             create.mutate(
@@ -113,7 +121,7 @@ function AddTransactionForm({ kurinId }: { kurinId: string }) {
         >
           Додати
         </Button>
-        {create.isError && <p className="text-sm text-destructive">{accessErrorMessage(create.error) ?? 'Не вдалося додати запис.'}</p>}
+        {create.isError && <p className="text-sm text-late">{accessErrorMessage(create.error) ?? 'Не вдалося додати запис.'}</p>}
       </CardContent>
     </Card>
   );
@@ -124,17 +132,15 @@ function TransactionRow({ transaction, kurinId, canEdit }: { transaction: import
   const isIncome = transaction.type === 'INCOME';
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{transaction.description}</p>
-        <p className="text-xs text-muted-foreground">{new Date(transaction.occurredAt).toLocaleDateString('uk-UA')}</p>
-      </div>
-      <p className={`shrink-0 text-sm font-semibold ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+    <div className="flex items-center gap-3 border-b border-dashed border-line px-[.9rem] py-[.65rem] last:border-b-0">
+      <span className="min-w-[5.5rem] font-mono text-[.82rem] text-ink-2">{formatEventDate(transaction.occurredAt)}</span>
+      <p className="m-0 min-w-0 flex-1 truncate text-base font-bold">{transaction.description}</p>
+      <p className={`m-0 shrink-0 font-mono font-bold whitespace-nowrap ${isIncome ? 'text-ok' : 'text-late'}`}>
         {isIncome ? '+' : '-'}
         {formatCents(transaction.amountCents)} грн
       </p>
       {canEdit && (
-        <Button size="sm" variant="outline" disabled={remove.isPending} onClick={() => remove.mutate(transaction.id)}>
+        <Button size="sm" variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate(transaction.id)}>
           Видалити
         </Button>
       )}
@@ -149,30 +155,33 @@ export default function TreasuryPage() {
   const canEdit = session?.role === 'ZVYAZKOVYI' || !!session?.positions.includes('SKARBNYK');
 
   if (isLoading) return <p>Завантаження...</p>;
-  if (isError) return <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
+  if (isError) return <p className="text-sm text-late">{accessErrorMessage(error) ?? 'Помилка завантаження.'}</p>;
   if (!kurinId || !treasury) return null;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Скарбниця</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Поточний баланс</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold">{formatCents(treasury.currentBalanceCents)} грн</p>
-        </CardContent>
-      </Card>
-
-      <StartingBalanceCard kurinId={kurinId} startingBalanceCents={treasury.startingBalanceCents} canEdit={canEdit} />
+      <PageHeader title="Скарбниця" subtitle="Готівка і кошти на рахунку куреня" />
+      <div className="grid gap-4 min-[760px]:grid-cols-2 min-[760px]:items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className={LABEL_CLASS}>Поточний баланс</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="m-0 font-mono text-[2.6rem] leading-none font-bold tracking-[-.03em]">
+              {formatCents(treasury.currentBalanceCents)} грн
+            </p>
+          </CardContent>
+        </Card>
+        <StartingBalanceCard kurinId={kurinId} startingBalanceCents={treasury.startingBalanceCents} canEdit={canEdit} />
+      </div>
       {canEdit && <AddTransactionForm kurinId={kurinId} />}
 
       <Card>
         <CardHeader>
           <CardTitle>Історія операцій</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {treasury.transactions.length === 0 && <p className="text-sm text-muted-foreground">Ще немає жодного запису.</p>}
+        <CardContent className="px-0">
+          {treasury.transactions.length === 0 && <p className="px-[1.2rem] text-sm text-ink-2">Ще немає жодного запису.</p>}
           {treasury.transactions.map((transaction) => (
             <TransactionRow key={transaction.id} transaction={transaction} kurinId={kurinId} canEdit={canEdit} />
           ))}

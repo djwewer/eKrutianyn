@@ -15,6 +15,8 @@ import {
 } from '@/lib/queries/junak-import';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
 
 /** The sync endpoint's 400/503 bodies carry a specific, actionable message (Google error, missing mapping...) — show it as is. */
 function syncErrorMessage(error: unknown): string {
@@ -50,47 +52,57 @@ export default function SuddivstvoPage() {
 
   if (!kurinId) return <p>Завантаження...</p>;
   if (junakImportStatus.isError) {
-    return <p className="text-sm text-destructive">{accessErrorMessage(junakImportStatus.error)}</p>;
+    return <p className="text-sm text-late">{accessErrorMessage(junakImportStatus.error)}</p>;
   }
 
   return (
-    <div className="max-w-md space-y-4">
-      <h1 className="text-2xl font-bold">Суддівство</h1>
+    <div className="space-y-4">
+      <PageHeader title="Суддівство" subtitle="Книга судді: прогрес проб і ступенів синхронізується з таблицею" />
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center gap-2">
           <CardTitle>Книга судді</CardTitle>
+          <Badge variant={junakImportStatus.data?.connectedSpreadsheetId ? 'ok' : 'mute'}>
+            {junakImportStatus.data?.connectedSpreadsheetId ? 'Підключено' : 'Не підключено'}
+          </Badge>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           {junakImportStatus.data?.connectedSpreadsheetId ? (
             <>
-              <p>Підключена таблиця: {junakImportStatus.data.connectedSpreadsheetName}</p>
+              <dl className="m-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]">
+                <div>
+                  <dt className="font-mono text-[.7rem] tracking-[.06em] text-ink-2 uppercase">Підключена таблиця</dt>
+                  <dd className="m-0 mt-[.1rem] font-bold [overflow-wrap:anywhere]">
+                    {junakImportStatus.data.connectedSpreadsheetName}
+                  </dd>
+                </div>
+              </dl>
               {canManageJudgeBook && (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={handleConnectJudgeBook}>
+                  <Button variant="outline" onClick={handleConnectJudgeBook}>
                     Змінити таблицю
                   </Button>
-                  <Button size="sm" variant="outline" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
+                  <Button variant="signal" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
                     {syncNow.isPending ? 'Записую...' : 'Записати зміни в таблицю зараз'}
                   </Button>
                 </div>
               )}
               {syncNow.isError && (
-                <p className="text-sm text-destructive">{syncErrorMessage(syncNow.error)}</p>
+                <p className="text-sm text-late">{syncErrorMessage(syncNow.error)}</p>
               )}
               {syncNow.data && (
-                <div className="space-y-1 rounded bg-muted p-2" data-testid="sync-report">
+                <div className="space-y-1 rounded-[4px] border border-line bg-bg p-3" data-testid="sync-report">
                   <p className="font-medium">
                     {syncNow.data.updatedCells > 0
                       ? `Записано комірок: ${syncNow.data.updatedCells} (юнаків: ${syncNow.data.syncedJunaky})`
                       : 'Нічого записувати — таблиця вже актуальна або немає що передавати.'}
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="text-ink-2">
                     Привʼязано до рядків таблиці: {syncNow.data.linkedJunaky}. Без рядка в таблиці:{' '}
                     {syncNow.data.unlinkedJunaky} (для них нічого не записується).
                   </p>
                   {syncNow.data.skipped.length > 0 && (
                     <div>
-                      <p className="font-medium text-destructive">Пропущено: {syncNow.data.skipped.length}</p>
+                      <p className="font-medium text-late">Пропущено: {syncNow.data.skipped.length}</p>
                       <ul className="list-disc pl-5">
                         {syncNow.data.skipped.map((item) => (
                           <li key={`${item.row}-${item.junakName}`}>
@@ -105,22 +117,26 @@ export default function SuddivstvoPage() {
             </>
           ) : (
             <>
-              <p className="text-muted-foreground">Книга судді не підключена.</p>
+              <p className="text-ink-2">Книга судді не підключена.</p>
               {canManageJudgeBook && (
-                <Button size="sm" disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
+                <Button disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
                   Підключити Книгу судді
                 </Button>
               )}
             </>
           )}
-          {bookConnectError && <p className="text-sm text-destructive">{bookConnectError}</p>}
+          {bookConnectError && <p className="text-sm text-late">{bookConnectError}</p>}
         </CardContent>
       </Card>
       {junakImportStatus.data?.connectedSpreadsheetId && (
-        <Link href="/suddivstvo/junak-import" className="block">
-          <Button className="w-full" size="lg">
+        <Link
+          href="/suddivstvo/junak-import"
+          className="block rounded-[6px] border border-line bg-paper p-4 no-underline transition-colors hover:border-navy"
+        >
+          <b className="block font-display text-[1.05rem] font-semibold tracking-[.01em] uppercase">
             Імпортувати юнаків з таблиці Книги судді
-          </Button>
+          </b>
+          <span className="text-[.9rem] text-ink-2">Нові юнаки і оновлення з Книги судді — перегляд перед імпортом.</span>
         </Link>
       )}
     </div>

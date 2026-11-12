@@ -13,6 +13,9 @@ import { useAdminKurins, useCreateKurin, useUpdateKurin, useDeleteKurin } from '
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { SectionHeading } from '@/components/ui/section-heading';
+import { WideContent } from '@/components/app-shell';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
 import { type AdminCredentials } from '@/lib/queries/admin-credentials';
@@ -85,7 +88,7 @@ export default function AdminProbyCatalogPage() {
   if (!credentials) {
     return (
       <div className="mx-auto max-w-sm space-y-4">
-        <h1 className="text-2xl font-bold">Адмін</h1>
+        <PageHeader title="Адмін" />
         <Card>
           <CardContent className="space-y-3 pt-6">
             <p className="text-sm text-muted-foreground">
@@ -123,17 +126,20 @@ export default function AdminProbyCatalogPage() {
   }
 
   return (
+    <WideContent>
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Адмін</h1>
-        <Button size="sm" variant="outline" onClick={handleClearCredentials}>
-          Вийти
-        </Button>
-      </div>
+      <PageHeader
+        title="Адмін"
+        actions={
+          <Button size="sm" variant="outline" onClick={handleClearCredentials}>
+            Вийти
+          </Button>
+        }
+      />
 
       <KurinsSection credentials={credentials} programs={programs ?? []} />
 
-      <h2 className="text-xl font-bold">Каталог проби</h2>
+      <SectionHeading>Каталог проби</SectionHeading>
       <p className="text-sm text-muted-foreground">
         Для кожної точки можна додати довідковий матеріал (точні дати, імена, факти) — AI-виховник
         використовуватиме лише ці факти замість того, щоб вигадувати їх.
@@ -190,6 +196,7 @@ export default function AdminProbyCatalogPage() {
 
       <ReferenceSourcesSection credentials={credentials} programs={programs ?? []} />
     </div>
+    </WideContent>
   );
 }
 

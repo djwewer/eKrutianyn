@@ -6,8 +6,11 @@ import { useCreateApd, usePseudoCandidates } from '@/lib/queries/pysarstvo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { ApiError } from '@/lib/api-client';
 import { accessErrorMessage } from '@/lib/error-message';
+
+const FIELD_LABEL = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
@@ -34,7 +37,7 @@ export default function PysarstvoPage() {
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
   if (!session || !kurinId) return null;
-  if (!canUse) return <p className="text-sm text-destructive">Немає доступу.</p>;
+  if (!canUse) return <p className="text-sm text-late">Немає доступу.</p>;
 
   const pseudos = [
     ...candidates.filter((c) => selected.includes(c.id)).map((c) => c.label),
@@ -62,13 +65,13 @@ export default function PysarstvoPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Писарство</h1>
+      <PageHeader title="Писарство" subtitle="АПД сходин і документи куреня в Google Drive" />
       <Card>
         <CardHeader>
           <CardTitle>Створити АПД</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink-2">
             Документ створюється у Google Drive куреня, у папці «Писарство» → «АПД». Для кожного псевдо додаються розділи
             «Що було добре» та «Що можна покращити».
           </p>
@@ -79,28 +82,30 @@ export default function PysarstvoPage() {
             maxLength={200}
           />
           <div className="space-y-2">
-            <p className="text-sm font-medium">Юнаки куреня</p>
-            <div className="flex flex-wrap gap-2">
+            <p className={FIELD_LABEL}>Юнаки куреня</p>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))] gap-2">
               {candidates.map((c) => (
-                <Button
+                <label
                   key={c.id}
-                  type="button"
-                  size="sm"
-                  variant={selected.includes(c.id) ? 'default' : 'outline'}
-                  aria-pressed={selected.includes(c.id)}
-                  onClick={() => toggle(c.id)}
+                  className="flex cursor-pointer items-center gap-[.7rem] rounded-[6px] border border-line bg-bg px-[.8rem] py-[.7rem] has-[:checked]:border-navy"
                 >
-                  {c.label}
-                </Button>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-navy"
+                    checked={selected.includes(c.id)}
+                    onChange={() => toggle(c.id)}
+                  />
+                  <span className="text-[.98rem] leading-tight font-bold">{c.label}</span>
+                </label>
               ))}
-              {candidates.length === 0 && <p className="text-sm text-muted-foreground">Немає юнаків.</p>}
+              {candidates.length === 0 && <p className="col-span-full text-sm text-ink-2">Немає юнаків.</p>}
             </div>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium">Додати вручну (гість, не в системі)</p>
+            <p className={FIELD_LABEL}>Додати вручну (гість, не в системі)</p>
             <div className="flex flex-wrap gap-2">
               <Input
-                className="max-w-60"
+                className="max-w-60 flex-1"
                 placeholder="Псевдо"
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
@@ -112,7 +117,7 @@ export default function PysarstvoPage() {
                 }}
                 maxLength={100}
               />
-              <Button type="button" size="sm" variant="outline" onClick={addManual}>
+              <Button type="button" variant="outline" onClick={addManual}>
                 Додати
               </Button>
             </div>
@@ -133,13 +138,13 @@ export default function PysarstvoPage() {
               </div>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">Обрано псевдо: {pseudos.length}</p>
+          <p className="text-sm text-ink-2">Обрано псевдо: {pseudos.length}</p>
           <Button disabled={createApd.isPending || !title.trim() || pseudos.length === 0} onClick={submit}>
             {createApd.isPending ? 'Створюю…' : 'Створити АПД'}
           </Button>
-          {createApd.isError && <p className="text-sm text-destructive">{errorText(createApd.error)}</p>}
+          {createApd.isError && <p className="text-sm text-late">{errorText(createApd.error)}</p>}
           {createdUrl && (
-            <p className="text-sm text-green-600 dark:text-green-400">
+            <p className="text-sm text-ok" role="status">
               Документ створено:{' '}
               <a href={createdUrl} target="_blank" rel="noopener noreferrer" className="underline">
                 відкрити в Google Docs

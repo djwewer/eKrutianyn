@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createOnboardedUserAs, loginForToken } from './helpers/proby-seed';
 
 test('lets zvyazkovyi set a starting balance, record income/expenses, and see the computed balance', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -44,7 +44,7 @@ test('a plain junak sees an access-denied message instead of the ledger', async 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
 
   const junakEmail = `junak-${Date.now()}@example.com`;
-  await createUserAs(zvyazkovyiToken, {
+  await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Юний',
     lastName: 'Пластун',
     email: junakEmail,
