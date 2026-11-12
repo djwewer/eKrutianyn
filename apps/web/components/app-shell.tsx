@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // children перемонтуються і втрачають введений стан (напр. поля форми входу).
   return (
     <div>
-      {session && nav && <BandHeader nav={nav} profile={profile} kurin={kurin} pathname={pathname} />}
+      {session && nav && !isAuthRoute && <BandHeader nav={nav} profile={profile} kurin={kurin} pathname={pathname} />}
       <main
         className={
           isAuthRoute
@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
-      {session && nav && <BottomNav nav={nav} pathname={pathname} />}
+      {session && nav && !isAuthRoute && <BottomNav nav={nav} pathname={pathname} />}
     </div>
   );
 }
