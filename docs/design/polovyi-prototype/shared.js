@@ -195,7 +195,7 @@
     const id = 'cz' + ++cid;
     registry[id] = { photos, opts };
     const nav = photos.length > 1;
-    return `<div class="cz cz-${opts.nav || 'dots'}" data-cz="${id}" style="--cz-ratio:${opts.ratio || '4/3'}">
+    return `<div class="cz cz--${opts.nav || 'dots'}" data-cz="${id}" style="--cz-ratio:${opts.ratio || '4/3'}">
       <div class="cz-stage">
         <div class="cz-track" tabindex="0" aria-roledescription="карусель" aria-label="${esc(opts.label || 'Фото')}">
           ${photos.map((src, i) => `<button type="button" class="cz-slide" data-cz-open="${i}" aria-label="Відкрити фото ${i + 1} з ${photos.length}"><img src="${src}" alt="${esc(opts.label || 'Фото')} ${i + 1}" loading="lazy" draggable="false"></button>`).join('')}
