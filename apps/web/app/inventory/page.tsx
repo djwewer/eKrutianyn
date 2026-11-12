@@ -15,6 +15,8 @@ import type { InventoryItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { PhotoCarousel } from '@/components/photo-carousel';
 import { accessErrorMessage } from '@/lib/error-message';
 import { useGoogleDriveStatus, useSetGoogleDriveFolder, fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
@@ -53,7 +55,7 @@ function GoogleDriveCard({
         <CardTitle>Google Drive</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {driveConnected && <p className="text-sm text-green-600 dark:text-green-400">Google Drive підключено.</p>}
+        {driveConnected && <p className="text-sm text-ok">Google Drive підключено.</p>}
         {driveError && (
           <p className="text-sm text-destructive">Не вдалося підключити Google Drive. Спробуйте ще раз.</p>
         )}
@@ -81,60 +83,6 @@ function GoogleDriveCard({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function PhotoCarousel({ item, canEdit, kurinId }: { item: InventoryItem; canEdit: boolean; kurinId: string }) {
-  const [index, setIndex] = useState(0);
-  const removePhoto = useRemoveInventoryPhoto(kurinId);
-  const photo = item.photos[index];
-
-  if (item.photos.length === 0) {
-    return <p className="text-sm text-muted-foreground">Немає фото</p>;
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="relative aspect-square w-full overflow-hidden rounded">
-        <img
-          src={photo.url}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 size-full scale-110 object-cover blur-xl"
-        />
-        <img src={photo.url} alt={item.name} className="relative size-full object-contain" />
-      </div>
-      {item.photos.length > 1 && (
-        <div className="flex items-center justify-between">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIndex((index - 1 + item.photos.length) % item.photos.length)}
-          >
-            ◂
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {index + 1} / {item.photos.length}
-          </span>
-          <Button size="sm" variant="outline" onClick={() => setIndex((index + 1) % item.photos.length)}>
-            ▸
-          </Button>
-        </div>
-      )}
-      {canEdit && (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={removePhoto.isPending}
-          onClick={() => {
-            removePhoto.mutate({ itemId: item.id, photoId: photo.id });
-            setIndex(0);
-          }}
-        >
-          Видалити це фото
-        </Button>
-      )}
-    </div>
   );
 }
 
@@ -214,14 +162,36 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
   const update = useUpdateInventoryItem(kurinId);
   const remove = useDeleteInventoryItem(kurinId);
   const addPhoto = useAddInventoryPhoto(kurinId);
+  const removePhoto = useRemoveInventoryPhoto(kurinId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{item.name}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <PhotoCarousel item={item} canEdit={canEdit} kurinId={kurinId} />
+    <article className="inv-tag">
+      <h3 className="m-0 pr-5 font-display text-[1.3rem] leading-[1.15] font-semibold tracking-[.02em] uppercase">
+        {item.name}
+      </h3>
+      {item.photos.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Немає фото</p>
+      ) : (
+        <PhotoCarousel
+          photos={item.photos.map((p) => ({ id: p.id, src: p.url, alt: item.name }))}
+          label={item.name}
+          ratio="4/3"
+          renderSlideExtra={(photo) =>
+            canEdit ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="justify-self-start"
+                disabled={removePhoto.isPending}
+                onClick={() => removePhoto.mutate({ itemId: item.id, photoId: photo.id })}
+              >
+                Видалити це фото
+              </Button>
+            ) : null
+          }
+        />
+      )}
+      <div className="space-y-3">
         {isEditing ? (
           <div className="space-y-2">
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
@@ -295,8 +265,8 @@ function InventoryItemCard({ item, canEdit, kurinId }: { item: InventoryItem; ca
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   );
 }
 
@@ -318,7 +288,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Облік реманенту</h1>
+      <PageHeader title="Облік реманенту" subtitle={`${(items ?? []).length} позицій`} />
       {canEdit && (
         <GoogleDriveCard
           kurinId={kurinId}
@@ -338,7 +308,7 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-[1.1rem]">
         {(items ?? []).map((item) => (
           <InventoryItemCard key={item.id} item={item} canEdit={canEdit} kurinId={kurinId} />
         ))}

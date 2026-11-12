@@ -41,6 +41,8 @@ const openLightbox = async (page: Page) => {
 
 // Next photo: expect the carousel state (counter/active dot) to change.
 const nextPhoto = async (page: Page) => {
+  // Arrows are hidden on phones by design (swipe + dots).
+  if ((page.viewportSize()?.width ?? 0) <= 760) throw new VisualNotApplicable('arrows hidden on phones');
   const next = page.getByRole('button', { name: /наступн/i });
   if ((await next.count()) === 0) throw new VisualSkip('control not found: next-photo arrow');
   const region = page.locator('main');
