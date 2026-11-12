@@ -106,6 +106,7 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
           aria-label="Основна навігація"
           className={cn(
             'grid gap-[.2rem]',
+            // 5 columns keep the prototype's .05em tracking (from ITEM) on purpose; 6 columns need tracking-normal to fit.
             columns === 6
               ? '[&_a]:text-[.62rem] [&_a]:tracking-normal [&_button]:text-[.62rem] [&_button]:tracking-normal'
               : '[&_a]:text-[.66rem] [&_button]:text-[.66rem]',
