@@ -14,14 +14,25 @@ export const MONTH_NAMES_GENITIVE = [
 // Indexed by Date#getDay() (0 = Sunday).
 export const WEEKDAY_CODES = ['НД', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
 
-// Local calendar day as a sortable number (yyyymmdd), ignoring time of day.
-function dayNumber(d: Date): number {
-  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+// Events are date-only values stored as UTC midnight, so their calendar date is
+// read from the UTC part of the ISO string; `today` is the viewer's local date.
+export function eventDate(iso: string) {
+  const d = new Date(iso);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate(), weekday: d.getUTCDay() };
 }
-const eventDay = (iso: string) => dayNumber(new Date(iso));
+const dayNumber = (year: number, month: number, day: number) => year * 10000 + (month + 1) * 100 + day;
+const eventDay = (iso: string) => {
+  const { year, month, day } = eventDate(iso);
+  return dayNumber(year, month, day);
+};
+// dd.mm.yyyy, same shape as toLocaleDateString('uk-UA'), without a timezone shift.
+export function formatEventDate(iso: string) {
+  const { year, month, day } = eventDate(iso);
+  return `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${year}`;
+}
 
 export function buildTimeline(events: KurinCalendarEvent[], view: TimelineView, today: Date): TimelineMonth[] {
-  const todayNum = dayNumber(today);
+  const todayNum = dayNumber(today.getFullYear(), today.getMonth(), today.getDate());
   const ty = today.getFullYear();
   const tm = today.getMonth();
 
@@ -34,9 +45,9 @@ export function buildTimeline(events: KurinCalendarEvent[], view: TimelineView, 
       .filter((e) => eventDay(e.endDate ?? e.startDate) >= todayNum)
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
     for (const e of upcoming) {
-      const s = new Date(e.startDate);
+      const s = eventDate(e.startDate);
       // An event already under way (started before this month) sits in the first month.
-      const idx = (s.getFullYear() - ty) * 12 + (s.getMonth() - tm);
+      const idx = (s.year - ty) * 12 + (s.month - tm);
       const target = months[Math.max(idx, 0)];
       if (target) target.events.push(e);
     }
@@ -50,9 +61,9 @@ export function buildTimeline(events: KurinCalendarEvent[], view: TimelineView, 
     .filter((e) => eventDay(e.startDate) < todayNum)
     .sort((a, b) => b.startDate.localeCompare(a.startDate));
   for (const e of past) {
-    const s = new Date(e.startDate);
-    if (s.getFullYear() !== view) continue;
-    months.find((x) => x.month === s.getMonth())?.events.push(e);
+    const s = eventDate(e.startDate);
+    if (s.year !== view) continue;
+    months.find((x) => x.month === s.month)?.events.push(e);
   }
   return months;
 }

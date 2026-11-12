@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
+import { Segmented } from '@/components/ui/segmented';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
-import { buildTimeline, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
+import { buildTimeline, eventDate, formatEventDate, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
 import type { KurinCalendarEvent } from '@/lib/types';
 
 const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -216,10 +217,6 @@ function AddEventDialog({
   );
 }
 
-function formatShort(iso: string) {
-  return new Date(iso).toLocaleDateString('uk-UA');
-}
-
 function EventCard({
   event,
   past,
@@ -233,27 +230,27 @@ function EventCard({
   onDelete: () => void;
   deleting: boolean;
 }) {
-  const start = new Date(event.startDate);
-  const end = event.endDate ? new Date(event.endDate) : null;
-  const multiDay = !!end && end.toDateString() !== start.toDateString();
-  const dayLabel = multiDay ? `${start.getDate()}–${end.getDate()}` : String(start.getDate());
+  const start = eventDate(event.startDate);
+  const end = event.endDate ? eventDate(event.endDate) : null;
+  const multiDay = !!end && (end.year !== start.year || end.month !== start.month || end.day !== start.day);
+  const dayLabel = multiDay ? `${start.day}–${end.day}` : String(start.day);
   return (
     <div className="flex items-center gap-[.9rem] rounded-[6px] border border-line bg-paper px-[.9rem] py-[.6rem]">
       <div className="min-w-[2.2rem] text-center font-display leading-none">
         <b className={cn('block text-[1.5rem] font-bold', past ? 'text-ink-2' : 'text-navy')}>{dayLabel}</b>
-        <span className="font-mono text-[.66rem] tracking-[.06em] text-ink-2">{WEEKDAY_CODES[start.getDay()]}</span>
+        <span className="font-mono text-[.66rem] tracking-[.06em] text-ink-2">{WEEKDAY_CODES[start.weekday]}</span>
       </div>
       <div className="min-w-0 flex-1">
         <b className="block leading-[1.25] break-words">{event.title}</b>
         {multiDay && (
           <small className="block font-mono text-[.76rem] text-ink-2">
-            {formatShort(event.startDate)} – {formatShort(event.endDate!)}
+            {formatEventDate(event.startDate)} – {formatEventDate(event.endDate!)}
           </small>
         )}
         {event.description && <small className="block text-[.84rem] break-words text-ink-2">{event.description}</small>}
       </div>
       {canEdit && (
-        <Button size="sm" variant="outline" disabled={deleting} onClick={onDelete}>
+        <Button size="sm" variant="destructive" disabled={deleting} onClick={onDelete}>
           Видалити
         </Button>
       )}
@@ -290,30 +287,13 @@ function TimelineView({
 
   return (
     <>
-      <div
-        role="radiogroup"
-        aria-label="Період"
-        className="mb-[1.2rem] inline-flex max-w-full flex-wrap overflow-hidden rounded-[4px] border-2 border-line"
-      >
-        {views.map(({ value, label }) => {
-          const on = value === view;
-          return (
-            <button
-              key={label}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => onViewChange(value)}
-              className={cn(
-                'cursor-pointer border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line',
-                on ? 'bg-navy text-navy-ink' : 'bg-paper text-ink',
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <Segmented
+        label="Період"
+        options={views}
+        value={view}
+        onChange={onViewChange}
+        className="mb-[1.2rem]"
+      />
 
       <div className="relative grid gap-[1.1rem] before:absolute before:top-[.4rem] before:bottom-[.4rem] before:left-[6.6rem] before:w-0.5 before:bg-line max-[759px]:before:hidden">
         {months.map(({ year, month, events: list }) => {
