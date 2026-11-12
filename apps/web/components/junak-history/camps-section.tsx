@@ -9,6 +9,7 @@ import { mutationErrorText } from '@/lib/error-message';
 import { CAMP_ROLE_LABELS, formatYears } from '@/lib/history-labels';
 import type { JunakActivityRole, JunakCamp } from '@/lib/types';
 import { DialogActions, EmptyText, HistoryCard, RowActions } from './shared';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 export function CampsSection({ junakId, entries, canEdit }: { junakId: string; entries: JunakCamp[]; canEdit: boolean }) {
   const [dialog, setDialog] = useState<{ entry: JunakCamp | null } | null>(null);
@@ -113,7 +114,7 @@ function CampDialog({ junakId, entry, onClose }: { junakId: string; entry: Junak
             id="camp-role"
             value={role}
             onChange={(e) => setRole(e.target.value as JunakActivityRole)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className={nativeSelectClass}
           >
             <option value="PARTICIPANT">Учасник</option>
             <option value="PROVID">Провід</option>

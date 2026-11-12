@@ -9,6 +9,7 @@ import { useCreateSkill, useUpdateSkill } from '@/lib/queries/skills';
 import { mutationErrorText } from '@/lib/error-message';
 import { SKILL_GROUP_LABELS, SKILL_GROUP_ORDER, SKILL_LEVEL_LABELS } from '@/lib/history-labels';
 import type { Skill, SkillGroup } from '@/lib/types';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 const LEVELS = [1, 2, 3];
 
@@ -86,7 +87,7 @@ export function CustomSkillDialog({ skill, onClose }: { skill: Skill | null; onC
             id="custom-skill-group"
             value={group}
             onChange={(e) => setGroup(e.target.value as SkillGroup)}
-            className="min-h-[2.75rem] w-full min-w-0 rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground transition-colors focus-visible:border-navy focus-visible:outline-none"
+            className={nativeSelectClass}
           >
             {SKILL_GROUP_ORDER.map((g) => (
               <option key={g} value={g}>

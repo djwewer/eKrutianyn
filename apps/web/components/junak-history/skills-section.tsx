@@ -13,6 +13,7 @@ import { mutationErrorText } from '@/lib/error-message';
 import { SKILL_GROUP_LABELS, SKILL_GROUP_ORDER, SKILL_LEVEL_LABELS } from '@/lib/history-labels';
 import type { JunakSkill } from '@/lib/types';
 import { DialogActions, EmptyText, HistoryCard, RowActions, formatDate, today } from './shared';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 export function SkillsSection({ junakId, skills, canEdit }: { junakId: string; skills: JunakSkill[]; canEdit: boolean }) {
   const [dialog, setDialog] = useState<{ entry: JunakSkill | null } | null>(null);
@@ -43,7 +44,7 @@ export function SkillsSection({ junakId, skills, canEdit }: { junakId: string; s
               {items.map((s) => (
                 <li key={s.id} className="flex items-start justify-between gap-2" data-testid="junak-skill">
                   <span className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Badge className="min-w-0 max-w-full shrink whitespace-normal rounded-xl [overflow-wrap:anywhere]">
+                    <Badge className="min-w-0 max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">
                       {s.skillName} {s.level}
                     </Badge>
                     <span className="text-muted-foreground">{formatDate(s.achievedAt)}</span>
@@ -176,7 +177,7 @@ function JunakSkillDialog({ junakId, entry, onClose }: { junakId: string; entry:
                   id="skill-level"
                   value={levelId}
                   onChange={(e) => setLevelId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  className={nativeSelectClass}
                 >
                   <option value="">Оберіть рівень</option>
                   {selected.levels.map((l) => (

@@ -11,6 +11,7 @@ import { POSITION_SCOPE_LABELS, formatYears } from '@/lib/history-labels';
 import { POSITION_LABELS } from '@/lib/role-labels';
 import type { JunakPastPosition, JunakPositionHistory, PositionScope } from '@/lib/types';
 import { DialogActions, EmptyText, HistoryCard, RowActions } from './shared';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 interface DilovodstvoRow {
   key: string;
@@ -146,7 +147,7 @@ function PastPositionDialog({ junakId, entry, onClose }: { junakId: string; entr
             id="past-position-scope"
             value={scope}
             onChange={(e) => setScope(e.target.value as PositionScope)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className={nativeSelectClass}
           >
             <option value="HURTOK">У гуртку</option>
             <option value="KURIN">У курені</option>

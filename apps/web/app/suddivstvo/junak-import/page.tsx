@@ -28,9 +28,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { WideContent } from '@/components/app-shell';
+import { nativeSelectClass } from '@/components/ui/native-select';
+import { cn } from '@/lib/utils';
 
-const SELECT_CLASS =
-  'min-h-[2.75rem] min-w-0 rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
 const MONO_HEAD = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
 const FIELD_OPTIONS = Object.keys(JUNAK_IMPORT_FIELD_LABELS) as JunakImportField[];
@@ -95,7 +95,7 @@ function WizardRowMatchPicker({
 
   return (
     <select
-      className={`${SELECT_CLASS} w-full sm:w-auto`}
+      className={cn(nativeSelectClass, 'sm:w-auto')}
       value={value ?? (soleCandidateId ? soleCandidateId : 'new')}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -322,149 +322,149 @@ export default function JunakImportPage() {
 
   return (
     <WideContent>
-    <div className="space-y-4">
-      <PageHeader
-        title="Імпорт юнаків з Книги судді"
-        subtitle="Перегляньте, що зміниться, перш ніж надсилати"
-        crumb={{ href: '/suddivstvo', label: 'Суддівство' }}
-      />
+      <div className="space-y-4">
+        <PageHeader
+          title="Імпорт юнаків з Книги судді"
+          subtitle="Перегляньте, що зміниться, перш ніж надсилати"
+          crumb={{ href: '/suddivstvo', label: 'Суддівство' }}
+        />
 
-      {step === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Крок 1: Мапінг стовпчиків</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {header.map((h, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-48 shrink-0 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
-                <select
-                  className={`${SELECT_CLASS} max-w-full flex-1`}
-                  value={columnMapping[i] ?? ''}
-                  onChange={(e) => setColumnMapping((prev) => ({ ...prev, [i]: e.target.value as JunakImportField }))}
-                >
-                  <option value="">Не імпортувати</option>
-                  {FIELD_OPTIONS.map((f) => (
-                    <option key={f} value={f}>
-                      {JUNAK_IMPORT_FIELD_LABELS[f]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-            <Button
-              variant="signal"
-              onClick={() => (uniquePositionValues.length > 0 ? setStep(2) : handleSaveMapping())}
-            >
-              Далі
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Крок 2: Мапінг значень посад</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {uniquePositionValues.map((value) => (
-              <div key={value} className="flex items-center gap-2">
-                <span className="w-48 shrink-0 truncate text-sm">{value}</span>
-                <select
-                  className={`${SELECT_CLASS} max-w-full flex-1`}
-                  value={positionValueMapping[value] ?? ''}
-                  onChange={(e) => setPositionValueMapping((prev) => ({ ...prev, [value]: e.target.value }))}
-                >
-                  <option value="">Не імпортувати</option>
-                  {POSITION_TYPES.map((p) => (
-                    <option key={p} value={p}>
-                      {POSITION_LABELS[p]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-            <Button variant="signal" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
-              Далі
-            </Button>
-            {saveMapping.isError && (
-              <p className="text-sm text-late">{accessErrorMessage(saveMapping.error)}</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 3 && !results && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Крок 3: Перегляд</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-ink-2">Рядків до імпорту: {wizardRows.length}</p>
-            <div className={`hidden gap-2 border-b-2 border-line pb-1 lg:flex ${MONO_HEAD}`} aria-hidden="true">
-              <span className="w-40">Юнак</span>
-              <span className="w-24">Гурток</span>
-              <span className="w-56">Email</span>
-              <span>Що зміниться</span>
-            </div>
-            {wizardRows.map((row) => {
-              const emailColIndex = colIndexFor('EMAIL');
-              const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
-              const i = row.rowIndex;
-              return (
-              <div key={i} className="flex flex-col gap-2 border-b border-dashed border-line pb-2 text-sm lg:flex-row lg:items-center lg:pb-1">
-                <div className="flex items-center gap-2 lg:contents">
-                  <span className="min-w-0 flex-1 truncate lg:w-40 lg:flex-none">
-                    {row.firstName} {row.lastName}
-                  </span>
-                  <span className="shrink-0 truncate text-ink-2 lg:w-24">{row.hurtokName || '—'}</span>
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Крок 1: Мапінг стовпчиків</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {header.map((h, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-48 shrink-0 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
+                  <select
+                    className={cn(nativeSelectClass, 'w-auto max-w-full flex-1')}
+                    value={columnMapping[i] ?? ''}
+                    onChange={(e) => setColumnMapping((prev) => ({ ...prev, [i]: e.target.value as JunakImportField }))}
+                  >
+                    <option value="">Не імпортувати</option>
+                    {FIELD_OPTIONS.map((f) => (
+                      <option key={f} value={f}>
+                        {JUNAK_IMPORT_FIELD_LABELS[f]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <Input
-                  className="w-full lg:w-56"
-                  placeholder="Email"
-                  defaultValue={rowOverrides[i]?.email ?? (emailFromSheet || undefined)}
-                  onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}
-                />
-                <WizardRowMatchPicker
-                  kurinId={kurinId}
-                  firstName={row.firstName}
-                  lastName={row.lastName}
-                  value={rowOverrides[i]?.matchChoice}
-                  onChange={(v) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], matchChoice: v } }))}
-                />
+              ))}
+              <Button
+                variant="signal"
+                onClick={() => (uniquePositionValues.length > 0 ? setStep(2) : handleSaveMapping())}
+              >
+                Далі
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Крок 2: Мапінг значень посад</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {uniquePositionValues.map((value) => (
+                <div key={value} className="flex items-center gap-2">
+                  <span className="w-48 shrink-0 truncate text-sm">{value}</span>
+                  <select
+                    className={cn(nativeSelectClass, 'w-auto max-w-full flex-1')}
+                    value={positionValueMapping[value] ?? ''}
+                    onChange={(e) => setPositionValueMapping((prev) => ({ ...prev, [value]: e.target.value }))}
+                  >
+                    <option value="">Не імпортувати</option>
+                    {POSITION_TYPES.map((p) => (
+                      <option key={p} value={p}>
+                        {POSITION_LABELS[p]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <Button variant="signal" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
+                Далі
+              </Button>
+              {saveMapping.isError && (
+                <p className="text-sm text-late">{accessErrorMessage(saveMapping.error)}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 3 && !results && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Крок 3: Перегляд</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-ink-2">Рядків до імпорту: {wizardRows.length}</p>
+              <div className={`hidden gap-2 border-b-2 border-line pb-1 lg:flex ${MONO_HEAD}`} aria-hidden="true">
+                <span className="w-40">Юнак</span>
+                <span className="w-24">Гурток</span>
+                <span className="w-56">Email</span>
+                <span>Що зміниться</span>
               </div>
-              );
-            })}
-            {submitError && <p className="text-sm text-late">{submitError}</p>}
-            <Button variant="signal" onClick={handleImport} disabled={importRows.isPending || createApprovalRequest.isPending}>
-              {isZvyazkovyi ? 'Імпортувати' : 'Надіслати на затвердження звʼязковому'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              {wizardRows.map((row) => {
+                const emailColIndex = colIndexFor('EMAIL');
+                const emailFromSheet = emailColIndex !== undefined ? (row.cells[emailColIndex] ?? '').trim() : '';
+                const i = row.rowIndex;
+                return (
+                <div key={i} className="flex flex-col gap-2 border-b border-dashed border-line pb-2 text-sm lg:flex-row lg:items-center lg:pb-1">
+                  <div className="flex items-center gap-2 lg:contents">
+                    <span className="min-w-0 flex-1 truncate lg:w-40 lg:flex-none">
+                      {row.firstName} {row.lastName}
+                    </span>
+                    <span className="shrink-0 truncate text-ink-2 lg:w-24">{row.hurtokName || '—'}</span>
+                  </div>
+                  <Input
+                    className="w-full lg:w-56"
+                    placeholder="Email"
+                    defaultValue={rowOverrides[i]?.email ?? (emailFromSheet || undefined)}
+                    onChange={(e) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], email: e.target.value } }))}
+                  />
+                  <WizardRowMatchPicker
+                    kurinId={kurinId}
+                    firstName={row.firstName}
+                    lastName={row.lastName}
+                    value={rowOverrides[i]?.matchChoice}
+                    onChange={(v) => setRowOverrides((prev) => ({ ...prev, [i]: { ...prev[i], matchChoice: v } }))}
+                  />
+                </div>
+                );
+              })}
+              {submitError && <p className="text-sm text-late">{submitError}</p>}
+              <Button variant="signal" onClick={handleImport} disabled={importRows.isPending || createApprovalRequest.isPending}>
+                {isZvyazkovyi ? 'Імпортувати' : 'Надіслати на затвердження звʼязковому'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-      {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Результат</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            {results.map((r) => (
-              <p key={r.row} className={r.error ? 'text-late' : ''}>
-                Рядок {r.row + 2}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
-              </p>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+        {results && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Результат</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              {results.map((r) => (
+                <p key={r.row} className={r.error ? 'text-late' : ''}>
+                  Рядок {r.row + 2}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-      {!isZvyazkovyi && results === null && createApprovalRequest.isSuccess && (
-        <p className="text-sm text-ink-2">
-          Запит надіслано звʼязковому на затвердження.
-        </p>
-      )}
-    </div>
+        {!isZvyazkovyi && results === null && createApprovalRequest.isSuccess && (
+          <p className="text-sm text-ink-2">
+            Запит надіслано звʼязковому на затвердження.
+          </p>
+        )}
+      </div>
     </WideContent>
   );
 }

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { accessErrorMessage } from '@/lib/error-message';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 function dayLabel(iso: string): string {
   return new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -46,9 +47,6 @@ export default function AuditLogPage() {
   const setFilter = (patch: Partial<AuditLogFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
   const items = log.data?.pages.flatMap((p) => p.items) ?? [];
 
-  const selectClass =
-    'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] text-base text-foreground focus-visible:border-navy';
-
   return (
     <div>
       <PageHeader title="Журнал дій" subtitle="Хто що змінив у курені" crumb={{ href: '/settings', label: 'Налаштування' }} />
@@ -61,7 +59,7 @@ export default function AuditLogPage() {
               id="audit-group"
               value={filters.group ?? ''}
               onChange={(e) => setFilter({ group: (e.target.value || undefined) as AuditGroup | undefined })}
-              className={selectClass}
+              className={nativeSelectClass}
             >
               <option value="">Усі</option>
               {(Object.keys(AUDIT_GROUP_LABELS) as AuditGroup[]).map((group) => (
@@ -85,7 +83,7 @@ export default function AuditLogPage() {
               id="audit-actor"
               value={filters.actorId ?? ''}
               onChange={(e) => setFilter({ actorId: e.target.value || undefined })}
-              className={selectClass}
+              className={nativeSelectClass}
             >
               <option value="">Хто діяв: усі</option>
               {users.data?.map((u) => (

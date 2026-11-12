@@ -13,9 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Role, UserSummary } from '@/lib/types';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
-const SELECT_CLASS =
-  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
 
 function ZvyazkovyiDirectCreateForm({
   initialHurtokId,
@@ -73,7 +72,7 @@ function ZvyazkovyiDirectCreateForm({
                 id="role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
-                className={SELECT_CLASS}
+                className={nativeSelectClass}
               >
                 <option value="JUNAK">Юнак</option>
                 <option value="VYKHOVNYK">Виховник</option>
@@ -103,7 +102,7 @@ function ZvyazkovyiDirectCreateForm({
                   value={hurtokId}
                   onChange={(e) => setHurtokId(e.target.value)}
                   required
-                  className={SELECT_CLASS}
+                  className={nativeSelectClass}
                 >
                   <option value="">Оберіть гурток</option>
                   {(hurtky ?? []).map((h) => (
@@ -190,7 +189,7 @@ function KurinnyiApprovalRequestForm({ initialHurtokId }: { initialHurtokId: str
                 value={hurtokId}
                 onChange={(e) => setHurtokId(e.target.value)}
                 required
-                className={SELECT_CLASS}
+                className={nativeSelectClass}
               >
                 <option value="">Оберіть гурток</option>
                 {(hurtky ?? []).map((h) => (

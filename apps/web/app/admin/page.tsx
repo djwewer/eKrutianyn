@@ -20,6 +20,7 @@ import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
 import { type AdminCredentials } from '@/lib/queries/admin-credentials';
 import type { AdminKurin, AdminProbyPoint, AdminProbyProgram } from '@/lib/types';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 const STORAGE_KEY = 'plastAdminCredentials';
 
@@ -127,75 +128,75 @@ export default function AdminProbyCatalogPage() {
 
   return (
     <WideContent>
-    <div className="space-y-4">
-      <PageHeader
-        title="Адмін"
-        actions={
-          <Button size="sm" variant="outline" onClick={handleClearCredentials}>
-            Вийти
-          </Button>
-        }
-      />
-
-      <KurinsSection credentials={credentials} programs={programs ?? []} />
-
-      <SectionHeading>Каталог проби</SectionHeading>
-      <p className="text-sm text-muted-foreground">
-        Для кожної точки можна додати довідковий матеріал (точні дати, імена, факти) — AI-виховник
-        використовуватиме лише ці факти замість того, щоб вигадувати їх.
-      </p>
-
-      {isLoading && <p className="text-sm text-muted-foreground">Завантаження...</p>}
-      {isError && (
-        <Card>
-          <CardContent className="space-y-3 pt-6">
-            <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Невірний ключ.'}</p>
+      <div className="space-y-4">
+        <PageHeader
+          title="Адмін"
+          actions={
             <Button size="sm" variant="outline" onClick={handleClearCredentials}>
-              Ввести дані знову
+              Вийти
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          }
+        />
 
-      {(programs ?? []).map((program) => (
-        <Card key={program.id}>
-          <CardHeader>
-            <CardTitle>
-              {program.name} ({program.version})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {program.stages
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .map((stage) => (
-                <details key={stage.id} className="rounded-lg border border-border">
-                  <summary className="cursor-pointer px-4 py-3 font-semibold">{stage.name}</summary>
-                  <div className="space-y-4 border-t border-border p-4">
-                    {stage.categories.map((category) => (
-                      <div key={category.id} className="space-y-2">
-                        <h3 className="text-sm font-bold tracking-wide text-muted-foreground uppercase">
-                          {category.name}
-                        </h3>
-                        <div className="space-y-2">
-                          {category.points
-                            .slice()
-                            .sort((a, b) => a.order - b.order)
-                            .map((point) => (
-                              <PointRow key={point.id} point={point} credentials={credentials} />
-                            ))}
+        <KurinsSection credentials={credentials} programs={programs ?? []} />
+
+        <SectionHeading>Каталог проби</SectionHeading>
+        <p className="text-sm text-muted-foreground">
+          Для кожної точки можна додати довідковий матеріал (точні дати, імена, факти) — AI-виховник
+          використовуватиме лише ці факти замість того, щоб вигадувати їх.
+        </p>
+
+        {isLoading && <p className="text-sm text-muted-foreground">Завантаження...</p>}
+        {isError && (
+          <Card>
+            <CardContent className="space-y-3 pt-6">
+              <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Невірний ключ.'}</p>
+              <Button size="sm" variant="outline" onClick={handleClearCredentials}>
+                Ввести дані знову
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {(programs ?? []).map((program) => (
+          <Card key={program.id}>
+            <CardHeader>
+              <CardTitle>
+                {program.name} ({program.version})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {program.stages
+                .slice()
+                .sort((a, b) => a.order - b.order)
+                .map((stage) => (
+                  <details key={stage.id} className="rounded-md border border-border">
+                    <summary className="cursor-pointer px-4 py-3 font-semibold">{stage.name}</summary>
+                    <div className="space-y-4 border-t border-border p-4">
+                      {stage.categories.map((category) => (
+                        <div key={category.id} className="space-y-2">
+                          <h3 className="text-sm font-bold tracking-wide text-muted-foreground uppercase">
+                            {category.name}
+                          </h3>
+                          <div className="space-y-2">
+                            {category.points
+                              .slice()
+                              .sort((a, b) => a.order - b.order)
+                              .map((point) => (
+                                <PointRow key={point.id} point={point} credentials={credentials} />
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              ))}
-          </CardContent>
-        </Card>
-      ))}
+                      ))}
+                    </div>
+                  </details>
+                ))}
+            </CardContent>
+          </Card>
+        ))}
 
-      <ReferenceSourcesSection credentials={credentials} programs={programs ?? []} />
-    </div>
+        <ReferenceSourcesSection credentials={credentials} programs={programs ?? []} />
+      </div>
     </WideContent>
   );
 }
@@ -285,7 +286,7 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value as 'MALE' | 'FEMALE')}
-            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+            className={nativeSelectClass}
           >
             <option value="MALE">Хлопці</option>
             <option value="FEMALE">Дівчата</option>
@@ -293,7 +294,7 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           <select
             value={probyProgramId}
             onChange={(e) => setProbyProgramId(e.target.value)}
-            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+            className={nativeSelectClass}
           >
             <option value="">— оберіть програму проби —</option>
             {programs.map((program) => (
@@ -360,7 +361,7 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
   const onDelete = useDeleteKurin(credentials);
   const [name, setName] = useState(kurin.name);
   const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber ?? '');
-  const dirty = name !== kurin.name || kurinNumber !== kurin.kurinNumber;
+  const dirty = name !== kurin.name || kurinNumber !== (kurin.kurinNumber ?? '');
   const canDelete = kurin.userCount === 0 && kurin.hurtokCount === 0;
 
   function handleSave() {
@@ -500,7 +501,7 @@ function ReferenceSourcesSection({ credentials, programs }: { credentials: Admin
           <select
             value={probyPointId}
             onChange={(e) => setProbyPointId(e.target.value)}
-            className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
+            className={nativeSelectClass}
           >
             <option value="">— не прив&apos;язувати до точки —</option>
             {allPoints.map((point) => (

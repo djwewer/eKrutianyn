@@ -10,6 +10,7 @@ import { mutationErrorText } from '@/lib/error-message';
 import { REMARK_KIND_LABELS } from '@/lib/history-labels';
 import type { JunakRemark, JunakRemarkKind } from '@/lib/types';
 import { DialogActions, EmptyText, HistoryCard, RowActions, formatDate, today } from './shared';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 const TEXTAREA = 'w-full rounded-md border border-border bg-background px-3 py-2 text-sm';
 
@@ -96,7 +97,7 @@ function RemarkDialog({ junakId, entry, onClose }: { junakId: string; entry: Jun
               id="remark-kind"
               value={kind}
               onChange={(e) => setKind(e.target.value as JunakRemarkKind)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              className={nativeSelectClass}
             >
               <option value="AWARD">Відзначення</option>
               <option value="WARNING">Пересторога</option>

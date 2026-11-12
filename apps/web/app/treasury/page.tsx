@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { accessErrorMessage } from '@/lib/error-message';
 import { formatEventDate } from '@/lib/calendar-timeline';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
-const SELECT_CLASS =
-  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
 const LABEL_CLASS = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
 function formatCents(cents: number): string {
@@ -95,7 +94,7 @@ function AddTransactionForm({ kurinId }: { kurinId: string }) {
         <select
           value={type}
           onChange={(e) => setType(e.target.value as 'INCOME' | 'EXPENSE')}
-          className={SELECT_CLASS}
+          className={nativeSelectClass}
           aria-label="Тип запису"
         >
           <option value="EXPENSE">Витрата</option>

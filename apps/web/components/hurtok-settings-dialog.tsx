@@ -17,6 +17,7 @@ import {
 } from '@/lib/queries/vykhovnyk-assignments';
 import { useUsers } from '@/lib/queries/users';
 import type { HurtokMember, PositionType } from '@/lib/types';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 const HURTOK_POSITION_TYPES: PositionType[] = ['HURTKOVYI', 'SUDDIA', 'PYSAR', 'SKARBNYK'];
 
@@ -132,7 +133,7 @@ export function HurtokSettingsDialog({
           <div className="flex gap-2">
             <select
               id="vykhovnyk-select"
-              className="min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-sm focus-visible:border-navy focus-visible:outline-none"
+              className={nativeSelectClass}
               value={currentVykhovnykAssignment?.vykhovnykId ?? ''}
               disabled={vykhovnykSelectDisabled}
               onChange={(e) => handleVykhovnykChange(e.target.value)}
@@ -166,7 +167,7 @@ export function HurtokSettingsDialog({
               <div className="flex items-center gap-2">
                 <select
                   id={`position-${positionType}`}
-                  className="min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-sm focus-visible:border-navy focus-visible:outline-none"
+                  className={nativeSelectClass}
                   value={current?.user.id ?? ''}
                   disabled={positionSelectsDisabled}
                   onChange={(e) => handlePositionChange(positionType, e.target.value)}

@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { RowList } from '@/components/ui/row-list';
 import { formatEventDate } from '@/lib/calendar-timeline';
 import { accessErrorMessage } from '@/lib/error-message';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
 function AddEntryForm() {
   const [title, setTitle] = useState('');
@@ -46,7 +46,7 @@ function AddEntryForm() {
             id="activity-role"
             value={role}
             onChange={(e) => setRole(e.target.value as 'PARTICIPANT' | 'PROVID')}
-            className="min-h-[2.75rem] w-full min-w-0 rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground transition-colors focus-visible:border-navy focus-visible:outline-none"
+            className={nativeSelectClass}
           >
             <option value="PARTICIPANT">Я був(-ла) учасником</option>
             <option value="PROVID">Я був(-ла) в проводі</option>
@@ -127,9 +127,6 @@ export default function MyActivityPage() {
                 </span>
                 {entry.description && <span className="mt-1 text-sm [overflow-wrap:anywhere]">{entry.description}</span>}
               </div>
-              <Badge variant={entry.role === 'PROVID' ? 'signal' : 'mute'}>
-                {entry.role === 'PROVID' ? 'в проводі' : 'учасник'}
-              </Badge>
               <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(entry.id)}>
                 Видалити
               </Button>

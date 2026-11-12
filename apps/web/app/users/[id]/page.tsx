@@ -33,9 +33,8 @@ import { Label } from '@/components/ui/label';
 import { Avatar } from '@/components/ui/avatar';
 import { WideContent } from '@/components/app-shell';
 import { getInitials } from '@/lib/utils';
+import { nativeSelectClass } from '@/components/ui/native-select';
 
-const SELECT_CLASS =
-  'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground focus-visible:border-navy';
 
 const KV_CLASS = 'm-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]';
 
@@ -77,7 +76,7 @@ function GuardianRelationSelect({
       aria-label="Хто це"
       value={value}
       onChange={(e) => onChange(e.target.value as GuardianRelation)}
-      className={SELECT_CLASS}
+      className={nativeSelectClass}
     >
       {(Object.keys(RELATION_LABELS) as GuardianRelation[]).map((relation) => (
         <option key={relation} value={relation} disabled={relation !== value && taken.includes(relation)}>
@@ -482,308 +481,308 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <WideContent>
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <Avatar
-          initials={getInitials(user.firstName, user.lastName)}
-          photoUrl={user.photoUpdatedAt ? `/api/backend/users/${user.id}/photo?v=${user.photoUpdatedAt}` : null}
-          className="size-20 border-[3px] border-dashed border-navy bg-transparent font-display text-[1.6rem] font-bold text-navy"
-        />
-        <div className="min-w-0 flex-1">
-          <Link
-            href="/kurin"
-            className="mb-[.3rem] inline-block font-mono text-[.74rem] tracking-[.04em] text-ink-2 no-underline"
-          >
-            ← КУРІНЬ
-          </Link>
-          <h1 className="m-0 font-display text-[1.9rem] leading-[1.05] font-bold uppercase [overflow-wrap:anywhere]">
-            {user.lastName} {user.firstName}
-          </h1>
-          <p className="mt-[.3rem] mb-0 font-mono text-[.8rem] tracking-[.04em] text-ink-2 uppercase">
-            {ROLE_LABELS[user.role]}
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <Avatar
+            initials={getInitials(user.firstName, user.lastName)}
+            photoUrl={user.photoUpdatedAt ? `/api/backend/users/${user.id}/photo?v=${user.photoUpdatedAt}` : null}
+            className="size-20 border-[3px] border-dashed border-navy bg-transparent font-display text-[1.6rem] font-bold text-navy"
+          />
+          <div className="min-w-0 flex-1">
+            <Link
+              href={session?.role === 'VYKHOVNYK' ? '/my-hurtok' : '/kurin'}
+              className="mb-[.3rem] inline-block font-mono text-[.74rem] tracking-[.04em] text-ink-2 no-underline"
+            >
+              {session?.role === 'VYKHOVNYK' ? '← МІЙ ГУРТОК' : '← КУРІНЬ'}
+            </Link>
+            <h1 className="m-0 font-display text-[1.9rem] leading-[1.05] font-bold uppercase [overflow-wrap:anywhere]">
+              {user.lastName} {user.firstName}
+            </h1>
+            <p className="mt-[.3rem] mb-0 font-mono text-[.8rem] tracking-[.04em] text-ink-2 uppercase">
+              {ROLE_LABELS[user.role]}
+            </p>
+          </div>
         </div>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Дані</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm">
-          <dl className={KV_CLASS}>
-            <KvItem label="Email">{user.email}</KvItem>
-            <KvItem label="Роль">{ROLE_LABELS[user.role]}</KvItem>
-            {user.birthDate && <KvItem label="Дата народження">{formatBirthDate(user.birthDate)}</KvItem>}
-          </dl>
-          {isJunak && (
-            <div className="space-y-2 pt-4">
-              <Label htmlFor="hurtok">Гурток</Label>
-              {canMoveHurtok ? (
-                hurtokRequestSent ? (
-                  <p className="text-sm text-ink-2">
-                    Запит на переведення надіслано, очікує затвердження зв&apos;язковим.
-                  </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Дані</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <dl className={KV_CLASS}>
+              <KvItem label="Email">{user.email}</KvItem>
+              <KvItem label="Роль">{ROLE_LABELS[user.role]}</KvItem>
+              {user.birthDate && <KvItem label="Дата народження">{formatBirthDate(user.birthDate)}</KvItem>}
+            </dl>
+            {isJunak && (
+              <div className="space-y-2 pt-4">
+                <Label htmlFor="hurtok">Гурток</Label>
+                {canMoveHurtok ? (
+                  hurtokRequestSent ? (
+                    <p className="text-sm text-ink-2">
+                      Запит на переведення надіслано, очікує затвердження зв&apos;язковим.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        id="hurtok"
+                        value={selectedHurtokId}
+                        onChange={(e) => setSelectedHurtokId(e.target.value)}
+                        className={`${nativeSelectClass} flex-1 basis-48`}
+                      >
+                        <option value="">Без гуртка</option>
+                        {(hurtky ?? []).map((h) => (
+                          <option key={h.id} value={h.id}>
+                            {h.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        disabled={selectedHurtokId === (user.hurtokId ?? '') || updateHurtok.isPending || createRequest.isPending}
+                        onClick={async () => {
+                          if (canDirectlyMoveHurtok) {
+                            updateHurtok.mutate(selectedHurtokId || null);
+                            return;
+                          }
+                          try {
+                            await createRequest.mutateAsync({
+                              actionType: 'CHANGE_HURTOK',
+                              junakId: user.id,
+                              newData: { hurtokId: selectedHurtokId || null },
+                            });
+                            setHurtokRequestSent(true);
+                          } catch {
+                            /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                          }
+                        }}
+                      >
+                        Перевести
+                      </Button>
+                    </div>
+                  )
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <select
-                      id="hurtok"
-                      value={selectedHurtokId}
-                      onChange={(e) => setSelectedHurtokId(e.target.value)}
-                      className={`${SELECT_CLASS} flex-1 basis-48`}
-                    >
-                      <option value="">Без гуртка</option>
-                      {(hurtky ?? []).map((h) => (
-                        <option key={h.id} value={h.id}>
-                          {h.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      size="sm"
-                      disabled={selectedHurtokId === (user.hurtokId ?? '') || updateHurtok.isPending || createRequest.isPending}
-                      onClick={async () => {
-                        if (canDirectlyMoveHurtok) {
-                          updateHurtok.mutate(selectedHurtokId || null);
-                          return;
-                        }
-                        try {
-                          await createRequest.mutateAsync({
-                            actionType: 'CHANGE_HURTOK',
-                            junakId: user.id,
-                            newData: { hurtokId: selectedHurtokId || null },
-                          });
-                          setHurtokRequestSent(true);
-                        } catch {
-                          /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
-                        }
-                      }}
-                    >
-                      Перевести
-                    </Button>
-                  </div>
-                )
-              ) : (
-                <p>{hurtky?.find((h) => h.id === user.hurtokId)?.name ?? 'Без гуртка'}</p>
+                  <p>{hurtky?.find((h) => h.id === user.hurtokId)?.name ?? 'Без гуртка'}</p>
+                )}
+                {updateHurtok.isError && (
+                  <p className="text-sm text-destructive">
+                    {accessErrorMessage(updateHurtok.error) ?? 'Не вдалося перевести юнака.'}
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Контакти</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-[.8rem]">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Телефон</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={!canEditContactInfo}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="residence">Місце проживання</Label>
+              <Input
+                id="residence"
+                value={residence}
+                onChange={(e) => setResidence(e.target.value)}
+                disabled={!canEditContactInfo}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="studyPlace">Місце навчання</Label>
+              <Input
+                id="studyPlace"
+                value={studyPlace}
+                onChange={(e) => setStudyPlace(e.target.value)}
+                disabled={!canEditContactInfo}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Нотатки</Label>
+              <Input
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={!canEditContactInfo}
+              />
+            </div>
+            {canEditContactInfo && (
+              <Button className="col-span-full justify-self-start" onClick={() => updateContactInfo.mutate({ notes, phone, residence, studyPlace })}>
+                Зберегти
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        {canEditContactInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Батьки та опікуни</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isError && (
+                <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження опікунів.'}</p>
               )}
-              {updateHurtok.isError && (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-[.6rem]">
+              {(guardianContacts ?? []).map((contact) => (
+                <GuardianContactRow
+                  key={contact.id}
+                  contact={contact}
+                  junakId={id}
+                  takenByOthers={(guardianContacts ?? [])
+                    .filter((other) => other.id !== contact.id)
+                    .map((other) => other.relation)}
+                />
+              ))}
+              <AddGuardianContactForm junakId={id} existing={guardianContacts ?? []} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {isJunak && !user.archivedAt && (
+          <JunakDegreesCard
+            junakId={id}
+            canEdit={!!canEditContactInfo || session?.role === 'VYKHOVNYK'}
+          />
+        )}
+        {isJunak && <JunakHistory junakId={id} />}
+        {isJunak && probyProgram && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Проба</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isJunakProgressError && (
                 <p className="text-sm text-destructive">
-                  {accessErrorMessage(updateHurtok.error) ?? 'Не вдалося перевести юнака.'}
+                  {accessErrorMessage(junakProgressError) ?? 'Помилка завантаження проби.'}
                 </p>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Контакти</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-[.8rem]">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Телефон</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={!canEditContactInfo}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="residence">Місце проживання</Label>
-            <Input
-              id="residence"
-              value={residence}
-              onChange={(e) => setResidence(e.target.value)}
-              disabled={!canEditContactInfo}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="studyPlace">Місце навчання</Label>
-            <Input
-              id="studyPlace"
-              value={studyPlace}
-              onChange={(e) => setStudyPlace(e.target.value)}
-              disabled={!canEditContactInfo}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Нотатки</Label>
-            <Input
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={!canEditContactInfo}
-            />
-          </div>
-          {canEditContactInfo && (
-            <Button className="col-span-full justify-self-start" onClick={() => updateContactInfo.mutate({ notes, phone, residence, studyPlace })}>
-              Зберегти
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-      {canEditContactInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Батьки та опікуни</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isError && (
-              <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Помилка завантаження опікунів.'}</p>
-            )}
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-[.6rem]">
-            {(guardianContacts ?? []).map((contact) => (
-              <GuardianContactRow
-                key={contact.id}
-                contact={contact}
-                junakId={id}
-                takenByOthers={(guardianContacts ?? [])
-                  .filter((other) => other.id !== contact.id)
-                  .map((other) => other.relation)}
-              />
-            ))}
-            <AddGuardianContactForm junakId={id} existing={guardianContacts ?? []} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {isJunak && !user.archivedAt && (
-        <JunakDegreesCard
-          junakId={id}
-          canEdit={!!canEditContactInfo || session?.role === 'VYKHOVNYK'}
-        />
-      )}
-      {isJunak && <JunakHistory junakId={id} />}
-      {isJunak && probyProgram && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Проба</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isJunakProgressError && (
-              <p className="text-sm text-destructive">
-                {accessErrorMessage(junakProgressError) ?? 'Помилка завантаження проби.'}
-              </p>
-            )}
-            {!isJunakProgressError &&
-              (() => {
-                const doneByPointId = new Set(
-                  (junakProgress?.points ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
-                );
-                const statusByStageId = new Map(
-                  (junakProgress?.stages ?? []).map((s) => [s.stageId, s.status]),
-                );
-                const hasDebtByStageId = new Map(
-                  (junakProgress?.stages ?? []).map((s) => [s.stageId, s.hasDebt]),
-                );
-                return probyProgram.stages
-                  .slice()
-                  .sort((a, b) => a.order - b.order)
-                  .map((stage) => {
-                    const status = statusByStageId.get(stage.id);
-                    const hasDebt = hasDebtByStageId.get(stage.id) ?? false;
-                    if (status === 'LOCKED' || status === undefined) {
+              {!isJunakProgressError &&
+                (() => {
+                  const doneByPointId = new Set(
+                    (junakProgress?.points ?? []).filter((p) => p.status === 'DONE').map((p) => p.pointId),
+                  );
+                  const statusByStageId = new Map(
+                    (junakProgress?.stages ?? []).map((s) => [s.stageId, s.status]),
+                  );
+                  const hasDebtByStageId = new Map(
+                    (junakProgress?.stages ?? []).map((s) => [s.stageId, s.hasDebt]),
+                  );
+                  return probyProgram.stages
+                    .slice()
+                    .sort((a, b) => a.order - b.order)
+                    .map((stage) => {
+                      const status = statusByStageId.get(stage.id);
+                      const hasDebt = hasDebtByStageId.get(stage.id) ?? false;
+                      if (status === 'LOCKED' || status === undefined) {
+                        return (
+                          <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
+                            <h3 className="text-sm font-bold uppercase text-ink-2">
+                              🔒 {stage.name}
+                            </h3>
+                            <p className="text-xs text-ink-2">
+                              Розблокується після закриття попередньої проби
+                            </p>
+                          </div>
+                        );
+                      }
                       return (
-                        <div key={stage.id} className="mb-4 last:mb-0 opacity-50">
-                          <h3 className="text-sm font-bold uppercase text-ink-2">
-                            🔒 {stage.name}
-                          </h3>
-                          <p className="text-xs text-ink-2">
-                            Розблокується після закриття попередньої проби
-                          </p>
+                        <div key={stage.id} className="mb-4 last:mb-0">
+                          <div className="mb-2 flex items-center justify-between">
+                            <h3 className="text-sm font-bold uppercase text-ink-2">{stage.name}</h3>
+                            {canConfirmProby &&
+                              (status === 'CLOSED' ? (
+                                <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
+                                  🔓 Перевідкрити пробу
+                                </Button>
+                              ) : hasDebt ? (
+                                <span className="text-xs text-ink-2">
+                                  Закрито (є непідтверджені точки)
+                                </span>
+                              ) : (
+                                <CloseStageControl
+                                  disabled={closeStage.isPending}
+                                  onClose={(date) => closeStage.mutate({ stageId: stage.id, date })}
+                                />
+                              ))}
+                          </div>
+                          {stage.categories.map((category) => (
+                            <ProbyCategorySection
+                              key={category.id}
+                              category={category}
+                              doneByPointId={doneByPointId}
+                              canConfirm={canConfirmProby && status !== 'CLOSED'}
+                              onConfirm={(pointId) => confirmPoint.mutate(pointId)}
+                              onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
+                            />
+                          ))}
                         </div>
                       );
-                    }
-                    return (
-                      <div key={stage.id} className="mb-4 last:mb-0">
-                        <div className="mb-2 flex items-center justify-between">
-                          <h3 className="text-sm font-bold uppercase text-ink-2">{stage.name}</h3>
-                          {canConfirmProby &&
-                            (status === 'CLOSED' ? (
-                              <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
-                                🔓 Перевідкрити пробу
-                              </Button>
-                            ) : hasDebt ? (
-                              <span className="text-xs text-ink-2">
-                                Закрито (є непідтверджені точки)
-                              </span>
-                            ) : (
-                              <CloseStageControl
-                                disabled={closeStage.isPending}
-                                onClose={(date) => closeStage.mutate({ stageId: stage.id, date })}
-                              />
-                            ))}
-                        </div>
-                        {stage.categories.map((category) => (
-                          <ProbyCategorySection
-                            key={category.id}
-                            category={category}
-                            doneByPointId={doneByPointId}
-                            canConfirm={canConfirmProby && status !== 'CLOSED'}
-                            onConfirm={(pointId) => confirmPoint.mutate(pointId)}
-                            onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
-                          />
-                        ))}
-                      </div>
-                    );
-                  });
-              })()}
-          </CardContent>
-        </Card>
-      )}
-      {session?.isKurinniy && user.role === 'JUNAK' && !user.archivedAt && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Змінити ПІБ (потребує затвердження)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {nameRequestSent ? (
-              <p>Запит надіслано, очікує затвердження зв&apos;язковим.</p>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="newFirstName">Нове ім&apos;я</Label>
-                  <Input
-                    id="newFirstName"
-                    value={newFirstName}
-                    onChange={(e) => setNewFirstName(e.target.value)}
-                    placeholder={user.firstName}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newLastName">Нове прізвище</Label>
-                  <Input
-                    id="newLastName"
-                    value={newLastName}
-                    onChange={(e) => setNewLastName(e.target.value)}
-                    placeholder={user.lastName}
-                  />
-                </div>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await createRequest.mutateAsync({
-                        actionType: 'CHANGE_FULL_NAME',
-                        junakId: user.id,
-                        newData: {
-                          firstName: newFirstName || user.firstName,
-                          lastName: newLastName || user.lastName,
-                        },
-                      });
-                      setNameRequestSent(true);
-                    } catch {
-                      /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
-                    }
-                  }}
-                >
-                  Надіслати запит
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      <ArchiveUserCard user={user} session={session} />
-    </div>
+                    });
+                })()}
+            </CardContent>
+          </Card>
+        )}
+        {session?.isKurinniy && user.role === 'JUNAK' && !user.archivedAt && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Змінити ПІБ (потребує затвердження)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {nameRequestSent ? (
+                <p>Запит надіслано, очікує затвердження зв&apos;язковим.</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="newFirstName">Нове ім&apos;я</Label>
+                    <Input
+                      id="newFirstName"
+                      value={newFirstName}
+                      onChange={(e) => setNewFirstName(e.target.value)}
+                      placeholder={user.firstName}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newLastName">Нове прізвище</Label>
+                    <Input
+                      id="newLastName"
+                      value={newLastName}
+                      onChange={(e) => setNewLastName(e.target.value)}
+                      placeholder={user.lastName}
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await createRequest.mutateAsync({
+                          actionType: 'CHANGE_FULL_NAME',
+                          junakId: user.id,
+                          newData: {
+                            firstName: newFirstName || user.firstName,
+                            lastName: newLastName || user.lastName,
+                          },
+                        });
+                        setNameRequestSent(true);
+                      } catch {
+                        /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
+                      }
+                    }}
+                  >
+                    Надіслати запит
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        <ArchiveUserCard user={user} session={session} />
+      </div>
     </WideContent>
   );
 }
