@@ -261,7 +261,7 @@
         const key = y + '-' + String(m + 1).padStart(2, '0');
         const list = all.filter((e) => e.d.startsWith(key)).sort((a, b) => (next ? a.d.localeCompare(b.d) : b.d.localeCompare(a.d)));
         const now = next && y === ty && m === tm ? `<p class="now">Сьогодні, ${fmtD(TODAY)}</p>` : '';
-        return `<section class="mo${list.length ? '' : ' empty'}"><h4>${MONTHS[m]} <span>${y}</span></h4><div class="evs">${now}${list.length ? list.map(evHTML).join('') : '<p class="none">Подій немає</p>'}</div></section>`;
+        return `<section class="mo${list.length ? '' : ' mo-empty'}"><h4>${MONTHS[m]} <span>${y}</span></h4><div class="evs">${now}${list.length ? list.map(evHTML).join('') : '<p class="none">Подій немає</p>'}</div></section>`;
       }).join('')}</div>
       ${next ? `<button type="button" class="btn ghost" style="margin-top:1rem" data-act="cal-view" data-v="${ty}">← Попередні події</button>` : `<button type="button" class="btn ghost" style="margin-top:1rem" data-act="cal-view" data-v="next">До найближчих подій →</button>`}`;
   };

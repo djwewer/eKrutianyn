@@ -220,8 +220,8 @@ details.acc[aria-disabled="true"] > summary { cursor: not-allowed; opacity: .6; 
 .mo h4 { margin: 0; font: 600 1rem/1.1 var(--display); text-transform: uppercase; letter-spacing: .06em; padding-top: .6rem; }
 .mo h4 span { display: block; font: .72rem var(--mono); color: var(--ink-2); letter-spacing: .04em; }
 .mo::after { content: ""; position: absolute; left: calc(6.6rem - 5px); top: .8rem; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--navy); }
-.mo.empty::after { border-color: var(--line); }
-.mo.empty h4 { color: var(--ink-2); }
+.mo.mo-empty::after { border-color: var(--line); }
+.mo.mo-empty h4 { color: var(--ink-2); }
 .evs { display: grid; gap: .5rem; padding-left: .6rem; }
 .ev { display: flex; gap: .9rem; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: .6rem .9rem; }
 .ev .day { text-align: center; font-family: var(--display); line-height: 1; min-width: 2.2rem; }
@@ -351,7 +351,7 @@ details.acc[aria-disabled="true"] > summary { cursor: not-allowed; opacity: .6; 
   .tl::before { left: 1.6rem; } .entry { grid-template-columns: 3.2rem minmax(0, 1fr); gap: .7rem; } .date b { font-size: 1.4rem; }
   .degrees { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pagehead h2 { font-size: 1.6rem; }
-  .ytl::before, .mo::after { display: none; } .mo { grid-template-columns: 1fr; gap: .4rem; } .mo h4 { padding-top: 0; display: flex; gap: .5rem; align-items: baseline; } .mo h4 span { display: inline; } .evs { padding-left: 0; } .mo.empty { grid-template-columns: auto 1fr; align-items: baseline; gap: .8rem; } .mo.empty .none { padding: 0; }
+  .ytl::before, .mo::after { display: none; } .mo { grid-template-columns: 1fr; gap: .4rem; } .mo h4 { padding-top: 0; display: flex; gap: .5rem; align-items: baseline; } .mo h4 span { display: inline; } .evs { padding-left: 0; } .mo.mo-empty { grid-template-columns: auto 1fr; align-items: baseline; gap: .8rem; } .mo.mo-empty .none { padding: 0; }
   .toast { bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
 }
 </style>
@@ -917,7 +917,7 @@ window.PROBY = [{"name":"Проба прихильника (Відзнака п�
         const key = y + '-' + String(m + 1).padStart(2, '0');
         const list = all.filter((e) => e.d.startsWith(key)).sort((a, b) => (next ? a.d.localeCompare(b.d) : b.d.localeCompare(a.d)));
         const now = next && y === ty && m === tm ? `<p class="now">Сьогодні, ${fmtD(TODAY)}</p>` : '';
-        return `<section class="mo${list.length ? '' : ' empty'}"><h4>${MONTHS[m]} <span>${y}</span></h4><div class="evs">${now}${list.length ? list.map(evHTML).join('') : '<p class="none">Подій немає</p>'}</div></section>`;
+        return `<section class="mo${list.length ? '' : ' mo-empty'}"><h4>${MONTHS[m]} <span>${y}</span></h4><div class="evs">${now}${list.length ? list.map(evHTML).join('') : '<p class="none">Подій немає</p>'}</div></section>`;
       }).join('')}</div>
       ${next ? `<button type="button" class="btn ghost" style="margin-top:1rem" data-act="cal-view" data-v="${ty}">← Попередні події</button>` : `<button type="button" class="btn ghost" style="margin-top:1rem" data-act="cal-view" data-v="next">До найближчих подій →</button>`}`;
   };
