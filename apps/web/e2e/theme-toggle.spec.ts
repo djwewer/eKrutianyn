@@ -56,3 +56,23 @@ test('choosing «Як у системі» follows the system color scheme', asyn
   await expect(html).toHaveClass(/dark/);
   await expect(main.getByRole('radio', { name: 'Як у системі' })).toHaveAttribute('aria-checked', 'true');
 });
+
+test('«Як у системі» chosen after a light page load follows live system changes', async ({ page, context }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+
+  await context.addCookies([{ name: 'theme', value: 'light', url: 'http://localhost:3000' }]);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/settings');
+  const html = page.locator('html');
+  await expect(html).not.toHaveClass(/dark/);
+
+  await page.locator('main').getByRole('radio', { name: 'Як у системі' }).click();
+  await expect(html).not.toHaveClass(/dark/);
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(html).toHaveClass(/dark/);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(html).not.toHaveClass(/dark/);
+});

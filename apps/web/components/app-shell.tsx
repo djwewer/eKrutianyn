@@ -9,6 +9,10 @@ import { useApprovalRequests } from '@/lib/queries/approval-requests-list';
 import { buildNav } from '@/lib/nav-model';
 import { BandHeader } from '@/components/band-header';
 import { BottomNav } from '@/components/bottom-nav';
+import { cn } from '@/lib/utils';
+
+// Повноекранні сторінки автентифікації: без колонки та відступів.
+const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -27,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [profile?.mustChangePassword, pathname, router]);
 
+  const isAuthRoute = AUTH_ROUTES.some((r) => pathname === r || pathname?.startsWith(`${r}/`));
   const nav = session ? buildNav(session, pending?.length ?? 0) : null;
   // Дерево стабільне незалежно від сесії: інакше, щойно сесія завантажиться,
   // children перемонтуються і втрачають введений стан (напр. поля форми входу).
@@ -35,9 +40,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {session && nav && <BandHeader nav={nav} profile={profile} kurin={kurin} pathname={pathname} />}
       <main
         className={
-          session
-            ? 'mx-auto max-w-[52rem] pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pb-[calc(8rem+env(safe-area-inset-bottom,0px))] pt-[1.4rem] min-[761px]:pb-12 [&:has([data-wide])]:max-w-[72rem]'
-            : ''
+          isAuthRoute
+            ? ''
+            : cn(
+                'mx-auto max-w-[52rem] pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pt-[1.4rem] min-[761px]:pb-12 [&:has([data-wide])]:max-w-[72rem]',
+                session ? 'pb-[calc(8rem+env(safe-area-inset-bottom,0px))]' : 'pb-12',
+              )
         }
       >
         {children}

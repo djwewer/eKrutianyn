@@ -41,7 +41,7 @@ export function buildNav(session: CurrentUserPayload, pendingRequests: number): 
           href: '/plastuvannia',
           label: session.role === 'ZVYAZKOVYI' ? 'Моя проба' : 'Моє пластування',
           icon: 'flag',
-          alsoActiveOn: ['/proby', '/ai-vykhovnyk', '/my-activity'],
+          alsoActiveOn: ['/proby', '/ai-vykhovnyk', '/my-activity', '/skills'],
         };
 
   const dilovody = DILOVODY_PAGES.filter(
