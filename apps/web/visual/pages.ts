@@ -32,11 +32,16 @@ async function clickIfPresent(locator: Locator, what: string) {
 
 // Lightbox: click a photo, expect a visible dialog (role=dialog) containing it.
 const openLightbox = async (page: Page) => {
-  await clickIfPresent(page.locator('main img'), 'photo (main img)');
+  // Open a slide of a multi-photo carousel (one that has dots) so the shot shows dots + arrows.
+  const slide = page.locator('main .cz:has(.cz-dot) .cz-slide').first();
+  if ((await slide.count()) === 0) throw new VisualSkip('no multi-photo carousel found');
+  await slide.scrollIntoViewIfNeeded();
+  await slide.click({ timeout: T });
   const dialog = page.getByRole('dialog').first();
   await dialog.waitFor({ state: 'visible', timeout: T }).catch(() => {
     throw new Error('lightbox dialog did not open after clicking a photo');
   });
+  if ((await dialog.locator('.cz-dot').count()) === 0) throw new Error('lightbox has no dots row');
 };
 
 // Next photo: expect the carousel state (counter/active dot) to change.

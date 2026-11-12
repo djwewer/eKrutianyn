@@ -14,7 +14,6 @@ function Carousel({
   renderSlideExtra,
   onIndexChange,
   onOpen,
-  rootRef,
 }: {
   photos: CarouselPhoto[];
   label: string;
@@ -24,7 +23,6 @@ function Carousel({
   renderSlideExtra?: (photo: { id: string; src: string }, index: number) => React.ReactNode;
   onIndexChange?: (index: number) => void;
   onOpen?: (index: number, slide: HTMLButtonElement) => void;
-  rootRef?: React.Ref<HTMLDivElement>;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(startIndex);
@@ -76,12 +74,13 @@ function Carousel({
   const extra = renderSlideExtra && photos[current] ? renderSlideExtra(photos[current], current) : null;
 
   return (
-    <div ref={rootRef} className="cz cz--dots" style={{ '--cz-ratio': ratio } as React.CSSProperties}>
+    <div className="cz" style={{ '--cz-ratio': ratio } as React.CSSProperties}>
       <div className="cz-stage">
         <div
           ref={trackRef}
           className="cz-track"
           tabIndex={0}
+          role="group"
           aria-roledescription="карусель"
           aria-label={label}
           onScroll={sync}
@@ -96,18 +95,25 @@ function Carousel({
             }
           }}
         >
-          {photos.map((p, i) => (
-            <button
-              key={p.id}
-              type="button"
-              className="cz-slide"
-              aria-label={`Відкрити фото ${i + 1} з ${photos.length}`}
-              onClick={(e) => !inLightbox && onOpen?.(i, e.currentTarget)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.src} alt={`${p.alt ?? label} ${i + 1}`} loading="lazy" draggable={false} />
-            </button>
-          ))}
+          {photos.map((p, i) => {
+            // eslint-disable-next-line @next/next/no-img-element
+            const img = <img src={p.src} alt={`${p.alt ?? label} ${i + 1}`} loading="lazy" draggable={false} />;
+            return inLightbox ? (
+              <div key={p.id} className="cz-slide" role="group" aria-label={`Фото ${i + 1} з ${photos.length}`}>
+                {img}
+              </div>
+            ) : (
+              <button
+                key={p.id}
+                type="button"
+                className="cz-slide"
+                aria-label={`Відкрити фото ${i + 1} з ${photos.length}`}
+                onClick={(e) => onOpen?.(i, e.currentTarget)}
+              >
+                {img}
+              </button>
+            );
+          })}
         </div>
         {multi && (
           <>
@@ -174,6 +180,26 @@ function Lightbox({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      onKeyDown={(e) => {
+        if (e.key !== 'Tab') return;
+        const items = Array.from(
+          e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex="0"]'),
+        ).filter((el) => el.offsetParent !== null || getComputedStyle(el).display !== 'none');
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (!e.currentTarget.contains(active)) {
+          first.focus();
+          e.preventDefault();
+        } else if (e.shiftKey && active === first) {
+          last.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && active === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }}
     >
       <button ref={closeRef} type="button" className="lb-close" aria-label="Закрити" onClick={onClose}>
         ×
@@ -201,7 +227,6 @@ export function PhotoCarousel({
 }) {
   const [open, setOpen] = useState<number | null>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
     setOpen(null);
@@ -218,7 +243,6 @@ export function PhotoCarousel({
         ratio={ratio}
         renderSlideExtra={renderSlideExtra}
         onIndexChange={onIndexChange}
-        rootRef={rootRef}
         onOpen={(i, slide) => {
           openerRef.current = slide;
           setOpen(i);

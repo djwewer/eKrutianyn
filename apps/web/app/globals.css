@@ -377,8 +377,9 @@
     animation: none;
   }
 }
+
 /* Photo carousel + lightbox (components/photo-carousel.tsx) */
-html.lb-lock { overflow: hidden; }
+html.lb-lock { overflow: hidden; scrollbar-gutter: stable; }
 .cz { display: grid; gap: .5rem; min-width: 0; }
 .cz-stage { position: relative; border-radius: 4px; overflow: hidden; }
 .cz-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
@@ -399,6 +400,7 @@ html.lb-lock { overflow: hidden; }
 .lb { position: fixed; inset: 0; z-index: 50; background: rgba(10,12,14,.92); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .lb-inner { width: min(100%, 60rem, calc((100dvh - 6rem) * 4 / 3)); }
 .lb .cz-slide { cursor: default; }
+.lb .cz-slide img { object-fit: contain; }
 .lb .cz-dot { background: rgba(255,255,255,.35); }
 .lb .cz-dot.on { background: #fff; }
 .lb-close { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 1.75rem; cursor: pointer; }

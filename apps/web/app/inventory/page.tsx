@@ -21,6 +21,12 @@ import { accessErrorMessage } from '@/lib/error-message';
 import { useGoogleDriveStatus, useSetGoogleDriveFolder, fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
 import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 
+const positionWord = { one: 'позиція', few: 'позиції', many: 'позицій', other: 'позицій' } as const;
+function positionsLabel(n: number) {
+  const form = new Intl.PluralRules('uk').select(n) as keyof typeof positionWord;
+  return `${n} ${positionWord[form]}`;
+}
+
 function GoogleDriveCard({
   kurinId,
   isZvyazkovyi,
@@ -288,7 +294,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Облік реманенту" subtitle={`${(items ?? []).length} позицій`} />
+      <PageHeader title="Облік реманенту" subtitle={positionsLabel((items ?? []).length)} />
       {canEdit && (
         <GoogleDriveCard
           kurinId={kurinId}
