@@ -267,25 +267,26 @@
 }
 .announcement-content > *:first-child { margin-top: 0; }
 .announcement-content > *:last-child { margin-bottom: 0; }
-.announcement-content p { margin: 0.75em 0; }
+.announcement-content > * + * { margin-top: 0.75rem; }
+.announcement-content p { margin: 0; }
 .announcement-content h1,
 .announcement-content h2,
 .announcement-content h3 {
   font-weight: 700;
   line-height: 1.3;
-  margin: 1.2em 0 0.5em;
+  margin: 0;
 }
 .announcement-content h1 { font-size: 1.5rem; }
 .announcement-content h2 { font-size: 1.25rem; }
 .announcement-content h3 { font-size: 1.1rem; }
 .announcement-content ul,
 .announcement-content ol {
-  margin: 0.75em 0;
+  margin: 0;
   padding-left: 1.5em;
 }
 .announcement-content ul { list-style: disc; }
 .announcement-content ol { list-style: decimal; }
-.announcement-content li { margin: 0.25em 0; }
+.announcement-content li { margin: 0.1em 0; }
 .announcement-content ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
@@ -306,7 +307,10 @@
   accent-color: var(--accent);
 }
 .announcement-content blockquote {
-  margin: 1em 0;
+  margin: 0;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.98rem;
   padding: 0.65rem 1rem;
   border-left: 4px solid var(--navy);
   background: var(--sky-soft);

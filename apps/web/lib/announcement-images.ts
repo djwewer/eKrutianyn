@@ -4,8 +4,8 @@ export type AnnouncementImage = { id: string; src: string; alt?: string };
 
 /**
  * Pulls every `image` node out of a Tiptap document (recursively), returning
- * them in document order. Blocks left empty by the removal are dropped;
- * blocks that were already empty are kept.
+ * them in document order. Paragraphs left empty by the removal are dropped;
+ * other nodes are kept.
  */
 export function splitAnnouncementImages(doc: JSONContent): {
   doc: JSONContent;
@@ -26,8 +26,9 @@ export function splitAnnouncementImages(doc: JSONContent): {
         continue;
       }
       const walked = walk(child);
-      // A container (paragraph, blockquote, ...) that only held images is dropped.
-      if (child.content && child.content.length > 0 && walked.content?.length === 0) continue;
+      // Only a paragraph that held nothing but images is pruned; structural
+      // containers (cells, rows, list items, quotes) are never emptied out.
+      if (child.type === 'paragraph' && child.content && child.content.length > 0 && walked.content?.length === 0) continue;
       next.push(walked);
     }
     return { ...node, content: next };

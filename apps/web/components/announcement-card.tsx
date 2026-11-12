@@ -109,7 +109,7 @@ export function AnnouncementCard({
             <Button size="sm" variant="outline" onClick={onEdit}>
               Редагувати
             </Button>
-            <Button size="sm" variant="outline" onClick={onDelete}>
+            <Button size="sm" variant="destructive" onClick={onDelete}>
               Видалити
             </Button>
           </div>
