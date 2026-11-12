@@ -11,7 +11,7 @@ const ITEM =
   'relative grid min-w-0 content-start justify-items-center gap-[.1rem] rounded-md border-0 bg-transparent px-0 py-[.3rem] font-display text-[.66rem] font-semibold uppercase tracking-[.05em]';
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <span className="max-w-full text-center leading-[1.1] [overflow-wrap:anywhere]">{children}</span>;
+  return <span className="max-w-full text-balance text-center leading-[1.1]">{children}</span>;
 }
 
 function Item({ item, active, badge = 0 }: { item: NavItem; active: boolean; badge?: number }) {
@@ -105,13 +105,13 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
         <nav
           aria-label="Основна навігація"
           className={cn(
-            'grid gap-[.1rem] [&_a]:tracking-normal [&_button]:tracking-normal',
+            'grid gap-[.2rem]',
             columns === 6
-              ? '[&_a]:text-[clamp(.44rem,2.2vw,.56rem)] [&_button]:text-[clamp(.44rem,2.2vw,.56rem)]'
-              : '[&_a]:text-[clamp(.5rem,2.6vw,.66rem)] [&_button]:text-[clamp(.5rem,2.6vw,.66rem)]',
+              ? '[&_a]:text-[.62rem] [&_a]:tracking-normal [&_button]:text-[.62rem] [&_button]:tracking-normal'
+              : '[&_a]:text-[.66rem] [&_button]:text-[.66rem]',
           )}
           style={{
-            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${columns}, minmax(min-content, 1fr))`,
           }}
         >
           <Item item={nav.left[0]} active={isActive(nav.left[0], pathname)} />
