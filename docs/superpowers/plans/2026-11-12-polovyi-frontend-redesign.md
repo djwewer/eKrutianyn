@@ -121,7 +121,7 @@
    cd apps/web && nice npx playwright test -c playwright.visual.config.ts --grep "<page-key>"
    ```
 
-   Then open the PNG pairs in `apps/web/test-results/visual/<page-key>/` with the Read tool:
+   Then open the PNG pairs in `apps/web/visual-shots/<page-key>/` with the Read tool:
    - `app-<role>-<viewport>-<theme>.png`
    - `proto-<role>-<viewport>-<theme>.png`
 
@@ -145,7 +145,7 @@
 **Interfaces:**
 - Produces:
   - Command `npx playwright test -c playwright.visual.config.ts --grep "<page-key>"`.
-  - Screenshots at `apps/web/test-results/visual/<page-key>/{app|proto}-<ROLE>-<desktop|phone>-<light|dark>.png`.
+  - Screenshots at `apps/web/visual-shots/<page-key>/{app|proto}-<ROLE>-<desktop|phone>-<light|dark>.png`.
   - Interaction shots at `.../<page-key>/app-<ROLE>-<viewport>-light-<interaction-name>.png`.
   - `pages.ts` exports `VISUAL_PAGES: VisualPage[]` with:
 
@@ -273,7 +273,7 @@
   cd apps/web && nice npx playwright test -c playwright.visual.config.ts --grep "news|inventory"
   ```
 
-  Expected: PNGs in `test-results/visual/news/` and `test-results/visual/inventory/`. Open two of them with Read. The app shows the seeded demo data and the inventory photos render the fixture SVGs. The proto shots show the prototype.
+  Expected: PNGs in `visual-shots/news/` and `visual-shots/inventory/`. Open two of them with Read. The app shows the seeded demo data and the inventory photos render the fixture SVGs. The proto shots show the prototype.
 - [ ] **Step 9: Type-check, lint, commit.**
 
   ```

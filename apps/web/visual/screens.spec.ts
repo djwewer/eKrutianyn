@@ -9,7 +9,7 @@ const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   phone: { width: 390, height: 844 },
 } as const;
-const OUT = path.resolve(__dirname, '../test-results/visual');
+const OUT = path.resolve(__dirname, '../visual-shots');
 const PROTO_URL = `file://${path.resolve(__dirname, '../../../docs/design/polovyi-prototype/polovyi-app.built.html')}`;
 const STRICT = process.env.VISUAL_STRICT === '1';
 // VISUAL_QUICK=1: desktop + light only (app and proto).
