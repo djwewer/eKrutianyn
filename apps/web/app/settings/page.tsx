@@ -7,16 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar } from '@/components/ui/avatar';
+import { PageHeader } from '@/components/ui/page-header';
+import { RowList } from '@/components/ui/row-list';
+import { ROLE_LABELS } from '@/lib/role-labels';
 import { PhotoCropDialog } from '@/components/photo-crop-dialog';
 import { PushNotificationToggle } from '@/components/push-notification-toggle';
 import { getInitials } from '@/lib/utils';
 import { ApiError } from '@/lib/api-client';
 import Link from 'next/link';
-import { ClipboardList, History, LogOut, Moon } from 'lucide-react';
 import { useSession } from '@/lib/session-client';
 import { useLogout } from '@/lib/use-logout';
 import { useApprovalRequests } from '@/lib/queries/approval-requests-list';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+
+const quickActionClass =
+  'flex items-center gap-[.8rem] border-b border-dashed border-line px-[.9rem] py-[.65rem] transition-colors last:border-b-0 hover:bg-sky-soft';
 
 function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError && typeof error.body === 'object' && error.body) {
@@ -109,43 +114,58 @@ export default function SettingsPage() {
   const forcedPasswordChange = profile.mustChangePassword;
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <h1 className="text-2xl font-bold">Налаштування</h1>
+    <div className="space-y-4">
+      <PageHeader
+        title="Налаштування"
+        subtitle={`${profile.firstName} ${profile.lastName}${session?.role ? ` · ${ROLE_LABELS[session.role]}` : ''}`}
+      />
+
+      {isZvyazkovyi && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Швидкі дії</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RowList>
+              <Link href="/approval-requests" className={quickActionClass}>
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <b className="text-base leading-tight">Запити</b>
+                  <small className="text-[.82rem] text-ink-2">Зміни даних юнаків, що чекають затвердження</small>
+                </span>
+                {pending && pending.length > 0 && (
+                  <span className="rounded-full bg-signal px-[.4rem] font-mono text-[.66rem] leading-[1.4] text-white dark:text-navy-ink">{pending.length}</span>
+                )}
+                <span className="text-xl text-ink-2" aria-hidden="true">›</span>
+              </Link>
+              <Link href="/audit-log" className={quickActionClass}>
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <b className="text-base leading-tight">Журнал дій</b>
+                  <small className="text-[.82rem] text-ink-2">Хто що змінив у курені</small>
+                </span>
+                <span className="text-xl text-ink-2" aria-hidden="true">›</span>
+              </Link>
+            </RowList>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Швидкі дії</CardTitle>
+          <CardTitle>Вигляд</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-1">
-          {isZvyazkovyi && (
-            <>
-              <Link href="/approval-requests" className="flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent-soft hover:text-accent-text">
-                <ClipboardList className="size-4" aria-hidden="true" />
-                <span className="flex-1">Запити</span>
-                {pending && pending.length > 0 && (
-                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-text">{pending.length}</span>
-                )}
-              </Link>
-              <Link href="/audit-log" className="flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium hover:bg-accent-soft hover:text-accent-text">
-                <History className="size-4" aria-hidden="true" />
-                <span className="flex-1">Журнал дій</span>
-              </Link>
-            </>
-          )}
-          <div className="flex items-center gap-3 px-2 py-2 text-sm font-medium">
-            <Moon className="size-4" aria-hidden="true" />
-            <span className="flex-1">Темна тема</span>
-            <ThemeToggle />
+        <CardContent className="grid gap-[.75rem]">
+          <div className="grid gap-[.3rem]">
+            <Label>Тема</Label>
+            <div>
+              <ThemeToggle />
+            </div>
           </div>
-          <Button type="button" variant="outline" className="mt-2 w-full justify-center text-destructive" onClick={logout}>
-            <LogOut className="size-4" aria-hidden="true" />
-            Вийти
-          </Button>
+          {!forcedPasswordChange && <PushNotificationToggle />}
         </CardContent>
       </Card>
 
       {forcedPasswordChange && (
-        <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <p className="rounded-[6px] border-2 border-late bg-late-soft p-3 text-sm text-late">
           Вам призначили тимчасовий пароль. Перш ніж продовжити, встановіть власний пароль нижче.
         </p>
       )}
@@ -181,7 +201,7 @@ export default function SettingsPage() {
               {profile.photoUpdatedAt ? 'Змінити фото' : 'Завантажити фото'}
             </Button>
             {profile.photoUpdatedAt && (
-              <Button type="button" size="sm" variant="ghost" disabled={removePhoto.isPending} onClick={() => removePhoto.mutate()}>
+              <Button type="button" size="sm" variant="destructive" disabled={removePhoto.isPending} onClick={() => removePhoto.mutate()}>
                 Видалити фото
               </Button>
             )}
@@ -213,24 +233,24 @@ export default function SettingsPage() {
           <CardTitle>Особисті дані</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProfileSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleProfileSubmit} className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="firstName">Ім'я</Label>
               <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="lastName">Прізвище</Label>
               <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="nickname">Псевдо</Label>
               <Input id="nickname" value={nickname} onChange={(e) => setNickname(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="phone">Телефон</Label>
               <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="birthDate">Дата народження</Label>
               <Input
                 id="birthDate"
@@ -241,16 +261,17 @@ export default function SettingsPage() {
                 onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>
-            {updateProfile.isError && <p className="text-sm text-destructive">Не вдалося зберегти зміни.</p>}
-            {updateProfile.isSuccess && <p className="text-sm text-muted-foreground">Збережено.</p>}
-            <Button type="submit" disabled={updateProfile.isPending}>
-              Зберегти
-            </Button>
+            {updateProfile.isError && <p className="text-sm sm:col-span-2 text-destructive">Не вдалося зберегти зміни.</p>}
+            {updateProfile.isSuccess && <p className="text-sm sm:col-span-2 text-muted-foreground">Збережено.</p>}
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={updateProfile.isPending}>
+                Зберегти
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
-      <PushNotificationToggle />
       </>
       )}
 
@@ -259,8 +280,8 @@ export default function SettingsPage() {
           <CardTitle>Пароль</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handlePasswordSubmit} className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="currentPassword">Поточний пароль</Label>
               <Input
                 id="currentPassword"
@@ -270,7 +291,7 @@ export default function SettingsPage() {
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-[.3rem]">
               <Label htmlFor="newPassword">Новий пароль</Label>
               <Input
                 id="newPassword"
@@ -282,12 +303,14 @@ export default function SettingsPage() {
               />
             </div>
             {changePassword.isError && (
-              <p className="text-sm text-destructive">Не вдалося змінити пароль. Перевірте поточний пароль.</p>
+              <p className="text-sm text-destructive sm:col-span-2">Не вдалося змінити пароль. Перевірте поточний пароль.</p>
             )}
-            {changePassword.isSuccess && <p className="text-sm text-muted-foreground">Пароль змінено.</p>}
-            <Button type="submit" disabled={changePassword.isPending}>
-              Змінити пароль
-            </Button>
+            {changePassword.isSuccess && <p className="text-sm sm:col-span-2 text-muted-foreground">Пароль змінено.</p>}
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={changePassword.isPending}>
+                Змінити пароль
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -304,8 +327,8 @@ export default function SettingsPage() {
               Перевірте пошту на новій адресі — там лист із посиланням для підтвердження.
             </p>
           ) : (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleEmailSubmit} className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-[.3rem]">
                 <Label htmlFor="newEmail">Нова адреса</Label>
                 <Input
                   id="newEmail"
@@ -315,7 +338,7 @@ export default function SettingsPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-[.3rem]">
                 <Label htmlFor="emailPassword">Поточний пароль</Label>
                 <Input
                   id="emailPassword"
@@ -326,18 +349,24 @@ export default function SettingsPage() {
                 />
               </div>
               {requestEmailChange.isError && (
-                <p className="text-sm text-destructive">
+                <p className="text-sm text-destructive sm:col-span-2">
                   Не вдалося змінити email. Перевірте пароль або чи ця адреса вже не зайнята.
                 </p>
               )}
-              <Button type="submit" disabled={requestEmailChange.isPending}>
-                Змінити email
-              </Button>
+              <div className="sm:col-span-2">
+                <Button type="submit" disabled={requestEmailChange.isPending}>
+                  Змінити email
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>
       </Card>
       )}
+
+      <Button type="button" variant="destructive" className="w-full" onClick={logout}>
+        Вийти
+      </Button>
     </div>
   );
 }

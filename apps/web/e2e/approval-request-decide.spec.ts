@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createOnboardedUserAs, loginForToken } from './helpers/proby-seed';
 
 test('lets zvyazkovyi approve a pending request and the change takes effect', async ({ page, request }) => {
   const { program } = await seedProbyProgram();
@@ -10,7 +10,7 @@ test('lets zvyazkovyi approve a pending request and the change takes effect', as
 
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
   const kurinnyiEmail = `kurinnyi-${Date.now()}@example.com`;
-  const junak = await createUserAs(zvyazkovyiToken, {
+  const junak = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Кур',
     lastName: 'Інний',
     email: kurinnyiEmail,
@@ -21,7 +21,7 @@ test('lets zvyazkovyi approve a pending request and the change takes effect', as
 
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: junak.id, scope: 'KURIN', positionType: 'KURINNYI' },
+    data: { userId: junak.user.id, scope: 'KURIN', positionType: 'KURINNYI' },
   });
 
   // kurinniy creates the request

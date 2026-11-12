@@ -32,10 +32,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
-// Runs before hydration, only when no `theme` cookie exists yet (first-time
-// visitor). Mirrors the system color scheme so there's no flash of the
-// wrong theme before ThemeToggle's own useLayoutEffect sync takes over.
-const THEME_PREFERENCE_SCRIPT = `(function(){try{if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+// Runs before hydration when the `theme` cookie is `system` or missing. It
+// mirrors the system color scheme so there's no flash of the wrong theme, and
+// keeps following system changes until the user picks light/dark (the cookie
+// is checked at event time, so no reload is needed to stop).
+const THEME_PREFERENCE_SCRIPT = `(function(){try{var m=window.matchMedia('(prefers-color-scheme: dark)');var r=document.documentElement;r.classList.toggle('dark',m.matches);m.addEventListener('change',function(e){if(/(?:^|; )theme=(light|dark)/.test(document.cookie))return;r.classList.toggle('dark',e.matches);});}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -45,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="uk"
       className={cn(oswald.variable, ptSans.variable, ptMono.variable, theme === 'dark' && 'dark')}
-      // For a system-dark visitor with no `theme` cookie yet, the inline
+      // For a system-dark visitor with `theme=system` (or no cookie), the inline
       // script below adds the `dark` class before React hydrates, which
       // makes the server-rendered className intentionally not match the
       // real DOM at hydration time. That's expected, not a bug — without

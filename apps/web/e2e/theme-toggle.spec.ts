@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 
-test('clicking the theme switch on Налаштування flips dark mode and persists across reload and login', async ({ page }) => {
+test('choosing the theme radio on Налаштування flips dark mode and persists across reload and login', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
 
@@ -13,8 +13,8 @@ test('clicking the theme switch on Налаштування flips dark mode and 
   const html = page.locator('html');
   await expect(html).not.toHaveClass(/dark/);
 
-  const toggle = main.getByRole('switch', { name: 'Перемкнути темну тему' });
-  await toggle.click();
+  const dark = main.getByRole('radio', { name: 'Темна' });
+  await dark.click();
   await expect(html).toHaveClass(/dark/);
 
   const cookies = await page.context().cookies();
@@ -32,5 +32,27 @@ test('clicking the theme switch on Налаштування flips dark mode and 
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/settings');
   await expect(html).toHaveClass(/dark/);
-  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect(dark).toHaveAttribute('aria-checked', 'true');
+});
+
+test('choosing «Як у системі» follows the system color scheme', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/settings');
+  const html = page.locator('html');
+  const main = page.locator('main');
+
+  await main.getByRole('radio', { name: 'Світла' }).click();
+  await expect(html).not.toHaveClass(/dark/);
+
+  await main.getByRole('radio', { name: 'Як у системі' }).click();
+  await expect(html).toHaveClass(/dark/);
+  expect((await page.context().cookies()).find((c) => c.name === 'theme')?.value).toBe('system');
+
+  await page.reload();
+  await expect(html).toHaveClass(/dark/);
+  await expect(main.getByRole('radio', { name: 'Як у системі' })).toHaveAttribute('aria-checked', 'true');
 });

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createUserAs, createOnboardedUserAs, loginForToken } from './helpers/proby-seed';
 
 test('lets kurinniy request a hurtok change, zvyazkovyi approves it', async ({ page, request }) => {
   const { program } = await seedProbyProgram();
@@ -11,7 +11,7 @@ test('lets kurinniy request a hurtok change, zvyazkovyi approves it', async ({ p
   const hurtokA = await createHurtok(zvyazkovyiToken, 'Орлики');
   const hurtokB = await createHurtok(zvyazkovyiToken, 'Соколи');
   const kurinniyEmail = `kurinniy-${Date.now()}@example.com`;
-  const kurinniy = await createUserAs(zvyazkovyiToken, {
+  const kurinniy = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Кур',
     lastName: 'Інний',
     email: kurinniyEmail,
@@ -21,7 +21,7 @@ test('lets kurinniy request a hurtok change, zvyazkovyi approves it', async ({ p
   });
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: kurinniy.id, scope: 'KURIN', positionType: 'KURINNYI' },
+    data: { userId: kurinniy.user.id, scope: 'KURIN', positionType: 'KURINNYI' },
   });
   const targetEmail = `target-${Date.now()}@example.com`;
   const target = await createUserAs(zvyazkovyiToken, {
@@ -56,7 +56,7 @@ test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, req
   const hurtokA = await createHurtok(zvyazkovyiToken, 'Орлики');
   const hurtokB = await createHurtok(zvyazkovyiToken, 'Соколи');
   const suddiaEmail = `suddia-${Date.now()}@example.com`;
-  const suddia = await createUserAs(zvyazkovyiToken, {
+  const suddia = await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Суд',
     lastName: 'Дя',
     email: suddiaEmail,
@@ -66,7 +66,7 @@ test('lets a KURIN-scope suddia request a hurtok change too', async ({ page, req
   });
   await request.post('http://localhost:3001/kurin-positions', {
     headers: { Authorization: `Bearer ${zvyazkovyiToken}`, 'Content-Type': 'application/json' },
-    data: { userId: suddia.id, scope: 'KURIN', positionType: 'SUDDIA' },
+    data: { userId: suddia.user.id, scope: 'KURIN', positionType: 'SUDDIA' },
   });
   const targetEmail = `target-${Date.now()}@example.com`;
   const target = await createUserAs(zvyazkovyiToken, {

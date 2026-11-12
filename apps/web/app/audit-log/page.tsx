@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { useSession } from '@/lib/session-client';
 import { useAuditLog, type AuditLogFilters } from '@/lib/queries/audit-log';
 import { useUsers } from '@/lib/queries/users';
-import { AUDIT_GROUP_LABELS, describeAuditEvent, type AuditGroup, type AuditLogItem } from '@/lib/audit';
+import { AUDIT_GROUP_LABELS, describeAuditEvent, auditGroupOf, type AuditGroup, type AuditLogItem } from '@/lib/audit';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
+import { SectionHeading } from '@/components/ui/section-heading';
 import { accessErrorMessage } from '@/lib/error-message';
 
 function dayLabel(iso: string): string {
@@ -42,66 +46,87 @@ export default function AuditLogPage() {
   const setFilter = (patch: Partial<AuditLogFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
   const items = log.data?.pages.flatMap((p) => p.items) ?? [];
 
+  const selectClass =
+    'min-h-[2.75rem] w-full rounded-[4px] border-2 border-line bg-field px-[.8rem] text-base text-foreground focus-visible:border-navy';
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Журнал дій</h1>
+    <div>
+      <PageHeader title="Журнал дій" subtitle="Хто що змінив у курені" crumb={{ href: '/settings', label: 'Налаштування' }} />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant={filters.group ? 'outline' : 'default'} onClick={() => setFilter({ group: undefined })}>
-          Усі
-        </Button>
-        {(Object.keys(AUDIT_GROUP_LABELS) as AuditGroup[]).map((group) => (
-          <Button
-            key={group}
-            size="sm"
-            variant={filters.group === group ? 'default' : 'outline'}
-            onClick={() => setFilter({ group })}
-          >
-            {AUDIT_GROUP_LABELS[group]}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Input type="date" aria-label="Від" value={filters.from ?? ''} onChange={(e) => setFilter({ from: e.target.value || undefined })} className="max-w-40" />
-        <Input type="date" aria-label="До" value={filters.to ?? ''} onChange={(e) => setFilter({ to: e.target.value || undefined })} className="max-w-40" />
-        <select
-          aria-label="Хто діяв"
-          value={filters.actorId ?? ''}
-          onChange={(e) => setFilter({ actorId: e.target.value || undefined })}
-          className="rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none dark:bg-input/30"
-        >
-          <option value="">Хто діяв: усі</option>
-          {users.data?.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.nickname ? `${u.firstName} ${u.lastName} («${u.nickname}»)` : `${u.firstName} ${u.lastName}`}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Card className="mb-4">
+        <CardContent className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3">
+          <div className="grid gap-[.3rem]">
+            <Label htmlFor="audit-group">Тип дії</Label>
+            <select
+              id="audit-group"
+              value={filters.group ?? ''}
+              onChange={(e) => setFilter({ group: (e.target.value || undefined) as AuditGroup | undefined })}
+              className={selectClass}
+            >
+              <option value="">Усі</option>
+              {(Object.keys(AUDIT_GROUP_LABELS) as AuditGroup[]).map((group) => (
+                <option key={group} value={group}>
+                  {AUDIT_GROUP_LABELS[group]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-[.3rem]">
+            <Label htmlFor="audit-from">Від</Label>
+            <Input id="audit-from" type="date" value={filters.from ?? ''} onChange={(e) => setFilter({ from: e.target.value || undefined })} />
+          </div>
+          <div className="grid gap-[.3rem]">
+            <Label htmlFor="audit-to">До</Label>
+            <Input id="audit-to" type="date" value={filters.to ?? ''} onChange={(e) => setFilter({ to: e.target.value || undefined })} />
+          </div>
+          <div className="grid gap-[.3rem]">
+            <Label htmlFor="audit-actor">Хто діяв</Label>
+            <select
+              id="audit-actor"
+              value={filters.actorId ?? ''}
+              onChange={(e) => setFilter({ actorId: e.target.value || undefined })}
+              className={selectClass}
+            >
+              <option value="">Хто діяв: усі</option>
+              {users.data?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nickname ? `${u.firstName} ${u.lastName} («${u.nickname}»)` : `${u.firstName} ${u.lastName}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
 
       {log.isLoading && <p>Завантаження...</p>}
       {log.isError && <p className="text-sm text-destructive">{accessErrorMessage(log.error) ?? 'Помилка завантаження.'}</p>}
-      {log.isSuccess && items.length === 0 && <p className="text-sm text-muted-foreground">Подій поки немає.</p>}
+      {log.isSuccess && items.length === 0 && (
+        <p className="rounded-[6px] border-2 border-dashed border-line p-[1.2rem] text-center text-ink-2">Подій поки немає.</p>
+      )}
 
       {groupByDay(items).map(({ day, items: dayItems }) => (
-        <Card key={day}>
-          <CardContent className="space-y-2">
-            <h2 className="text-sm font-semibold text-muted-foreground">{day}</h2>
-            <ul className="space-y-1.5">
-              {dayItems.map((item) => (
-                <li key={item.id} className="text-sm">
-                  <span className="text-muted-foreground">{timeLabel(item.createdAt)}</span> · <span className="font-medium">{item.actor?.name ?? 'Система'}</span> ·{' '}
-                  {describeAuditEvent(item)}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <section key={day}>
+          <SectionHeading>{day}</SectionHeading>
+          <ul className="m-0 flex list-none flex-col overflow-hidden rounded-[6px] border border-line bg-paper p-0">
+            {dayItems.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-[.8rem] border-b border-dashed border-line px-[.9rem] py-[.65rem] last:border-b-0"
+              >
+                <span className="min-w-[3rem] font-mono text-[.82rem] text-ink-2">{timeLabel(item.createdAt)}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <b className="text-base leading-tight">{describeAuditEvent(item)}</b>
+                  <small className="text-[.82rem] text-ink-2">{item.actor?.name ?? 'Система'}</small>
+                </span>
+                <Badge variant="mute">{AUDIT_GROUP_LABELS[auditGroupOf(item.action)]}</Badge>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
 
       {log.hasNextPage && (
-        <Button variant="outline" disabled={log.isFetchingNextPage} onClick={() => log.fetchNextPage()}>
+        <Button variant="outline" className="mt-4 w-full" disabled={log.isFetchingNextPage} onClick={() => log.fetchNextPage()}>
           Завантажити ще
         </Button>
       )}

@@ -109,7 +109,7 @@ function updateFields(row: BulkImportRow, current: MatchedJunakSummary): FieldCh
 function FieldLine({ field }: { field: FieldChange }) {
   if (field.ignored) {
     return (
-      <li className="text-muted-foreground">
+      <li className="text-ink-2">
         <span className="font-medium">{field.label}:</span> залишиться {field.before} (у таблиці інше значення —{' '}
         {field.after} — його не буде застосовано)
       </li>
@@ -145,13 +145,13 @@ function RowCard({ row, matched, isUpdate }: { row: BulkImportRow; matched?: Mat
     : `Новий юнак: ${row.firstName} ${row.lastName}`;
 
   return (
-    <li className="rounded border p-3 text-sm space-y-2" data-testid="bulk-import-row">
+    <li className="space-y-2 rounded-[6px] border border-line bg-paper p-3 text-sm" data-testid="bulk-import-row">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-semibold">{title}</span>
-        <Badge variant={isUpdate ? 'neutral' : 'accent'}>{isUpdate ? 'Існуючий юнак' : 'Новий'}</Badge>
-        {unresolvedTarget && <Badge variant="warning">Юнака не знайдено в цьому курені — рядок буде відхилено</Badge>}
+        <Badge variant={isUpdate ? 'mute' : 'ok'}>{isUpdate ? 'Існуючий юнак' : 'Новий'}</Badge>
+        {unresolvedTarget && <Badge variant="signal" className="whitespace-normal">Юнака не знайдено в цьому курені — рядок буде відхилено</Badge>}
         {isProtectedTarget && (
-          <Badge variant="warning">Має посаду в курені — через запит оновити не можна, рядок буде відхилено</Badge>
+          <Badge variant="signal" className="whitespace-normal">Має посаду в курені — через запит оновити не можна, рядок буде відхилено</Badge>
         )}
       </div>
 
@@ -163,11 +163,11 @@ function RowCard({ row, matched, isUpdate }: { row: BulkImportRow; matched?: Mat
         </ul>
       )}
       {isUpdate && matched && fields.length === 0 && (
-        <p className="text-muted-foreground">Основні дані не змінюються.</p>
+        <p className="text-ink-2">Основні дані не змінюються.</p>
       )}
 
       {kurinPositions.length > 0 && (
-        <p className={requestsKurinniy ? 'font-semibold text-destructive' : undefined}>
+        <p className={requestsKurinniy ? 'font-semibold text-late' : undefined}>
           <span className="font-medium">Призначити посаду в курені:</span> {positionList(kurinPositions)}
           {requestsKurinniy && ' — посаду «Курінний» через імпорт призначити не можна, рядок буде відхилено'}
         </p>
@@ -198,7 +198,7 @@ function RowCard({ row, matched, isUpdate }: { row: BulkImportRow; matched?: Mat
 export function BulkImportRequestView({ request }: { request: ApprovalRequest }) {
   const data = request.newData as { rows?: unknown; processingError?: unknown };
   if (!Array.isArray(data.rows)) {
-    return <p className="text-sm text-destructive">Запит пошкоджений: немає списку рядків для імпорту.</p>;
+    return <p className="text-sm text-late">Запит пошкоджений: немає списку рядків для імпорту.</p>;
   }
   const rows = data.rows as BulkImportRow[];
   const matchedJunaky = request.matchedJunaky ?? {};
@@ -211,7 +211,7 @@ export function BulkImportRequestView({ request }: { request: ApprovalRequest })
         Рядків: {rows.length} (нових — {newCount}, оновлень — {updateCount})
       </p>
       {typeof data.processingError === 'string' && (
-        <p className="text-sm text-destructive">{data.processingError}</p>
+        <p className="text-sm text-late">{data.processingError}</p>
       )}
       <ul className="space-y-2">
         {rows.map((row, index) => (

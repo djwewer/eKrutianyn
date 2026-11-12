@@ -7,6 +7,14 @@ export const AUDIT_GROUP_LABELS: Record<AuditGroup, string> = {
   SETTINGS: 'Налаштування',
 };
 
+/** Mirrors AUDIT_GROUPS in apps/api/src/audit/audit.constants.ts (everything not listed there is PEOPLE). */
+export function auditGroupOf(action: string): AuditGroup {
+  if (/^(PROBY_|DEGREE_DATE_)/.test(action)) return 'PROBY';
+  if (/^(TREASURY_|INVENTORY_)/.test(action)) return 'MONEY';
+  if (/^(KURIN_PROBY_PROGRAM_|DRIVE_|JUDGE_BOOK_|APD_|ANNOUNCEMENT_)/.test(action)) return 'SETTINGS';
+  return 'PEOPLE';
+}
+
 export interface AuditLogItem {
   id: string;
   action: string;

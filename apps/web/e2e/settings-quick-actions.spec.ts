@@ -14,7 +14,7 @@ test('zvyazkovyi sees all quick actions on /settings', async ({ page }) => {
 
   const html = page.locator('html');
   const wasDark = await html.evaluate((el) => el.classList.contains('dark'));
-  await main.getByRole('switch', { name: 'Перемкнути темну тему' }).click();
+  await main.getByRole('radio', { name: wasDark ? 'Світла' : 'Темна' }).click();
   await expect.poll(() => html.evaluate((el) => el.classList.contains('dark'))).toBe(!wasDark);
 
   await main.getByRole('button', { name: 'Вийти' }).click();
@@ -36,7 +36,7 @@ test('junak sees theme switch and logout but not zvyazkovyi links', async ({ pag
   await loginAs(page, email, password);
   await page.goto('/settings');
   const main = page.locator('main');
-  await expect(main.getByRole('switch', { name: 'Перемкнути темну тему' })).toBeVisible();
+  await expect(main.getByRole('radio', { name: 'Темна' })).toBeVisible();
   await expect(main.getByRole('button', { name: 'Вийти' })).toBeVisible();
   await expect(main.getByRole('link', { name: 'Запити' })).toHaveCount(0);
   await expect(main.getByRole('link', { name: 'Журнал дій' })).toHaveCount(0);

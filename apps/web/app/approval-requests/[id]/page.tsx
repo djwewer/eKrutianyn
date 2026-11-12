@@ -9,6 +9,7 @@ import {
 } from '@/lib/queries/approval-requests-list';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { accessErrorMessage } from '@/lib/error-message';
 import { BulkImportRequestView } from '@/components/bulk-import-request-view';
 
@@ -35,28 +36,31 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
   const isBulkImport = request.actionType === 'BULK_IMPORT_JUNAKY';
 
   return (
-    <Card className={isBulkImport ? 'max-w-2xl' : 'max-w-md'}>
+    <Card>
       <CardHeader>
         <CardTitle>{ACTION_LABELS[request.actionType] ?? request.actionType}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className="mb-1 font-semibold">{isBulkImport ? 'Що буде імпортовано' : 'Нові дані'}</h3>
+          <h3 className="mb-1 font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase">{isBulkImport ? 'Що буде імпортовано' : 'Нові дані'}</h3>
           {isBulkImport ? (
             <BulkImportRequestView request={request} />
           ) : (
-            <pre className="rounded bg-muted p-2 text-xs">{JSON.stringify(request.newData, null, 2)}</pre>
+            <pre className="overflow-x-auto rounded-[4px] border border-line bg-bg p-2 font-mono text-xs">{JSON.stringify(request.newData, null, 2)}</pre>
           )}
         </div>
         {request.oldData && (
           <div>
-            <h3 className="mb-1 font-semibold">Поточні дані</h3>
-            <pre className="rounded bg-muted p-2 text-xs">{JSON.stringify(request.oldData, null, 2)}</pre>
+            <h3 className="mb-1 font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase">Поточні дані</h3>
+            <pre className="overflow-x-auto rounded-[4px] border border-line bg-bg p-2 font-mono text-xs">{JSON.stringify(request.oldData, null, 2)}</pre>
           </div>
         )}
-        <p className="text-sm text-muted-foreground">Статус: {request.status}</p>
+        <p className="text-sm text-ink-2">
+          Статус:{' '}
+          <Badge variant={request.status === 'APPROVED' ? 'ok' : request.status === 'PENDING' ? 'signal' : 'late'}>{request.status}</Badge>
+        </p>
         {request.status === 'PENDING' && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={async () => {
                 try {
@@ -70,7 +74,7 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
               Затвердити
             </Button>
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={async () => {
                 try {
                   await reject.mutateAsync();
