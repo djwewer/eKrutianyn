@@ -86,7 +86,7 @@ export function CustomSkillDialog({ skill, onClose }: { skill: Skill | null; onC
             id="custom-skill-group"
             value={group}
             onChange={(e) => setGroup(e.target.value as SkillGroup)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="min-h-[2.75rem] w-full min-w-0 rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base text-foreground transition-colors focus-visible:border-navy focus-visible:outline-none"
           >
             {SKILL_GROUP_ORDER.map((g) => (
               <option key={g} value={g}>
@@ -96,8 +96,8 @@ export function CustomSkillDialog({ skill, onClose }: { skill: Skill | null; onC
           </select>
         </div>
         {LEVELS.map((level) => (
-          <fieldset key={level} className="space-y-2 rounded-lg border border-border p-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
+          <fieldset key={level} className="space-y-2 rounded-[6px] border border-line p-3">
+            <label className="flex items-center gap-2 font-display text-[.86rem] font-semibold tracking-[.07em] uppercase">
               <input
                 type="checkbox"
                 checked={levels[level].enabled}
@@ -113,7 +113,7 @@ export function CustomSkillDialog({ skill, onClose }: { skill: Skill | null; onC
                   rows={4}
                   value={levels[level].requirements}
                   onChange={(e) => setLevel(level, { requirements: e.target.value })}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  className="min-h-[4.5rem] w-full min-w-0 resize-y rounded-[4px] border-2 border-line bg-field px-[.8rem] py-[.45rem] text-base leading-normal text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-navy focus-visible:outline-none"
                 />
                 <Input
                   aria-label={`Примітка — ${SKILL_LEVEL_LABELS[level]}`}

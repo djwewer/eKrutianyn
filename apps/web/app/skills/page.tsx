@@ -9,6 +9,7 @@ import { SKILL_GROUP_LABELS, SKILL_LEVEL_LABELS } from '@/lib/history-labels';
 import { AccordionContent, AccordionItem, AccordionRoot, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { CustomSkillDialog } from '@/components/custom-skill-dialog';
 import { SkillRequirementList } from '@/components/skill-requirement-list';
 import type { Skill } from '@/lib/types';
@@ -19,10 +20,10 @@ function SkillCard({ skill, canManage, onEdit }: { skill: Skill; canManage: bool
   const level = skill.levels.find((l) => l.level === selected) ?? skill.levels[0];
 
   return (
-    <li className="space-y-3 rounded-lg border border-border bg-background p-3" data-testid="skill-card">
+    <li className="space-y-3 rounded-[6px] border border-line bg-background p-3" data-testid="skill-card">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 font-medium [overflow-wrap:anywhere]">{skill.name}</h3>
-        {skill.isCustom && <Badge variant="neutral">Власна</Badge>}
+        <h3 className="min-w-0 text-[.98rem] leading-tight font-bold [overflow-wrap:anywhere]">{skill.name}</h3>
+        {skill.isCustom && <Badge variant="signal">Власна</Badge>}
       </div>
       <div role="tablist" aria-label={`Рівні вмілості «${skill.name}»`} className="flex flex-wrap gap-1">
         {skill.levels.map((l) => {
@@ -36,8 +37,8 @@ function SkillCard({ skill, canManage, onEdit }: { skill: Skill; canManage: bool
               onClick={() => setSelected(l.level)}
               className={
                 active
-                  ? 'rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-text'
-                  : 'rounded-full px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted'
+                  ? 'rounded-[3px] border border-navy bg-sky-soft px-2 py-[.15rem] font-display text-[.7rem] font-semibold tracking-[.1em] text-sky-ink uppercase'
+                  : 'rounded-[3px] border border-line bg-background px-2 py-[.15rem] font-display text-[.7rem] font-semibold tracking-[.1em] text-ink-2 uppercase transition-colors hover:border-navy'
               }
             >
               {SKILL_LEVEL_LABELS[l.level]}
@@ -47,7 +48,7 @@ function SkillCard({ skill, canManage, onEdit }: { skill: Skill; canManage: bool
       </div>
       {level && (
         <div role="tabpanel" aria-label={SKILL_LEVEL_LABELS[level.level]} className="space-y-2 text-sm">
-          {level.note && <p className="font-medium text-accent-text">{level.note}</p>}
+          {level.note && <p className="font-medium text-sky-ink">{level.note}</p>}
           <SkillRequirementList requirements={level.requirements} />
         </div>
       )}
@@ -84,20 +85,20 @@ export default function SkillsPage() {
   const canManage = session.role === 'ZVYAZKOVYI';
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Вмілості</h1>
-        {canManage && (
-          <Button onClick={() => setDialog({ skill: null })}>
-            <Plus aria-hidden />
-            Додати власну вмілість
-          </Button>
-        )}
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Каталог «Вмілості УПЮ» (Львів, 2003) і власні вмілості куреня. Рівень вмілості — це проба, до якої вона
-        призначена.
-      </p>
+    <div>
+      <PageHeader
+        title="Вмілості"
+        subtitle="Каталог «Вмілості УПЮ» (Львів, 2003) і власні вмілості куреня. Рівень вмілості — це проба, до якої вона призначена."
+        crumb={{ href: '/plastuvannia', label: 'Моє пластування' }}
+        actions={
+          canManage && (
+            <Button onClick={() => setDialog({ skill: null })}>
+              <Plus aria-hidden />
+              Додати власну вмілість
+            </Button>
+          )
+        }
+      />
       {isError && (
         <p className="text-sm text-destructive">{accessErrorMessage(error) ?? 'Не вдалося завантажити каталог.'}</p>
       )}
@@ -108,12 +109,12 @@ export default function SkillsPage() {
               <AccordionTrigger>
                 <span className="flex items-center gap-2">
                   {SKILL_GROUP_LABELS[group]}
-                  <Badge variant="neutral">{skills.length}</Badge>
+                  <Badge variant="mute">{skills.length}</Badge>
                 </span>
               </AccordionTrigger>
               <AccordionContent>
                 {skills.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">У цій групі ще немає вмілостей.</p>
+                  <p className="text-sm text-ink-2">У цій групі ще немає вмілостей.</p>
                 ) : (
                   <ul className="space-y-3">
                     {skills.map((skill) => (

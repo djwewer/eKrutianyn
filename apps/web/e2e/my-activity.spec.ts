@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createOnboardedUserAs, loginForToken } from './helpers/proby-seed';
 
 test('lets a junak add an activity entry and delete it, and shows the in-production note', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -9,13 +9,12 @@ test('lets a junak add an activity entry and delete it, and shows the in-product
   const accessToken = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(accessToken, 'Орлики');
   const junakEmail = `junak-${Date.now()}@example.com`;
-  await createUserAs(accessToken, {
+  await createOnboardedUserAs(accessToken, {
     firstName: 'Юний',
     lastName: 'Пластун',
     email: junakEmail,
     role: 'JUNAK',
     hurtokId: hurtok.id,
-    password: 'password123',
   });
 
   await loginAs(page, junakEmail, 'password123');

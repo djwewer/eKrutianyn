@@ -8,7 +8,7 @@ export function SkillRequirementList({ requirements }: { requirements: SkillRequ
         <li key={index}>
           <p>{requirement.text}</p>
           {requirement.items && requirement.items.length > 0 && (
-            <ul className="mt-1 space-y-0.5 pl-4 text-muted-foreground">
+            <ul className="mt-1 space-y-0.5 pl-4 text-ink-2">
               {requirement.items.map((item, itemIndex) => (
                 <li key={itemIndex}>{item}</li>
               ))}
