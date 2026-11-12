@@ -65,10 +65,14 @@ export default function LoginPage() {
           {loading ? 'Зачекайте...' : 'Увійти'}
         </Button>
       </form>
-      <div className="flex items-center gap-[.7rem] font-mono text-[.72rem] uppercase text-ink-2 before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
-        або
-      </div>
-      <GoogleSignInButton />
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+        <>
+          <div className="flex items-center gap-[.7rem] font-mono text-[.72rem] uppercase text-ink-2 before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">
+            або
+          </div>
+          <GoogleSignInButton />
+        </>
+      )}
       <div className="text-center">
         <Link href="/forgot-password" className="text-sm underline">
           Забули пароль?

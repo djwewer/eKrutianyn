@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={
           session
             ? 'mx-auto max-w-[52rem] pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pb-[calc(8rem+env(safe-area-inset-bottom,0px))] pt-[1.4rem] min-[761px]:pb-12 [&:has([data-wide])]:max-w-[72rem]'
-            : 'p-4'
+            : ''
         }
       >
         {children}

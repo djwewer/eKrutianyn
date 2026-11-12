@@ -51,7 +51,7 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-band px-[max(16px,env(safe-area-inset-left,0px))] py-8 text-band-ink">
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-band pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] py-8 text-band-ink">
       <Topo />
       <div className="relative grid w-full justify-items-center">
         <div className="relative grid w-[min(100%,25rem)] gap-4 rounded-[8px] bg-paper p-[1.6rem_1.5rem] text-ink shadow-[8px_8px_0_rgba(0,0,0,.18)]">
