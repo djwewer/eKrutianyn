@@ -1,5 +1,5 @@
+import { createECDH } from 'node:crypto';
 import { defineConfig } from '@playwright/test';
-import { generateVAPIDKeys } from 'web-push';
 import { ADMIN_API_KEY, ADMIN_PASSWORD, ADMIN_USERNAME } from './e2e/helpers/seed';
 
 const DATABASE_URL_TEST =
@@ -14,8 +14,22 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? 'test-openai-key';
 // PushNotificationsService calls web-push setVapidDetails in its constructor,
 // which throws on an empty key, so the API can't boot without a VAPID pair, and
 // apps/api/.env has none. Test-only throwaway keys generated per run, never
-// used for real pushes and not a production secret.
-const VAPID = generateVAPIDKeys();
+// used for real pushes and not a production secret. Generated with node:crypto
+// (a P-256 key pair, base64url, the format web-push expects) because web-push is
+// an apps/api dependency only — importing it here breaks `next build` on Vercel,
+// which type-checks this file.
+function generateVapidKeys() {
+  const ecdh = createECDH('prime256v1');
+  ecdh.generateKeys();
+  const privateKey = Buffer.alloc(32);
+  const raw = ecdh.getPrivateKey();
+  raw.copy(privateKey, 32 - raw.length);
+  return {
+    publicKey: ecdh.getPublicKey().toString('base64url'),
+    privateKey: privateKey.toString('base64url'),
+  };
+}
+const VAPID = generateVapidKeys();
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? VAPID.publicKey;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ?? VAPID.privateKey;
 
