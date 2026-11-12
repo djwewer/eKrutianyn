@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/auth-layout';
 
 export default function ConfirmEmailChangePage({
   searchParams,
@@ -25,24 +25,17 @@ export default function ConfirmEmailChangePage({
   }, [token]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Підтвердження email</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {status === 'pending' && <p className="text-sm text-muted-foreground">Перевіряємо посилання...</p>}
-          {status === 'success' && (
-            <p className="text-sm text-muted-foreground">Email підтверджено. Увійдіть новою адресою.</p>
-          )}
-          {status === 'error' && (
-            <p className="text-sm text-destructive">Посилання недійсне або застаріле.</p>
-          )}
-          <Link href="/login" className="text-sm underline">
-            Повернутись до входу
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout title="Підтвердження email" subtitle="ЗМІНА АДРЕСИ">
+      {status === 'pending' && <p className="text-sm text-muted-foreground">Перевіряємо посилання...</p>}
+      {status === 'success' && (
+        <p className="text-sm text-muted-foreground">Email підтверджено. Увійдіть новою адресою.</p>
+      )}
+      {status === 'error' && (
+        <p className="text-sm text-destructive">Посилання недійсне або застаріле.</p>
+      )}
+      <Link href="/login" className="text-sm underline">
+        Повернутись до входу
+      </Link>
+    </AuthLayout>
   );
 }

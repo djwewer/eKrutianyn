@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/auth-layout';
 
 export default function ResetPasswordPage({
   searchParams,
@@ -37,37 +37,30 @@ export default function ResetPasswordPage({
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted">
+      <AuthLayout title="Новий пароль" subtitle="ВІДНОВЛЕННЯ ДОСТУПУ">
         <p className="text-sm text-destructive">Немає токена відновлення в посиланні.</p>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Новий пароль</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Новий пароль</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Зачекайте...' : 'Встановити пароль'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout title="Новий пароль" subtitle="ВІДНОВЛЕННЯ ДОСТУПУ">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="newPassword">Новий пароль</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Зачекайте...' : 'Встановити пароль'}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
