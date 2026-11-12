@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSession } from '@/lib/session-client';
@@ -208,7 +208,7 @@ export default function AiVykhovnykPage() {
               Точка проби
             </span>
             <Select value={selectedPointId} onValueChange={handlePointChange} items={pointLabelById}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Точка проби">
                 <SelectValue placeholder="Оберіть точку проби" />
               </SelectTrigger>
               <SelectContent>
@@ -301,6 +301,14 @@ function ConversationPanel({
   // real response is written into the cache above — never both at once, since
   // by then serverMessages already includes it.
   const messages = pendingUserMessage ? [...serverMessages, pendingUserMessage] : serverMessages;
+  const messagesRef = useRef<HTMLDivElement>(null);
+  // Keep the newest message / typing indicator in view inside the box (not the page).
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
+  }, [messages.length, isAwaitingReply]);
   const canSend = !!selectedPointId && draft.trim().length > 0 && !isAwaitingReply;
 
   async function handleSend() {
@@ -368,7 +376,7 @@ function ConversationPanel({
           Оберіть точку проби та опишіть, що хочете підготувати — AI-виховник допоможе скласти план.
         </p>
       )}
-      <div className="grid max-h-[30rem] gap-[.8rem] overflow-auto p-[.2rem]">
+      <div ref={messagesRef} className="grid max-h-[30rem] gap-[.8rem] overflow-auto p-[.2rem]">
         {messages.map((message, index) => (
           <div
             key={index}

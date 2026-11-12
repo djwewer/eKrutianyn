@@ -31,13 +31,14 @@ export function probyProgress(
     });
 }
 
-/** Percent (0-100) of the current OPEN stage's points that are done; 0 when no stage is open. */
+/** Percent (0-100) of the current OPEN stage's points that are done; 100 when every stage is closed, else 0. */
 export function overallPercent(
   program: Pick<ProbyProgram, 'stages'>,
   progress: Pick<JunakProgressResponse, 'points' | 'stages'> | undefined,
 ): number {
   if (!progress) return 0;
   const openIds = new Set(progress.stages.filter((s) => s.status === 'OPEN').map((s) => s.stageId));
+  if (progress.stages.length > 0 && progress.stages.every((s) => s.status === 'CLOSED')) return 100;
   const current = probyProgress(program, progress).find((s) => openIds.has(s.stageId));
   if (!current || current.total === 0) return 0;
   return Math.round((current.done / current.total) * 100);

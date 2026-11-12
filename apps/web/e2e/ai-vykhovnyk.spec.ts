@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
-import { createHurtok, createOnboardedUserAs, createUserAs, loginForToken } from './helpers/proby-seed';
+import { createHurtok, createOnboardedUserAs, loginForToken } from './helpers/proby-seed';
 
 type StoredMessage = { role: 'USER' | 'ASSISTANT'; content: string; probyPointId: string | null; createdAt: string };
 type StoredConversation = { id: string; title: string | null; probyPointId: string | null; createdAt: string; updatedAt: string };
@@ -105,7 +105,7 @@ async function seedJunak(zvyazkovyiToken: string, emailPrefix: string) {
   const hurtok = await createHurtok(zvyazkovyiToken, 'Орлики');
   const email = `${emailPrefix}-${Date.now()}@example.com`;
   const password = 'password123';
-  await createUserAs(zvyazkovyiToken, {
+  await createOnboardedUserAs(zvyazkovyiToken, {
     firstName: 'Юрій',
     lastName: 'Юрченко',
     email,

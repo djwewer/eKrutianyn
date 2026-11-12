@@ -239,6 +239,14 @@
   color: transparent;
   animation: kmGradientShift 6s ease-in-out infinite;
 }
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ai-gradient-text {
+    color: #5b3fd9;
+  }
+  .dark .ai-gradient-text {
+    color: #b18cff;
+  }
+}
 .dark .ai-gradient-text {
   background-image: linear-gradient(120deg, #b18cff, #7fa8ff, #5fe0f0, #b18cff);
 }

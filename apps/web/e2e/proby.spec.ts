@@ -53,9 +53,9 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
   await expect(page.getByText('Точка А')).toBeVisible();
   await expect(page.getByText('Точка Б')).toBeVisible();
   const doneRow = page.locator('li', { hasText: 'Точка А' });
-  await expect(doneRow).toContainText('✅');
+  await expect(doneRow).toContainText('Зараховано');
   const notDoneRow = page.locator('li', { hasText: 'Точка Б' });
-  await expect(notDoneRow).not.toContainText('✅');
+  await expect(notDoneRow).not.toContainText('Зараховано');
 });
 
 test('marks a closed stage with a checkmark on its accordion header, not an open one', async ({ page }) => {
@@ -84,7 +84,7 @@ test('marks a closed stage with a checkmark on its accordion header, not an open
   await page.goto('/proby');
 
   const stageHeader = page.getByRole('button', { name: 'Ступінь 1' });
-  await expect(stageHeader).not.toContainText('✅');
+  await expect(stageHeader).not.toContainText('Закрито');
 
   // A stage only reports as CLOSED once every point in it is confirmed AND
   // it's been closed — closing with a point still unconfirmed just tracks
@@ -96,5 +96,5 @@ test('marks a closed stage with a checkmark on its accordion header, not an open
   });
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Ступінь 1' })).toContainText('✅');
+  await expect(page.getByRole('button', { name: 'Ступінь 1' })).toContainText('Закрито');
 });
