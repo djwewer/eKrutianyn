@@ -7,41 +7,25 @@ import { NavIcon } from '@/components/nav-icon';
 import { isActive, type NavItem, type NavModel } from '@/lib/nav-model';
 import { cn } from '@/lib/utils';
 
-function Item({
-  item,
-  active,
-  small,
-  badge = 0,
-}: {
-  item: NavItem;
-  active: boolean;
-  small: boolean;
-  badge?: number;
-}) {
+const ITEM =
+  'relative grid min-w-0 justify-items-center gap-[.1rem] rounded-md border-0 bg-transparent px-0 py-[.3rem] font-display text-[.66rem] font-semibold uppercase tracking-[.05em]';
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <span className="max-w-full truncate">{children}</span>;
+}
+
+function Item({ item, active, badge = 0 }: { item: NavItem; active: boolean; badge?: number }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
-      className={cn(
-        'flex flex-col items-center gap-0.5 font-semibold',
-        small ? 'text-[9px] tracking-tight' : 'text-[10.5px]',
-        active ? 'text-accent-text' : 'text-muted-foreground',
-      )}
+      className={cn(ITEM, active ? 'text-navy' : 'text-ink-2')}
     >
-      <span
-        className={cn(
-          'relative flex h-[30px] w-9 items-center justify-center rounded-[11px]',
-          active && 'bg-primary text-primary-foreground',
-        )}
-      >
-        <NavIcon name={item.icon} className="size-5" />
-        {badge > 0 && (
-          <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-white">
-            {badge}
-          </span>
-        )}
-      </span>
-      <span className="max-w-full truncate">{item.label}</span>
+      <NavIcon name={item.icon} className="size-[1.45rem]" />
+      <Label>{item.label}</Label>
+      {badge > 0 && (
+        <span aria-label={`${badge}`} className="absolute right-[22%] top-[.1rem] size-[.55rem] rounded-full bg-signal" />
+      )}
     </Link>
   );
 }
@@ -67,30 +51,26 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
   }, [sheetOpen]);
 
   const count = nav.dilovody.length;
-  const hasDilovody = count > 0;
-  const small = hasDilovody;
   const dilovodyActive = nav.dilovody.some((p) => isActive(p, pathname));
   const centerActive = isActive(nav.center, pathname);
+  const columns = count > 0 ? 6 : 5;
 
   return (
-    <div
-      className="fixed inset-x-3 z-40 sm:hidden"
-      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-    >
+    <div className="min-[761px]:hidden">
       {sheetOpen && count > 1 && (
-        <>
+        <div className="fixed inset-0 z-[25] grid items-end">
           <button
             type="button"
             aria-label="Закрити"
             tabIndex={-1}
-            className="fixed inset-0 -z-10 bg-foreground/20"
+            className="absolute inset-0 bg-black/40"
             onClick={() => setOpenOn(null)}
           />
           <div
             ref={sheetRef}
             role="dialog"
             aria-label="Діловодство"
-            className="absolute inset-x-0 bottom-full mb-2 flex flex-col rounded-[1.4rem] border border-border bg-popover p-2 shadow-lg"
+            className="relative mb-[calc(4.6rem+env(safe-area-inset-bottom,0px))] grid gap-[.3rem] rounded-t-xl bg-paper px-[max(16px,env(safe-area-inset-right,0px))] pb-4 pt-4"
           >
             {nav.dilovody.map((page) => {
               const active = isActive(page, pathname);
@@ -101,48 +81,43 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
                   onClick={() => setOpenOn(null)}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-                    active ? 'bg-accent-soft font-semibold text-accent-text' : 'text-foreground hover:bg-accent-soft',
+                    'flex items-center gap-[.8rem] rounded-md border-b border-dashed border-line px-[.9rem] py-[.65rem] last:border-b-0',
+                    active && 'bg-sky-soft text-sky-ink',
                   )}
                 >
-                  <NavIcon name={page.icon} className="size-5" />
-                  {page.label}
+                  <NavIcon name={page.icon} className="size-[1.6rem] flex-none text-navy" />
+                  <b className="text-base leading-tight">{page.label}</b>
                 </Link>
               );
             })}
           </div>
-        </>
+        </div>
       )}
-      <nav aria-label="Основна навігація">
-        <div
-          className={cn(
-            'grid items-end rounded-[2rem] border border-border bg-popover px-1.5 py-2 shadow-lg',
-            hasDilovody ? 'grid-cols-[1fr_1fr_4rem_1fr_1fr_1fr] gap-x-1' : 'grid-cols-[1fr_1fr_5.5rem_1fr_1fr]',
-          )}
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-line bg-paper pt-[.3rem] pl-[max(10px,env(safe-area-inset-left,0px))] pr-[max(10px,env(safe-area-inset-right,0px))]"
+        style={{ paddingBottom: 'calc(0.3rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <nav
+          aria-label="Основна навігація"
+          className={cn('grid gap-[.15rem]', columns === 6 && '[&_a]:text-[.6rem] [&_a]:tracking-[.01em] [&_button]:text-[.6rem] [&_button]:tracking-[.01em]')}
+          style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         >
-          <Item item={nav.left[0]} active={isActive(nav.left[0], pathname)} small={small} />
-          <Item item={nav.left[1]} active={isActive(nav.left[1], pathname)} small={small} />
+          <Item item={nav.left[0]} active={isActive(nav.left[0], pathname)} />
+          <Item item={nav.left[1]} active={isActive(nav.left[1], pathname)} />
           <Link
             href={nav.center.href}
             aria-current={centerActive ? 'page' : undefined}
             className={cn(
-              'flex flex-col items-center gap-0.5 font-semibold',
-              small ? 'text-[9px] tracking-tight' : 'text-[10.5px]',
-              centerActive ? 'text-accent-text' : 'text-muted-foreground',
+              ITEM,
+              '-mt-[.9rem] rounded-[50%_50%_8px_8px] bg-navy pt-[.55rem] text-navy-ink',
+              centerActive && 'shadow-[0_0_0_3px_var(--sky)]',
             )}
           >
-            <span
-              className={cn(
-                '-mt-8 flex size-[62px] items-center justify-center rounded-full border-[5px] border-popover bg-primary text-primary-foreground',
-                centerActive && 'ring-4 ring-accent-soft',
-              )}
-            >
-              <NavIcon name={nav.center.icon} className="size-6" />
-            </span>
-            <span className="text-center leading-tight">{nav.center.label}</span>
+            <NavIcon name={nav.center.icon} className="size-[1.45rem]" />
+            <Label>{nav.center.label}</Label>
           </Link>
-          <Item item={nav.kurin} active={isActive(nav.kurin, pathname)} small={small} />
-          {count === 1 && <Item item={nav.dilovody[0]} active={dilovodyActive} small={small} />}
+          <Item item={nav.kurin} active={isActive(nav.kurin, pathname)} />
+          {count === 1 && <Item item={nav.dilovody[0]} active={dilovodyActive} />}
           {count > 1 && (
             <button
               ref={triggerRef}
@@ -150,30 +125,15 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
               aria-expanded={sheetOpen}
               aria-haspopup="dialog"
               onClick={() => setOpenOn(sheetOpen ? null : pathname)}
-              className={cn(
-                'flex flex-col items-center gap-0.5 text-[9px] font-semibold tracking-tight',
-                dilovodyActive || sheetOpen ? 'text-accent-text' : 'text-muted-foreground',
-              )}
+              className={cn(ITEM, 'cursor-pointer', dilovodyActive || sheetOpen ? 'text-navy' : 'text-ink-2')}
             >
-              <span
-                className={cn(
-                  'flex h-[30px] w-9 items-center justify-center rounded-[11px]',
-                  (dilovodyActive || sheetOpen) && 'bg-primary text-primary-foreground',
-                )}
-              >
-                <Briefcase className="size-5" aria-hidden="true" />
-              </span>
-              <span>Діловодство</span>
+              <Briefcase className="size-[1.45rem]" aria-hidden="true" />
+              <Label>Діловодство</Label>
             </button>
           )}
-          <Item
-            item={nav.settings}
-            active={isActive(nav.settings, pathname)}
-            small={small}
-            badge={nav.settings.badge}
-          />
-        </div>
-      </nav>
+          <Item item={nav.settings} active={isActive(nav.settings, pathname)} badge={nav.settings.badge} />
+        </nav>
+      </div>
     </div>
   );
 }

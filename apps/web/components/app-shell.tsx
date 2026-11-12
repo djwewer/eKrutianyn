@@ -7,9 +7,8 @@ import { useOwnProfile } from '@/lib/queries/settings';
 import { useKurin } from '@/lib/queries/kurin';
 import { useApprovalRequests } from '@/lib/queries/approval-requests-list';
 import { buildNav } from '@/lib/nav-model';
-import { MobileHeader } from '@/components/mobile-header';
+import { BandHeader } from '@/components/band-header';
 import { BottomNav } from '@/components/bottom-nav';
-import { SidebarNav } from '@/components/sidebar-nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,22 +28,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [profile?.mustChangePassword, pathname, router]);
 
   const nav = session ? buildNav(session, pending?.length ?? 0) : null;
-  const kurinTitle = kurin
-    ? `${kurin.kurinNumber ? `Курінь ч.${kurin.kurinNumber}` : 'Підготовчий курінь'} ${kurin.name.replace(/^курінь\s+/i, '')}`
-    : '';
-
   // Дерево стабільне незалежно від сесії: інакше, щойно сесія завантажиться,
   // children перемонтуються і втрачають введений стан (напр. поля форми входу).
   return (
-    <div className={session ? 'sm:flex sm:min-h-screen' : undefined}>
-      {session && nav && (
-        <SidebarNav nav={nav} profile={profile} role={session.role} kurinTitle={kurinTitle} pathname={pathname} />
-      )}
-      <div className="min-w-0 flex-1">
-        {session && <MobileHeader profile={profile} kurinTitle={kurinTitle} />}
-        <main className={session ? 'p-4 pb-32 sm:p-8' : 'p-4'}>{children}</main>
-      </div>
+    <div>
+      {session && nav && <BandHeader nav={nav} profile={profile} kurin={kurin} pathname={pathname} />}
+      <main
+        className={
+          session
+            ? 'mx-auto max-w-[52rem] pl-[max(16px,env(safe-area-inset-left,0px))] pr-[max(16px,env(safe-area-inset-right,0px))] pb-[calc(8rem+env(safe-area-inset-bottom,0px))] pt-[1.4rem] min-[761px]:pb-12 [&:has([data-wide])]:max-w-[72rem]'
+            : 'p-4'
+        }
+      >
+        {children}
+      </main>
       {session && nav && <BottomNav nav={nav} pathname={pathname} />}
     </div>
   );
+}
+
+/** Сторінки, яким потрібна ширша колонка (до 72rem), обгортають вміст у цей компонент. */
+export function WideContent({ children }: { children: React.ReactNode }) {
+  return <div data-wide>{children}</div>;
 }
