@@ -4,6 +4,7 @@ import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/session-client';
 import { useAnnouncements, useUpdateAnnouncement } from '@/lib/queries/announcements';
+import { PageHeader } from '@/components/ui/page-header';
 import { AnnouncementEditor } from '@/components/announcement-editor';
 
 export default function EditAnnouncementPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,8 +23,8 @@ export default function EditAnnouncementPage({ params }: { params: Promise<{ id:
   if (!announcement) return <p>Оголошення не знайдено.</p>;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-2xl font-bold">Редагувати оголошення</h1>
+    <div>
+      <PageHeader title="Редагувати оголошення" crumb={{ href: '/news', label: 'Новини' }} />
       <AnnouncementEditor
         kurinId={kurinId}
         initialTitle={announcement.title}

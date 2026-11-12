@@ -72,7 +72,10 @@ function ToolbarButton({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={cn(active && 'bg-accent-soft text-accent-text')}
+      className={cn(
+        'size-[2.3rem] border border-line bg-field hover:bg-field hover:border-navy',
+        active && 'border-navy bg-navy text-navy-ink hover:bg-navy',
+      )}
       onClick={onClick}
     >
       {children}
@@ -81,7 +84,7 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <div className="mx-0.5 h-5 w-px self-center bg-border" />;
+  return <div className="mx-0.5 h-5 w-px self-center bg-line" />;
 }
 
 export function AnnouncementEditor({
@@ -165,10 +168,10 @@ export function AnnouncementEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 rounded-[6px] border border-line bg-paper p-4">
       <Input placeholder="Заголовок" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
 
-      <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-muted/40 p-1.5">
+      <div className="flex flex-wrap items-center gap-[.3rem] border-b border-dashed border-line pb-[.6rem]">
         <ToolbarButton label="Скасувати" active={false} onClick={() => editor?.chain().focus().undo().run()}>
           <Undo2 className={cn('size-4', !state?.canUndo && 'opacity-40')} />
         </ToolbarButton>
@@ -265,7 +268,7 @@ export function AnnouncementEditor({
           <TableIcon className="size-4" />
         </ToolbarButton>
         <label
-          className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground hover:bg-muted"
+          className="inline-flex size-[2.3rem] cursor-pointer items-center justify-center rounded-[4px] border border-line bg-field text-foreground hover:border-navy"
           title="Картинка"
         >
           <ImageIcon className="size-4" />
@@ -273,12 +276,12 @@ export function AnnouncementEditor({
         </label>
       </div>
 
-      <div className="rounded-lg border border-border p-3">
+      <div className="rounded-[4px] border-2 border-line bg-field p-3">
         <EditorContent editor={editor} />
       </div>
       {imageError && <p className="text-sm text-destructive">{imageError}</p>}
       {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
-      <Button disabled={!title.trim() || isSaving} onClick={handleSubmit}>
+      <Button className="justify-self-start" disabled={!title.trim() || isSaving} onClick={handleSubmit}>
         {submitLabel}
       </Button>
     </div>
