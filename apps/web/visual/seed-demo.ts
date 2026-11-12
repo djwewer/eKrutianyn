@@ -17,6 +17,8 @@ export type DemoIds = {
   kurinNumber: number;
   hurtokSlug: string;
   junakId: string;
+  /** Optional demo extras that failed to seed (load-bearing steps throw instead). */
+  skipped: string[];
 };
 
 const API_URL = 'http://localhost:3001';
@@ -26,15 +28,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-
 const DATABASE_URL_TEST =
   process.env.DATABASE_URL_TEST ?? 'postgresql://plast:plast@localhost:5432/plast_test';
 
-const skipped: string[] = [];
-
-/** Run one optional seed step; a failure skips only that demo item. */
-async function step<T>(label: string, fn: () => Promise<T>): Promise<T | undefined> {
+/** Run one OPTIONAL seed extra; a failure is recorded in `skipped`. Load-bearing steps must not use this. */
+async function step<T>(skipped: string[], label: string, fn: () => Promise<T>): Promise<T | undefined> {
   try {
     return await fn();
   } catch (err) {
-    skipped.push(label);
-    console.warn(`[seed-demo] skipped "${label}": ${(err as Error).message}`);
+    skipped.push(`${label}: ${(err as Error).message.split('\n')[0]}`);
     return undefined;
   }
 }
@@ -113,7 +112,7 @@ const day = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * day).toISOString();
 
 export async function seedDemo(): Promise<DemoIds> {
-  skipped.length = 0;
+  const skipped: string[] = [];
   const { program, points } = await seedProbyProgram(
     ['Знаю історію Пласту', 'Вмію ставити намет', 'Знаю вузли', 'Вмію розпалити вогонь', 'Орієнтуюсь за компасом', 'Надаю першу допомогу'],
   );
@@ -146,11 +145,9 @@ export async function seedDemo(): Promise<DemoIds> {
   const intendant = await createOnboardedUserAs(zToken, {
     firstName: 'Данило', lastName: 'Гнатюк', email: `danylo-${tag}@example.com`, role: 'JUNAK', hurtokId: berkuty.id,
   });
-  await step('INTENDANT position', () =>
-    api(zToken, 'POST', '/kurin-positions', {
-      userId: intendant.user.id, scope: 'KURIN', positionType: 'INTENDANT',
-    }),
-  );
+  await api(zToken, 'POST', '/kurin-positions', {
+    userId: intendant.user.id, scope: 'KURIN', positionType: 'INTENDANT',
+  });
 
   const extraJunaky = [
     ['Марко', 'Кравець', berkuty.id], ['Іван', 'Поліщук', rysi.id], ['Роман', 'Гуменюк', rysi.id],
@@ -165,63 +162,58 @@ export async function seedDemo(): Promise<DemoIds> {
 
   // ---- proby: confirm 2 points for the first extra junak (in Беркути) ----
   const vToken = await loginForToken(vykhovnyk.email, vykhovnyk.password);
-  await step('proby confirmations', async () => {
-    for (const p of points.slice(0, 2)) await confirmPointAs(vToken, junakIds[0], p.id);
-  });
+  for (const p of points.slice(0, 2)) await confirmPointAs(vToken, junakIds[0], p.id);
 
   // ---- announcements ----
   const base = `/kurins/${kurin.id}/announcements`;
-  const created = [] as { id: string }[];
-  await step('announcement 1 (list + blockquote)', async () => {
-    created.push(
-      await api<{ id: string }>(zToken, 'POST', base, {
-        title: 'Осінній вишкіл на Чорногорі',
-        imageIds: [],
-        content: doc(
-          para(text('Друзі, цієї суботи йдемо у короткий вишкіл. Що потрібно знати:')),
-          { type: 'bulletList', content: ['Збір о 8:30 на вокзалі', 'Тепле вбрання і дощовик', 'Обід беремо з собою'].map((t) => ({ type: 'listItem', content: [para(text(t))] })) },
-          { type: 'blockquote', content: [
-            para(text('Коли:', true), text(' субота, 9:00-17:00')),
-            para(text('Де:', true), text(' Підгірне, стежка до водоспаду')),
-            para(text('Форма:', true), text(' польова, з хустиною')),
-          ] },
-        ),
-      }),
-    );
-  });
-  await step('announcement 2 (3 images)', async () => {
-    const colours: [number, number, number][] = [[74, 143, 224], [47, 122, 62], [217, 82, 11]];
-    const imageIds: string[] = [];
-    for (const c of colours) {
-      const form = new FormData();
-      form.append('image', new Blob([new Uint8Array(solidPng(640, 400, c))], { type: 'image/png' }), 'demo.png');
-      const res = await fetch(`${API_URL}${base}/images`, { method: 'POST', headers: { Authorization: `Bearer ${zToken}` }, body: form });
-      if (!res.ok) throw new Error(`image upload -> ${res.status} ${await res.text()}`);
-      imageIds.push(((await res.json()) as { id: string }).id);
-    }
-    const img = (id: string) => ({ type: 'image', attrs: { src: `/api/backend/kurins/${kurin.id}/announcements/images/${id}` } });
-    created.push(
-      await api<{ id: string }>(zToken, 'POST', base, {
-        title: 'Фото з літнього табору',
-        imageIds,
-        content: doc(para(text('Кілька кадрів з табору, дякуємо всім за участь.')), ...imageIds.map(img)),
-      }),
-    );
-  });
-  await step('announcement 3 (short)', async () => {
-    created.push(
-      await api<{ id: string }>(zToken, 'POST', base, {
-        title: 'Збори в четвер',
-        imageIds: [],
-        content: doc(para(text('Збори гуртків цього четверга о 18:30 у пластовій домівці.'))),
-      }),
-    );
-  });
-  await step('reactions', async () => {
+  const created: { id: string }[] = [];
+  created.push(
+    await api<{ id: string }>(zToken, 'POST', base, {
+      title: 'Осінній вишкіл на Чорногорі',
+      imageIds: [],
+      content: doc(
+        para(text('Друзі, цієї суботи йдемо у короткий вишкіл. Що потрібно знати:')),
+        { type: 'bulletList', content: ['Збір о 8:30 на вокзалі', 'Тепле вбрання і дощовик', 'Обід беремо з собою'].map((t) => ({ type: 'listItem', content: [para(text(t))] })) },
+        { type: 'blockquote', content: [
+          para(text('Коли:', true), text(' субота, 9:00-17:00')),
+          para(text('Де:', true), text(' Підгірне, стежка до водоспаду')),
+          para(text('Форма:', true), text(' польова, з хустиною')),
+        ] },
+      ),
+    }),
+  );
+
+  const colours: [number, number, number][] = [[74, 143, 224], [47, 122, 62], [217, 82, 11]];
+  const imageIds: string[] = [];
+  for (const c of colours) {
+    const form = new FormData();
+    form.append('image', new Blob([new Uint8Array(solidPng(640, 400, c))], { type: 'image/png' }), 'demo.png');
+    const res = await fetch(`${API_URL}${base}/images`, { method: 'POST', headers: { Authorization: `Bearer ${zToken}` }, body: form });
+    if (!res.ok) throw new Error(`image upload -> ${res.status} ${await res.text()}`);
+    imageIds.push(((await res.json()) as { id: string }).id);
+  }
+  const img = (id: string) => ({ type: 'image', attrs: { src: `/api/backend/kurins/${kurin.id}/announcements/images/${id}` } });
+  created.push(
+    await api<{ id: string }>(zToken, 'POST', base, {
+      title: 'Фото з літнього табору',
+      imageIds,
+      content: doc(para(text('Кілька кадрів з табору, дякуємо всім за участь.')), ...imageIds.map(img)),
+    }),
+  );
+  created.push(
+    await api<{ id: string }>(zToken, 'POST', base, {
+      title: 'Збори в четвер',
+      imageIds: [],
+      content: doc(para(text('Збори гуртків цього четверга о 18:30 у пластовій домівці.'))),
+    }),
+  );
+
+  // Reactions are a cosmetic extra: tolerated, reported via `skipped`.
+  await step(skipped, 'reactions', async () => {
     const reactions = [[0, 'THUMBS_UP'], [0, 'HEART'], [1, 'WOW']] as const;
     const tokens = [zToken, vToken, await loginForToken(intendant.email, intendant.password)];
     for (const [i, [idx, emoji]] of reactions.entries()) {
-      if (created[idx]) await api(tokens[i], 'POST', `${base}/${created[idx].id}/reactions`, { emoji });
+      await api(tokens[i], 'POST', `${base}/${created[idx].id}/reactions`, { emoji });
     }
   });
 
@@ -238,62 +230,51 @@ export async function seedDemo(): Promise<DemoIds> {
     ['Великодній гайвок', 'Весняні забави', `${year}-04-12T11:00:00.000Z`],
   ];
   for (const [title, description, startDate, endDate] of events) {
-    await step(`calendar event "${title}"`, () =>
-      api(zToken, 'POST', `/kurins/${kurin.id}/calendar-events`, { title, description, startDate, ...(endDate ? { endDate } : {}) }),
-    );
+    await api(zToken, 'POST', `/kurins/${kurin.id}/calendar-events`, { title, description, startDate, ...(endDate ? { endDate } : {}) });
   }
 
   // ---- inventory (photos inserted directly: no Drive in e2e) ----
-  const itemIds: string[] = [];
-  for (const [name, quantity, description] of [
-    ['Намет «Карпати-4»', 3, 'Чотиримісний, двошаровий'],
-    ['Тент 3×4 м', 4, 'З розтяжками'],
-    ['Казанок 8 л', 5, 'Алюмінієвий, з кришкою'],
-  ] as const) {
-    await step(`inventory item "${name}"`, async () => {
-      const form = new FormData();
-      form.append('name', name);
-      form.append('quantity', String(quantity));
-      form.append('description', description);
-      const res = await fetch(`${API_URL}/kurins/${kurin.id}/inventory`, { method: 'POST', headers: { Authorization: `Bearer ${zToken}` }, body: form });
-      if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-      itemIds.push(((await res.json()) as { id: string }).id);
-    });
+  // Photo count per item, keyed by item name (not array position).
+  const items: [name: string, quantity: number, description: string, photos: number][] = [
+    ['Намет «Карпати-4»', 3, 'Чотиримісний, двошаровий', 3],
+    ['Тент 3×4 м', 4, 'З розтяжками', 1],
+    ['Казанок 8 л', 5, 'Алюмінієвий, з кришкою', 0],
+  ];
+  const photoValues: string[] = [];
+  let photoNo = 0;
+  for (const [name, quantity, description, photos] of items) {
+    const form = new FormData();
+    form.append('name', name);
+    form.append('quantity', String(quantity));
+    form.append('description', description);
+    const res = await fetch(`${API_URL}/kurins/${kurin.id}/inventory`, { method: 'POST', headers: { Authorization: `Bearer ${zToken}` }, body: form });
+    if (!res.ok) throw new Error(`inventory item "${name}" -> ${res.status} ${await res.text()}`);
+    const itemId = ((await res.json()) as { id: string }).id;
+    for (let k = 0; k < photos; k++) {
+      photoNo++;
+      const fid = `demo-${((photoNo - 1) % 3) + 1}`;
+      photoValues.push(`(gen_random_uuid(), '${itemId}', '${fid}', 'https://drive.google.com/thumbnail?id=${fid}&sz=w1000', now() + interval '${photoNo} seconds')`);
+    }
   }
-  if (itemIds.length) {
-    const photoCounts = [3, 1, 0];
-    let n = 0;
-    const values: string[] = [];
-    itemIds.forEach((id, i) => {
-      for (let k = 0; k < (photoCounts[i] ?? 0); k++) {
-        n++;
-        const fid = `demo-${(n - 1) % 3 + 1}`;
-        values.push(`(gen_random_uuid(), '${id}', '${fid}', 'https://drive.google.com/thumbnail?id=${fid}&sz=w1000', now() + interval '${n} seconds')`);
-      }
-    });
-    await step('inventory photos (psql)', async () => {
-      execFileSync('psql', [
-        DATABASE_URL_TEST, '-v', 'ON_ERROR_STOP=1', '-c',
-        `INSERT INTO "InventoryItemPhoto" (id, "itemId", "driveFileId", url, "createdAt") VALUES ${values.join(',')}`,
-      ], { stdio: 'pipe' });
-    });
+  if (!/_test(\?|$)/.test(new URL(DATABASE_URL_TEST).pathname.slice(1))) {
+    throw new Error(`Refusing to write photos: database name in ${DATABASE_URL_TEST} must end with _test`);
   }
+  execFileSync('psql', [
+    DATABASE_URL_TEST, '-v', 'ON_ERROR_STOP=1', '-c',
+    `INSERT INTO "InventoryItemPhoto" (id, "itemId", "driveFileId", url, "createdAt") VALUES ${photoValues.join(',')}`,
+  ], { stdio: 'pipe' });
 
   // ---- treasury ----
-  await step('treasury starting balance', () =>
-    api(zToken, 'PATCH', `/kurins/${kurin.id}/treasury/starting-balance`, { startingBalanceCents: 1_500_000 }),
-  );
+  await api(zToken, 'PATCH', `/kurins/${kurin.id}/treasury/starting-balance`, { startingBalanceCents: 1_500_000 });
   for (const [type, amountCents, description, offset] of [
     ['INCOME', 420_000, 'Членські внески, жовтень', -20],
     ['EXPENSE', 185_000, 'Купівля тентів', -12],
     ['EXPENSE', 64_000, 'Аптечка табірна', -3],
   ] as const) {
-    await step(`treasury transaction "${description}"`, () =>
-      api(zToken, 'POST', `/kurins/${kurin.id}/treasury/transactions`, { type, amountCents, description, occurredAt: iso(offset) }),
-    );
+    await api(zToken, 'POST', `/kurins/${kurin.id}/treasury/transactions`, { type, amountCents, description, occurredAt: iso(offset) });
   }
 
-  if (skipped.length) console.warn(`[seed-demo] skipped items: ${skipped.join('; ')}`);
+  if (skipped.length) console.warn(`[seed-demo] skipped optional items: ${skipped.join('; ')}`);
 
   return {
     users: {
@@ -305,5 +286,6 @@ export async function seedDemo(): Promise<DemoIds> {
     kurinNumber,
     hurtokSlug: berkuty.slug,
     junakId: junakIds[0],
+    skipped,
   };
 }

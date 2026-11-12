@@ -1,7 +1,7 @@
 const API_URL = 'http://localhost:3001';
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
+export const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
+export const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'dev-admin-password-change-me';
 
 async function adminPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
