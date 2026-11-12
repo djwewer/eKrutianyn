@@ -10,7 +10,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Segmented } from '@/components/ui/segmented';
 import { accessErrorMessage } from '@/lib/error-message';
 import { cn } from '@/lib/utils';
-import { buildTimeline, eventDate, formatEventDate, localDateKey, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
+import { buildTimeline, LATER_MONTH, MONTH_NAMES, MONTH_NAMES_GENITIVE, WEEKDAY_CODES, type TimelineView } from '@/lib/calendar-timeline';
+import { eventDate, formatEventDate, localDateKey } from '@/lib/dates';
 import type { KurinCalendarEvent } from '@/lib/types';
 
 const WEEKDAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -282,11 +283,19 @@ function TimelineView({
   const next = view === 'next';
   const ty = today.getFullYear();
   const tm = today.getMonth();
+  // Past-year chips: every earlier year that has a past event, newest first, max 6.
+  const pastYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const e of events) {
+      const y = eventDate(e.startDate).year;
+      if (y < ty) years.add(y);
+    }
+    return [...years].sort((a, b) => b - a).slice(0, 5);
+  }, [events, ty]);
   const views: { value: TimelineView; label: string }[] = [
     { value: 'next', label: 'Наступні 12 місяців' },
     { value: ty, label: String(ty) },
-    { value: ty - 1, label: String(ty - 1) },
-    { value: ty - 2, label: String(ty - 2) },
+    ...pastYears.map((y) => ({ value: y, label: String(y) })),
   ];
 
   return (
@@ -316,10 +325,12 @@ function TimelineView({
                   !list.length && 'text-ink-2',
                 )}
               >
-                {MONTH_NAMES[month]}{' '}
-                <span className="block font-mono text-[.72rem] font-normal tracking-[.04em] text-ink-2 normal-case max-[759px]:inline">
-                  {year}
-                </span>
+                {month === LATER_MONTH ? 'Пізніше' : MONTH_NAMES[month]}{' '}
+                {month !== LATER_MONTH && (
+                  <span className="block font-mono text-[.72rem] font-normal tracking-[.04em] text-ink-2 normal-case max-[759px]:inline">
+                    {year}
+                  </span>
+                )}
               </h2>
               <div className="grid gap-2 pl-[.6rem] max-[759px]:pl-0">
                 {showNow && (
