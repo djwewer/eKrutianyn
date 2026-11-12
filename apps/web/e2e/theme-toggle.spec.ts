@@ -75,4 +75,10 @@ test('«Як у системі» chosen after a light page load follows live sys
   await expect(html).toHaveClass(/dark/);
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(html).not.toHaveClass(/dark/);
+
+  // Still follows after client-side navigation away from /settings.
+  await page.getByRole('navigation', { name: 'Основна навігація' }).getByRole('link', { name: 'Новини' }).click();
+  await expect(page).toHaveURL(/\/news/);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(html).toHaveClass(/dark/);
 });

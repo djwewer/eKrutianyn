@@ -5,7 +5,7 @@ function RowList({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="row-list"
-      className={cn("flex flex-col overflow-hidden rounded-[6px] border border-line bg-paper", className)}
+      className={cn("flex flex-col overflow-hidden rounded-[6px] [&_a:focus-visible]:outline-offset-[-3px] border border-line bg-paper", className)}
       {...props}
     />
   )

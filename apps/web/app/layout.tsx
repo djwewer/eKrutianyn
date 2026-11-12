@@ -32,11 +32,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
-// Runs before hydration when the `theme` cookie is `system` or missing. It
-// mirrors the system color scheme so there's no flash of the wrong theme, and
-// keeps following system changes until the user picks light/dark (the cookie
-// is checked at event time, so no reload is needed to stop).
-const THEME_PREFERENCE_SCRIPT = `(function(){try{var m=window.matchMedia('(prefers-color-scheme: dark)');var r=document.documentElement;r.classList.toggle('dark',m.matches);m.addEventListener('change',function(e){if(/(?:^|; )theme=(light|dark)/.test(document.cookie))return;r.classList.toggle('dark',e.matches);});}catch(e){}})();`;
+// Always rendered. Mirrors the system color scheme before hydration (no flash)
+// and keeps following system changes, unless the `theme` cookie is light/dark.
+// The cookie is checked at run/event time, so choosing «Як у системі» later on
+// a light/dark page load works without a reload.
+const THEME_PREFERENCE_SCRIPT = `(function(){try{var m=window.matchMedia('(prefers-color-scheme: dark)');var r=document.documentElement;var f=function(){return /(?:^|; )theme=(light|dark)/.test(document.cookie)};if(!f())r.classList.toggle('dark',m.matches);m.addEventListener('change',function(e){if(f())return;r.classList.toggle('dark',e.matches);});}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -55,9 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        {theme !== 'light' && theme !== 'dark' && (
-          <script dangerouslySetInnerHTML={{ __html: THEME_PREFERENCE_SCRIPT }} />
-        )}
+        <script dangerouslySetInnerHTML={{ __html: THEME_PREFERENCE_SCRIPT }} />
       </head>
       <body>
         <QueryProvider>

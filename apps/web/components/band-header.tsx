@@ -130,7 +130,8 @@ export function BandHeader({
   const photoUrl = profile?.photoUpdatedAt
     ? `/api/backend/users/${profile.id}/photo?v=${profile.photoUpdatedAt}`
     : null;
-  const [photoFailed, setPhotoFailed] = useState(false);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const photoFailed = failedPhotoUrl === photoUrl;
 
   return (
     <header className="sticky top-0 z-[15] bg-band pt-[env(safe-area-inset-top,0px)] text-band-ink">
@@ -152,9 +153,9 @@ export function BandHeader({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="m-0 truncate font-display text-[1.3rem] font-bold uppercase leading-none tracking-[.03em]">
+              <p className="m-0 truncate font-display text-[1.3rem] font-bold uppercase leading-none tracking-[.03em]">
                 {name}
-              </h1>
+              </p>
               {subtitle && (
                 <p className="m-0 mt-[.15rem] truncate font-mono text-[.68rem] tracking-[.04em] opacity-85">
                   {subtitle}
@@ -169,7 +170,7 @@ export function BandHeader({
           >
             <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-band-ink font-display text-[.75rem] font-bold text-band">
               {photoUrl && !photoFailed ? (
-                <img src={photoUrl} alt="" className="size-full object-cover" onError={() => setPhotoFailed(true)} />
+                <img src={photoUrl} alt="" className="size-full object-cover" onError={() => setFailedPhotoUrl(photoUrl)} />
               ) : (
                 initials
               )}

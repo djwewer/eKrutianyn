@@ -32,17 +32,6 @@ function ThemeToggle({ className }: { className?: string }) {
     setTheme(readThemeCookie())
   }, [])
 
-  // The inline layout script only exists when the page loaded with theme=system
-  // (or no cookie). After a light/dark load, follow OS changes from here while
-  // the choice is «Як у системі».
-  React.useEffect(() => {
-    if (theme !== "system") return
-    const media = window.matchMedia("(prefers-color-scheme: dark)")
-    const onChange = (e: MediaQueryListEvent) => document.documentElement.classList.toggle("dark", e.matches)
-    media.addEventListener("change", onChange)
-    return () => media.removeEventListener("change", onChange)
-  }, [theme])
-
   function choose(next: ThemeChoice) {
     const dark = next === "system" ? window.matchMedia("(prefers-color-scheme: dark)").matches : next === "dark"
     document.documentElement.classList.toggle("dark", dark)

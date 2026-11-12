@@ -85,7 +85,7 @@ function Segmented<T extends string | number>({
             onClick={() => select(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              "cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line",
+              "cursor-pointer focus-visible:outline-offset-[-3px] disabled:cursor-not-allowed disabled:opacity-50 border-0 px-[.8rem] py-[.4rem] font-display text-[.78rem] font-semibold tracking-[.06em] uppercase [&+button]:border-l-2 [&+button]:border-line",
               on ? "bg-navy text-navy-ink" : "bg-paper text-ink",
             )}
           >
