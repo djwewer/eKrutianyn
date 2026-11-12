@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { accessErrorMessage } from '@/lib/error-message';
-import { formatEventDate } from '@/lib/calendar-timeline';
+import { formatEventDate, localDateKey } from '@/lib/dates';
 import { nativeSelectClass } from '@/components/ui/native-select';
 
 const LABEL_CLASS = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
@@ -79,7 +79,7 @@ function AddTransactionForm({ kurinId }: { kurinId: string }) {
   const [type, setType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [occurredAt, setOccurredAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [occurredAt, setOccurredAt] = useState(() => localDateKey(new Date()));
   const create = useCreateTransaction(kurinId);
 
   const amountCents = parseToCents(amount);

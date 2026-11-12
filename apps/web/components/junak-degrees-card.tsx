@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useJunakDegrees, useSetDegreeDate } from '@/lib/queries/junak-degrees';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
+import { localDateKey } from '@/lib/dates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ export const DEGREE_LABELS: Record<DegreeKey, string> = {
 const DEGREE_ORDER: DegreeKey[] = ['PRYHYLNYK', 'UCHASNYK', 'ROZVIDUVACH', 'SKOB'];
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey(new Date());
 }
 
 function formatDate(iso: string): string {
@@ -140,7 +141,7 @@ export function JunakDegreesCard({ junakId, canEdit }: { junakId: string; canEdi
         <p className="flex items-center gap-2 text-sm">
           Поточний ступінь:{' '}
           {data.currentLabel ? (
-            <Badge data-testid="current-degree">{data.currentLabel}</Badge>
+            <Badge variant="ok" data-testid="current-degree">{data.currentLabel}</Badge>
           ) : (
             <span className="text-muted-foreground" data-testid="current-degree">
               ще не здобуто

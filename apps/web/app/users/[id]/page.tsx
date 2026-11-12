@@ -26,6 +26,7 @@ import { JunakHistory } from '@/components/junak-history';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
+import { formatEventDate, localDateKey } from '@/lib/dates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,13 +36,7 @@ import { WideContent } from '@/components/app-shell';
 import { getInitials } from '@/lib/utils';
 import { nativeSelectClass } from '@/components/ui/native-select';
 
-
 const KV_CLASS = 'm-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]';
-
-/** Birth date is stored as UTC midnight — format from UTC components. */
-function formatBirthDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('uk-UA', { timeZone: 'UTC' });
-}
 
 function KvItem({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
@@ -242,7 +237,7 @@ function AddGuardianContactForm({ junakId, existing }: { junakId: string; existi
 
 /** "Закрити пробу" with the date the degree was actually earned (defaults to today). */
 function CloseStageControl({ onClose, disabled }: { onClose: (date: string) => void; disabled: boolean }) {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = localDateKey(new Date());
   const [date, setDate] = useState(todayIso);
   return (
     <div className="flex items-center gap-2">
@@ -511,7 +506,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <dl className={KV_CLASS}>
               <KvItem label="Email">{user.email}</KvItem>
               <KvItem label="Роль">{ROLE_LABELS[user.role]}</KvItem>
-              {user.birthDate && <KvItem label="Дата народження">{formatBirthDate(user.birthDate)}</KvItem>}
+              {user.birthDate && <KvItem label="Дата народження">{formatEventDate(user.birthDate)}</KvItem>}
             </dl>
             {isJunak && (
               <div className="space-y-2 pt-4">

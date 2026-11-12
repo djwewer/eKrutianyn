@@ -13,6 +13,7 @@ import { ROLE_LABELS } from '@/lib/role-labels';
 import { PhotoCropDialog } from '@/components/photo-crop-dialog';
 import { PushNotificationToggle } from '@/components/push-notification-toggle';
 import { getInitials } from '@/lib/utils';
+import { localDateKey } from '@/lib/dates';
 import { ApiError } from '@/lib/api-client';
 import Link from 'next/link';
 import { useSession } from '@/lib/session-client';
@@ -257,7 +258,7 @@ export default function SettingsPage() {
                 type="date"
                 className="text-sm"
                 value={birthDate}
-                max={new Date().toISOString().slice(0, 10)}
+                max={localDateKey(new Date())}
                 onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>

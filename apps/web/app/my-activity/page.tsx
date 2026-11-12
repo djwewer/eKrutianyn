@@ -10,13 +10,13 @@ import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { RowList } from '@/components/ui/row-list';
-import { formatEventDate } from '@/lib/calendar-timeline';
+import { formatEventDate, localDateKey } from '@/lib/dates';
 import { accessErrorMessage } from '@/lib/error-message';
 import { nativeSelectClass } from '@/components/ui/native-select';
 
 function AddEntryForm() {
   const [title, setTitle] = useState('');
-  const [occurredAt, setOccurredAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [occurredAt, setOccurredAt] = useState(() => localDateKey(new Date()));
   const [role, setRole] = useState<'PARTICIPANT' | 'PROVID'>('PARTICIPANT');
   const [description, setDescription] = useState('');
   const create = useCreateActivityEntry();

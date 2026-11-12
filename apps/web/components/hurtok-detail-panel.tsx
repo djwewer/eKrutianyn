@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { Button } from '@/components/ui/button';
 import { getInitials } from '@/lib/utils';
+import { formatEventDate } from '@/lib/dates';
 import { accessErrorMessage } from '@/lib/error-message';
 import { HurtokSettingsDialog } from '@/components/hurtok-settings-dialog';
 
@@ -69,7 +70,7 @@ export function HurtokDetailPanel({ slug, heading = 'page' }: { slug: string; he
     <>
       {data.hurtok.foundedAt && (
         <p className="m-0 text-sm text-ink-2">
-          Засновано {new Date(data.hurtok.foundedAt).toLocaleDateString('uk-UA', { timeZone: 'UTC' })}
+          Засновано {formatEventDate(data.hurtok.foundedAt)}
         </p>
       )}
       {data.hurtok.archivedAt && (

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
+import { formatEventDate } from '@/lib/dates';
 import { POSITION_LABELS, ROLE_LABELS } from '@/lib/role-labels';
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -51,7 +52,7 @@ export default function MePage() {
             {profile.lastName} {profile.firstName}
           </p>
           <p className="mt-[.3rem] mb-0 truncate text-ink-2">{profile.email}</p>
-          <Badge className="mt-1">{ROLE_LABELS[profile.role]}</Badge>
+          <Badge variant="mute" className="mt-1">{ROLE_LABELS[profile.role]}</Badge>
         </div>
       </div>
 
@@ -110,7 +111,7 @@ export default function MePage() {
           <dl className="m-0 grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-x-[1.2rem] gap-y-[.8rem]">
             {hurtokName && <Row label="Гурток" value={hurtokName} />}
             {profile.birthDate && (
-              <Row label="Дата народження" value={new Date(profile.birthDate).toLocaleDateString('uk-UA', { timeZone: 'UTC' })} />
+              <Row label="Дата народження" value={formatEventDate(profile.birthDate)} />
             )}
             {profile.phone && <Row label="Телефон" value={profile.phone} />}
             {profile.residence && <Row label="Проживання" value={profile.residence} />}

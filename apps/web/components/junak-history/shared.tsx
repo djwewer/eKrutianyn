@@ -4,9 +4,10 @@ import type { ReactNode } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
+import { localDateKey } from '@/lib/dates';
 
 export function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey(new Date());
 }
 
 /** YYYY-MM-DD → DD.MM.YYYY */
