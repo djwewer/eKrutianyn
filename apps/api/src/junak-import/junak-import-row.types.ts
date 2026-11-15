@@ -30,6 +30,7 @@ export interface JunakImportRowResult {
   row: number;
   junakId?: string;
   created?: boolean;
+  inviteSent?: boolean;
   succeededSteps: string[];
   error?: string;
 }

@@ -1,4 +1,4 @@
-import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MinLength, ValidateNested } from 'class-validator';
+import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { KurinGender } from '@prisma/client';
 
@@ -6,7 +6,6 @@ class CreateKurinZvyazkovyiDto {
   @IsString() @IsNotEmpty() firstName: string;
   @IsString() @IsNotEmpty() lastName: string;
   @IsEmail() email: string;
-  @IsString() @MinLength(8) password: string;
 }
 
 export class CreateKurinDto {

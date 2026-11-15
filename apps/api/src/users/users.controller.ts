@@ -42,6 +42,12 @@ export class UsersController {
     return this.service.create(dto, user);
   }
 
+  @Roles(Role.ZVYAZKOVYI)
+  @Post(':id/resend-invite')
+  resendInvite(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.service.resendInvite(id, user);
+  }
+
   @Get('me')
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.service.findById(user.userId);

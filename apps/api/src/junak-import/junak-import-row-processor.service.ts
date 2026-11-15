@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HurtkyService } from '../hurtky/hurtky.service';
 import { KurinPositionsService } from '../kurin-positions/kurin-positions.service';
 import { ProbyProgressService } from '../proby-progress/proby-progress.service';
+import { InviteService } from '../auth/invite.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { ResolvedJunakRow, JunakImportRowResult } from './junak-import-row.types';
 import { isKurinniyForUser } from '../common/kurinniy.util';
@@ -31,6 +32,7 @@ export class JunakImportRowProcessorService {
     private readonly hurtky: HurtkyService,
     private readonly kurinPositions: KurinPositionsService,
     private readonly probyProgress: ProbyProgressService,
+    private readonly inviteService: InviteService,
   ) {}
 
   async processRow(
@@ -44,6 +46,11 @@ export class JunakImportRowProcessorService {
     try {
       const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, rowIndex, result, options, actor);
       result.junakId = junakId;
+
+      // Only freshly created users get an invite, and only once the upsert has committed.
+      if (result.created) {
+        result.inviteSent = (await this.inviteService.sendInvite(junakId, actor.userId)).sent;
+      }
 
       await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
       await this.backfillProbaProgress(kurinId, junakId, row, actor, result);

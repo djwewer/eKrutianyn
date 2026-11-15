@@ -1,9 +1,10 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { AuditAction, PositionType, Role } from '@prisma/client';
+import { AuditAction, Prisma, PositionType, Role, TokenPurpose } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { personLabel } from '../audit/audit.util';
 import { AuthService } from '../auth/auth.service';
+import { InviteService } from '../auth/invite.service';
 import { MailService } from '../mail/mail.service';
 import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { generateToken } from '../common/token.util';
@@ -19,6 +20,32 @@ import { hasAnyActivePosition } from '../common/positions.util';
 import { detectSafeImageMimeType } from '../common/image-sniff.util';
 import { canEditBookData } from '../common/book-access.util';
 
+// passwordHash and token rows are read only to derive activated / lastInviteAt;
+// toDetail() strips them so neither the hash nor token data reaches the client.
+const DETAIL_SELECT = {
+  ...USER_SELECT,
+  notes: true,
+  phone: true,
+  residence: true,
+  studyPlace: true,
+  passwordHash: true,
+  passwordResetTokens: {
+    where: { purpose: TokenPurpose.INVITE },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    select: { createdAt: true },
+  },
+} satisfies Prisma.UserSelect;
+
+function toDetail<T extends { passwordHash: string | null; passwordResetTokens: { createdAt: Date }[] }>(user: T) {
+  const { passwordHash, passwordResetTokens, ...rest } = user;
+  return {
+    ...rest,
+    activated: passwordHash !== null,
+    lastInviteAt: passwordResetTokens[0]?.createdAt ?? null,
+  };
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -27,6 +54,7 @@ export class UsersService {
     private readonly mailService: MailService,
     private readonly judgeBookSync: JudgeBookSyncService,
     private readonly audit: AuditService,
+    private readonly inviteService: InviteService,
   ) {}
 
   async create(dto: CreateUserDto, actor: CurrentUserPayload) {
@@ -43,7 +71,6 @@ export class UsersService {
         throw new NotFoundException('Hurtok not found in this kurin');
       }
     }
-    const passwordHash = dto.password ? await this.authService.hashPassword(dto.password) : undefined;
     let created;
     try {
       created = await this.prisma.user.create({
@@ -52,8 +79,8 @@ export class UsersService {
           lastName: dto.lastName,
           email: dto.email,
           role: dto.role,
-          passwordHash,
-          mustChangePassword: !!dto.password,
+          passwordHash: null,
+          mustChangePassword: false,
           kurinId: actorKurinId,
           hurtokId: dto.hurtokId,
         },
@@ -87,7 +114,23 @@ export class UsersService {
       subjectUserId: created.id,
       details: { subjectName: personLabel(created), role: created.role },
     });
-    return created;
+    const { sent } = await this.inviteService.sendInvite(created.id, actor.userId);
+    return { ...created, inviteSent: sent };
+  }
+
+  async resendInvite(userId: string, actor: CurrentUserPayload): Promise<{ inviteSent: boolean }> {
+    const target = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { kurinId: true, passwordHash: true },
+    });
+    if (!target || target.kurinId !== actor.kurinId) {
+      throw new NotFoundException('User not found');
+    }
+    if (target.passwordHash !== null) {
+      throw new ConflictException('Користувач уже активував акаунт');
+    }
+    const { sent } = await this.inviteService.sendInvite(userId, actor.userId);
+    return { inviteSent: sent };
   }
 
   async updateContactInfo(junakId: string, dto: UpdateContactInfoDto, actor: CurrentUserPayload) {
@@ -214,12 +257,12 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { ...USER_SELECT, notes: true, phone: true, residence: true, studyPlace: true },
+      select: DETAIL_SELECT,
     });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return user;
+    return toDetail(user);
   }
 
   async list(actor: CurrentUserPayload, filters: { role?: Role; hurtokId?: string }) {
@@ -309,7 +352,7 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { ...USER_SELECT, notes: true, phone: true, residence: true, studyPlace: true },
+      select: DETAIL_SELECT,
     });
     if (!user || user.kurinId !== actor.kurinId) {
       throw new NotFoundException('User not found');
@@ -319,7 +362,7 @@ export class UsersService {
     if (!visible) {
       throw new NotFoundException('User not found');
     }
-    return user;
+    return toDetail(user);
   }
 
   private async isVisibleTo(

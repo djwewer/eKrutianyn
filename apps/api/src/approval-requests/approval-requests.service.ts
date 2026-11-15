@@ -7,6 +7,7 @@ import { JunakImportRowProcessorService } from '../junak-import/junak-import-row
 import { ResolvedJunakRow } from '../junak-import/junak-import-row.types';
 import { JudgeBookSyncService } from '../kurins/judge-book-sync.service';
 import { UsersService } from '../users/users.service';
+import { InviteService } from '../auth/invite.service';
 import { AuditService } from '../audit/audit.service';
 import { personLabel } from '../audit/audit.util';
 
@@ -27,6 +28,7 @@ export class ApprovalRequestsService {
     private readonly judgeBookSync: JudgeBookSyncService,
     private readonly usersService: UsersService,
     private readonly audit: AuditService,
+    private readonly inviteService: InviteService,
   ) {}
 
   async create(dto: CreateApprovalRequestDto, actor: CurrentUserPayload) {
@@ -246,6 +248,11 @@ export class ApprovalRequestsService {
     }
 
     await this.recordDecision(AuditAction.APPROVAL_APPROVED, req, actor, subjectName, {}, createdJunakId ?? req.junakId);
+    if (createdJunakId) {
+      // After the transaction has committed; a mail failure never undoes the approval.
+      const { sent } = await this.inviteService.sendInvite(createdJunakId, actor.userId);
+      return { ...updatedRequest, inviteSent: sent };
+    }
     return updatedRequest;
   }
 

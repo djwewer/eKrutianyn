@@ -4,6 +4,7 @@ import { MailModule } from '../mail/mail.module';
 import { ReferenceSourcesModule } from '../reference-sources/reference-sources.module';
 import { KurinsAdminController } from './kurins-admin.controller';
 import { KurinsAdminService } from './kurins-admin.service';
+import { UsersAdminController } from './users-admin.controller';
 import { ProbyCatalogAdminController } from './proby-catalog-admin.controller';
 import { ProbyCatalogAdminService } from './proby-catalog-admin.service';
 import { PointMappingAdminController } from './point-mapping-admin.controller';
@@ -16,6 +17,7 @@ import { ReferenceSourceAdminService } from './reference-source-admin.service';
   imports: [AuthModule, MailModule, ReferenceSourcesModule],
   controllers: [
     KurinsAdminController,
+    UsersAdminController,
     ProbyCatalogAdminController,
     PointMappingAdminController,
     TestMailAdminController,

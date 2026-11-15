@@ -9,6 +9,7 @@ describe('JunakImportRowProcessorService', () => {
   let hurtky: any;
   let kurinPositions: any;
   let probyProgress: any;
+  let invite: any;
 
   beforeEach(() => {
     prisma = {
@@ -22,7 +23,8 @@ describe('JunakImportRowProcessorService', () => {
     hurtky = { listForKurin: jest.fn().mockResolvedValue([]), create: jest.fn() };
     kurinPositions = { assign: jest.fn() };
     probyProgress = { getProgressFor: jest.fn(), confirm: jest.fn(), closeStage: jest.fn() };
-    service = new JunakImportRowProcessorService(prisma, hurtky, kurinPositions, probyProgress);
+    invite = { sendInvite: jest.fn().mockResolvedValue({ sent: true }) };
+    service = new JunakImportRowProcessorService(prisma, hurtky, kurinPositions, probyProgress, invite);
   });
 
   function baseRow(overrides: Partial<ResolvedJunakRow> = {}): ResolvedJunakRow {
@@ -38,6 +40,19 @@ describe('JunakImportRowProcessorService', () => {
     expect(result.created).toBe(true);
     expect(result.succeededSteps).toContain('user');
     expect(result.error).toBeUndefined();
+    expect(invite.sendInvite).toHaveBeenCalledTimes(1);
+    expect(invite.sendInvite).toHaveBeenCalledWith('user-1', 'zvyazkovyi-1');
+    expect(result.inviteSent).toBe(true);
+  });
+
+  it('sends no invite for an updated row', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
+    prisma.user.update.mockResolvedValue({ id: 'user-2' });
+
+    const result = await service.processRow('kurin-1', baseRow({ matchedUserId: 'user-2' }), 0, ACTOR);
+
+    expect(invite.sendInvite).not.toHaveBeenCalled();
+    expect(result.inviteSent).toBeUndefined();
   });
 
   it('updates an existing junak when matchedUserId is given, only with non-blank fields', async () => {

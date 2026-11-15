@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Role, TokenPurpose } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthService } from '../auth/auth.service';
+import { InviteService } from '../auth/invite.service';
 import { CreateKurinDto } from './dto/create-kurin.dto';
 import { UpdateKurinDto } from './dto/update-kurin.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
@@ -10,13 +10,33 @@ import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 export class KurinsAdminService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly authService: AuthService,
+    private readonly inviteService: InviteService,
   ) {}
 
   async listKurins() {
     const kurins = await this.prisma.kurin.findMany({
       orderBy: { kurinNumber: 'asc' },
-      include: { _count: { select: { users: true, hurtky: true } } },
+      include: {
+        _count: { select: { users: true, hurtky: true } },
+        users: {
+          where: { role: Role.ZVYAZKOVYI, archivedAt: null },
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            passwordHash: true,
+            passwordResetTokens: {
+              where: { purpose: TokenPurpose.INVITE },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { createdAt: true },
+            },
+          },
+        },
+      },
     });
     return kurins.map((k) => ({
       id: k.id,
@@ -28,6 +48,16 @@ export class KurinsAdminService {
       createdAt: k.createdAt,
       userCount: k._count.users,
       hurtokCount: k._count.hurtky,
+      zvyazkovyi: k.users[0]
+        ? {
+            id: k.users[0].id,
+            firstName: k.users[0].firstName,
+            lastName: k.users[0].lastName,
+            email: k.users[0].email,
+            activated: k.users[0].passwordHash !== null,
+            lastInviteAt: k.users[0].passwordResetTokens[0]?.createdAt ?? null,
+          }
+        : null,
     }));
   }
 
@@ -81,24 +111,24 @@ export class KurinsAdminService {
       }
     }
     const { zvyazkovyi, ...kurinFields } = dto;
-    const passwordHash = await this.authService.hashPassword(zvyazkovyi.password);
+    let result;
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      result = await this.prisma.$transaction(async (tx) => {
         const kurin = await tx.kurin.create({
           data: { ...kurinFields, kurinNumber: kurinFields.kurinNumber ?? null },
         });
-        await tx.user.create({
+        const user = await tx.user.create({
           data: {
             firstName: zvyazkovyi.firstName,
             lastName: zvyazkovyi.lastName,
             email: zvyazkovyi.email,
-            passwordHash,
             role: Role.ZVYAZKOVYI,
             kurinId: kurin.id,
-            mustChangePassword: true,
+            passwordHash: null,
+            mustChangePassword: false,
           },
         });
-        return kurin;
+        return { kurin, zvyazkovyiId: user.id };
       });
     } catch (err: any) {
       if (err.code === 'P2002') {
@@ -106,6 +136,9 @@ export class KurinsAdminService {
       }
       throw err;
     }
+    // Sent only after the transaction has committed.
+    const { sent } = await this.inviteService.sendInvite(result.zvyazkovyiId, null);
+    return { ...result.kurin, inviteSent: sent };
   }
 
   async createFirstZvyazkovyi(dto: CreateAdminUserDto) {
@@ -119,17 +152,17 @@ export class KurinsAdminService {
     if (existingZvyazkovyi) {
       throw new ConflictException('This kurin already has an active Зв\'язковий');
     }
-    const passwordHash = await this.authService.hashPassword(dto.password);
+    let created;
     try {
-      return await this.prisma.user.create({
+      created = await this.prisma.user.create({
         data: {
           firstName: dto.firstName,
           lastName: dto.lastName,
           email: dto.email,
-          passwordHash,
+          passwordHash: null,
           role: Role.ZVYAZKOVYI,
           kurinId: dto.kurinId,
-          mustChangePassword: true,
+          mustChangePassword: false,
         },
         select: {
           id: true,
@@ -148,5 +181,19 @@ export class KurinsAdminService {
       }
       throw err;
     }
+    const { sent } = await this.inviteService.sendInvite(created.id, null);
+    return { ...created, inviteSent: sent };
+  }
+
+  async resendInvite(userId: string): Promise<{ inviteSent: boolean }> {
+    const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    if (!target) {
+      throw new NotFoundException('User not found');
+    }
+    if (target.passwordHash !== null) {
+      throw new ConflictException('Користувач уже активував акаунт');
+    }
+    const { sent } = await this.inviteService.sendInvite(userId, null);
+    return { inviteSent: sent };
   }
 }
