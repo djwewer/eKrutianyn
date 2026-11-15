@@ -62,4 +62,37 @@ describe('ApprovalRequestsService invites', () => {
     await service.reject('r-1', ACTOR);
     expect(invite.sendInvite).not.toHaveBeenCalled();
   });
+
+  describe('CHANGE_EMAIL', () => {
+    beforeEach(() => {
+      prisma.approvalRequest.findUnique.mockResolvedValue({
+        id: 'r-2',
+        actionType: 'CHANGE_EMAIL',
+        status: 'PENDING',
+        initiatedById: 'v-1',
+        junakId: 'j-1',
+        newData: { email: 'new@e.com' },
+      });
+      prisma.user.update = jest.fn().mockResolvedValue({});
+      prisma.passwordResetToken = { updateMany: jest.fn().mockResolvedValue({ count: 1 }) };
+    });
+
+    it('invalidates unused tokens and re-sends the invite to the new address when not activated', async () => {
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, googleId: null });
+      await service.approve('r-2', ACTOR);
+      expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'j-1', usedAt: null },
+        data: { usedAt: expect.any(Date) },
+      });
+      expect(invite.sendInvite.mock.calls).toEqual([['j-1', 'z-1']]);
+      expect(committedAtSend).toBe(true);
+    });
+
+    it('invalidates tokens but sends no invite for an activated user', async () => {
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: 'h', googleId: null });
+      await service.approve('r-2', ACTOR);
+      expect(prisma.passwordResetToken.updateMany).toHaveBeenCalled();
+      expect(invite.sendInvite).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -178,6 +178,7 @@ export class ApprovalRequestsService {
     }
 
     let createdJunakId: string | undefined;
+    let reinviteUserId: string | undefined;
 
     const updatedRequest = await this.prisma.$transaction(async (tx) => {
       if (req.actionType === ApprovalActionType.CREATE_JUNAK) {
@@ -222,6 +223,20 @@ export class ApprovalRequestsService {
         }
         try {
           await tx.user.update({ where: { id: req.junakId! }, data: updateData });
+          if (req.actionType === ApprovalActionType.CHANGE_EMAIL) {
+            // Links mailed to the old address must not stay usable.
+            await tx.passwordResetToken.updateMany({
+              where: { userId: req.junakId!, usedAt: null },
+              data: { usedAt: new Date() },
+            });
+            const target = await tx.user.findUnique({
+              where: { id: req.junakId! },
+              select: { passwordHash: true, googleId: true },
+            });
+            if (target && target.passwordHash === null && target.googleId === null) {
+              reinviteUserId = req.junakId!;
+            }
+          }
         } catch (err: any) {
           if (err.code === 'P2002') {
             throw new ConflictException('This email is already in use');
@@ -252,6 +267,10 @@ export class ApprovalRequestsService {
       // After the transaction has committed; a mail failure never undoes the approval.
       const { sent } = await this.inviteService.sendInvite(createdJunakId, actor.userId);
       return { ...updatedRequest, inviteSent: sent };
+    }
+    if (reinviteUserId) {
+      // New address, not yet activated: the old invite was invalidated above.
+      await this.inviteService.sendInvite(reinviteUserId, actor.userId);
     }
     return updatedRequest;
   }

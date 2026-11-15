@@ -185,12 +185,20 @@ describe('AuthService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
-    it('acceptInvite rejects archived users', async () => {
+    it('acceptInvite rejects archived users with the generic invalid-link 404', async () => {
       prisma.passwordResetToken.findUnique.mockResolvedValue(
         tok({ user: { ...baseUser, archivedAt: new Date() } }),
       );
-      await expect(service.acceptInvite('x', 'newpassword1')).rejects.toThrow(UnauthorizedException);
+      await expect(service.acceptInvite('x', 'newpassword1')).rejects.toThrow(MSG);
       expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('getInviteInfo gives the same 404 for an archived user', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(
+        tok({ user: { ...baseUser, archivedAt: new Date() } }),
+      );
+      await expect(service.getInviteInfo('x')).rejects.toThrow(NotFoundException);
+      await expect(service.getInviteInfo('x')).rejects.toThrow(MSG);
     });
 
     it('acceptInvite loses the claim race: count 0 gives NotFound and the user is not updated', async () => {
@@ -216,6 +224,27 @@ describe('AuthService', () => {
     it('getInviteInfo throws NotFoundException for an invalid token', async () => {
       prisma.passwordResetToken.findUnique.mockResolvedValue(null);
       await expect(service.getInviteInfo('x')).rejects.toThrow(MSG);
+    });
+
+    it('confirmEmailChange invalidates the user\'s unused password tokens in the same transaction', async () => {
+      prisma.emailChangeRequest = {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'e1',
+          userId: 'u1',
+          newEmail: 'new@e.com',
+          usedAt: null,
+          expiresAt: new Date(Date.now() + 3600_000),
+        }),
+        update: jest.fn(),
+      };
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.$transaction.mockImplementation(async (ops: any[]) => Promise.all(ops));
+      await service.confirmEmailChange('raw');
+      expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'u1', usedAt: null },
+        data: { usedAt: expect.any(Date) },
+      });
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { email: 'new@e.com' } });
     });
 
     it('requestPasswordReset creates a RESET-purpose token', async () => {

@@ -143,6 +143,9 @@ export class AuthService {
     ) {
       throw new NotFoundException('Посилання недійсне або вже використане');
     }
+    if (invite.user.archivedAt) {
+      throw new NotFoundException('Посилання недійсне або вже використане');
+    }
     return invite;
   }
 
@@ -153,9 +156,6 @@ export class AuthService {
 
   async acceptInvite(token: string, newPassword: string): Promise<{ accessToken: string }> {
     const invite = await this.findValidInvite(token);
-    if (invite.user.archivedAt) {
-      throw new UnauthorizedException('Account archived');
-    }
     const passwordHash = await this.hashPassword(newPassword);
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
@@ -191,6 +191,11 @@ export class AuthService {
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: changeRequest.userId }, data: { email: changeRequest.newEmail } }),
       this.prisma.emailChangeRequest.update({ where: { id: changeRequest.id }, data: { usedAt: new Date() } }),
+      // Links mailed to the old address must not stay usable after the change.
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: changeRequest.userId, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
     ]);
   }
 }
