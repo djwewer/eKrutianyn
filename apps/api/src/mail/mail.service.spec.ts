@@ -171,3 +171,29 @@ describe('MailService (test mode)', () => {
     });
   });
 });
+
+describe('MailService SMTP transport', () => {
+  it('uses a single pooled connection with bounded timeouts', () => {
+    const nodemailer = require('nodemailer');
+    const spy = jest.spyOn(nodemailer, 'createTransport').mockReturnValue({} as any);
+    const prev = { u: process.env.GMAIL_USER, p: process.env.GMAIL_APP_PASSWORD };
+    process.env.GMAIL_USER = 'a@b.c';
+    process.env.GMAIL_APP_PASSWORD = 'x';
+    try {
+      new MailService();
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        pool: true,
+        maxConnections: 1,
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
+      });
+    } finally {
+      if (prev.u === undefined) delete process.env.GMAIL_USER;
+      else process.env.GMAIL_USER = prev.u;
+      if (prev.p === undefined) delete process.env.GMAIL_APP_PASSWORD;
+      else process.env.GMAIL_APP_PASSWORD = prev.p;
+      spy.mockRestore();
+    }
+  });
+});

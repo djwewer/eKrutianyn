@@ -34,6 +34,12 @@ export class MailService implements OnModuleInit {
             port: 465,
             secure: true,
             auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+            // Bulk import sends invites in a row: reuse one connection and never hang on a dead socket.
+            pool: true,
+            maxConnections: 1,
+            connectionTimeout: 10_000,
+            greetingTimeout: 10_000,
+            socketTimeout: 20_000,
           })
         : null;
   }

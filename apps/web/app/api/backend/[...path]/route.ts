@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
+// Bulk junak import sends one invite mail per created row; allow the proxied call to run long.
+export const maxDuration = 300;
+
 const API_URL = process.env.API_URL ?? 'http://localhost:3001';
 
 async function proxy(request: NextRequest, path: string[]) {
