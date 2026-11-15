@@ -64,7 +64,9 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
             <Button
               onClick={async () => {
                 try {
-                  await approve.mutateAsync();
+                  const approved = await approve.mutateAsync();
+                  // Stay on the page so the warning is seen; the approval itself already succeeded.
+                  if (approved.inviteSent === false) return;
                   router.push('/approval-requests');
                 } catch {
                   /* handled by MutationCache.onError for 401; other errors just stop-and-not-navigate */
@@ -87,6 +89,11 @@ export default function ApprovalRequestDetailPage({ params }: { params: Promise<
               Відхилити
             </Button>
           </div>
+        )}
+        {approve.data?.inviteSent === false && (
+          <p className="text-sm text-late">
+            Юнака створено, але запрошення не надіслано — надішліть його ще раз зі сторінки юнака
+          </p>
         )}
         {approve.isError && (
           <p className="text-sm text-destructive">

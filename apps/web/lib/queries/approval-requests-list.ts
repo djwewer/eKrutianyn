@@ -24,7 +24,7 @@ export function useApprovalRequest(id: string | undefined) {
 export function useApproveRequest(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch<ApprovalRequest>(`/approval-requests/${id}/approve`, { method: 'POST' }),
+    mutationFn: () => apiFetch<ApprovalRequest & { inviteSent?: boolean }>(`/approval-requests/${id}/approve`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['approval-requests'] });
     },

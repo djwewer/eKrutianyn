@@ -320,6 +320,8 @@ export default function JunakImportPage() {
     );
   }
 
+  const inviteFailures = results?.filter((r) => r.created && r.inviteSent === false).length ?? 0;
+
   return (
     <WideContent>
       <div className="space-y-4">
@@ -452,9 +454,21 @@ export default function JunakImportPage() {
             <CardContent className="space-y-1 text-sm">
               {results.map((r) => (
                 <p key={r.row} className={r.error ? 'text-late' : ''}>
-                  Рядок {r.row + 2}: {r.error ? `помилка — ${r.error}` : r.created ? 'створено' : 'оновлено'}
+                  Рядок {r.row + 2}:{' '}
+                  {r.error
+                    ? `помилка — ${r.error}`
+                    : r.created
+                      ? r.inviteSent === false
+                        ? 'створено, запрошення не надіслано'
+                        : 'створено'
+                      : 'оновлено'}
                 </p>
               ))}
+              {inviteFailures > 0 && (
+                <p className="text-late">
+                  Запрошень не надіслано: {inviteFailures} — надішліть ще раз зі сторінки людини
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

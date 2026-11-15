@@ -455,6 +455,8 @@ export interface JunakImportRowResult {
   row: number;
   junakId?: string;
   created?: boolean;
+  /** Set only for created rows: false when the invite mail could not be sent. */
+  inviteSent?: boolean;
   succeededSteps: string[];
   error?: string;
 }
