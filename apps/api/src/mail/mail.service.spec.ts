@@ -62,6 +62,55 @@ describe('MailService (test mode)', () => {
     expect(captured?.html).toContain('&lt;img src=x onerror=alert(2)&gt;');
   });
 
+  describe('sendWelcomeInvite', () => {
+    const params = {
+      firstName: 'Олег',
+      kurinLabel: '№307 Чорногора',
+      roleLabel: 'звʼязковий',
+      inviteUrl: 'http://x/welcome?token=t',
+    };
+
+    it('captures a welcome-invite mail with link and meta', async () => {
+      const service = new MailService();
+      await service.sendWelcomeInvite('a@b.c', params);
+      expect(service.getLastMailFor('a@b.c')).toMatchObject({
+        to: 'a@b.c',
+        type: 'welcome-invite',
+        link: 'http://x/welcome?token=t',
+        meta: { firstName: 'Олег', kurinLabel: '№307 Чорногора', roleLabel: 'звʼязковий' },
+      });
+    });
+
+    it('renders the exact copy and button', async () => {
+      const service = new MailService();
+      await service.sendWelcomeInvite('a2@b.c', params);
+      const html = service.getLastMailFor('a2@b.c')?.html ?? '';
+      expect(html).toContain('Привіт, Олег!');
+      expect(html).toContain('№307 Чорногора');
+      expect(html).toContain('звʼязковий');
+      expect(html).toContain('Встановити пароль');
+      expect(html).toContain('href="http://x/welcome?token=t"');
+      expect(html).toContain('Якщо ви не чекали цього листа, просто проігноруйте його.');
+    });
+
+    it('uses the welcome subject when delivering', async () => {
+      const service = new MailService();
+      const deliver = jest.spyOn(service as any, 'deliver');
+      await service.sendWelcomeInvite('a3@b.c', params);
+      expect(deliver.mock.calls[0][1]).toMatchObject({
+        subject: 'Вітаємо в єПластуні — курінь №307 Чорногора',
+      });
+    });
+
+    it('escapes HTML in interpolated values', async () => {
+      const service = new MailService();
+      await service.sendWelcomeInvite('a4@b.c', { ...params, firstName: '<b>Олег</b>' });
+      const html = service.getLastMailFor('a4@b.c')?.html ?? '';
+      expect(html).not.toContain('<b>Олег</b>');
+      expect(html).toContain('&lt;b&gt;Олег&lt;/b&gt;');
+    });
+  });
+
   describe('onModuleInit', () => {
     const ORIGINAL = {
       MAIL_MODE: process.env.MAIL_MODE,

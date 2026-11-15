@@ -4,7 +4,7 @@ import type { Transporter } from 'nodemailer';
 
 export interface CapturedMail {
   to: string;
-  type: 'password-reset' | 'email-change-confirmation' | 'profile-change-notification';
+  type: 'password-reset' | 'welcome-invite' | 'email-change-confirmation' | 'profile-change-notification';
   link?: string;
   meta?: Record<string, string | null>;
   html?: string;
@@ -79,6 +79,32 @@ export class MailService implements OnModuleInit {
       {
         subject: `${params.changedUserName} змінив(-ла) особисті дані`,
         html: `<p>${escapeHtml(params.changedUserName)} самостійно змінив(-ла) поле "${params.field}": "${escapeHtml(params.oldValue ?? '—')}" → "${escapeHtml(params.newValue ?? '—')}".</p>`,
+      },
+    );
+  }
+
+  async sendWelcomeInvite(
+    to: string,
+    p: { firstName: string; kurinLabel: string; roleLabel: string; inviteUrl: string },
+  ): Promise<void> {
+    const firstName = escapeHtml(p.firstName);
+    const kurinLabel = escapeHtml(p.kurinLabel);
+    const roleLabel = escapeHtml(p.roleLabel);
+    const url = escapeHtml(p.inviteUrl);
+    await this.deliver(
+      {
+        to,
+        type: 'welcome-invite',
+        link: p.inviteUrl,
+        meta: { firstName: p.firstName, kurinLabel: p.kurinLabel, roleLabel: p.roleLabel },
+      },
+      {
+        subject: `Вітаємо в єПластуні — курінь ${p.kurinLabel}`,
+        html:
+          `<p>Привіт, ${firstName}! Тебе додано до куреня ${kurinLabel} як ${roleLabel}. ` +
+          `Щоб увійти в єПластун, перейди за посиланням і встанови пароль. Посилання діє 7 днів.</p>` +
+          `<p><a href="${url}" style="display:inline-block;background:#1B3358;color:#ffffff;padding:12px 24px;border-radius:4px;text-decoration:none;">Встановити пароль</a></p>` +
+          `<p>Якщо ви не чекали цього листа, просто проігноруйте його.</p>`,
       },
     );
   }

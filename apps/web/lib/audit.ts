@@ -116,6 +116,8 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Змінив програму проби куреня: ${lookup(PROGRAM_LABELS, s(d, 'from'))} → ${lookup(PROGRAM_LABELS, s(d, 'to'))} (перенесено точок: ${s(d, 'transferredPoints')})`;
     case 'USER_CREATED':
       return `Створив користувача ${s(d, 'subjectName')}`;
+    case 'USER_INVITED':
+      return `Надіслав(-ла) запрошення ${s(d, 'subjectName')}`;
     case 'USER_ARCHIVED':
       return `Архівував ${s(d, 'subjectName')}`;
     case 'USER_CONTACT_UPDATED':

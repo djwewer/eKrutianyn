@@ -610,11 +610,17 @@ model ApprovalRequest {
   @@index([status, createdAt])
 }
 
+enum TokenPurpose {
+  RESET
+  INVITE
+}
+
 model PasswordResetToken {
   id        String    @id @default(uuid())
   userId    String
   user      User      @relation(fields: [userId], references: [id])
   tokenHash String    @unique
+  purpose   TokenPurpose @default(RESET)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -780,6 +786,7 @@ enum AuditAction {
   DEGREE_DATE_CHANGED
   // Люди й ролі
   USER_CREATED
+  USER_INVITED
   USER_ARCHIVED
   USER_CONTACT_UPDATED
   USER_HURTOK_CHANGED

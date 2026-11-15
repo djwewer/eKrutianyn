@@ -12,6 +12,7 @@ export const AUDIT_GROUPS: Record<AuditGroup, AuditAction[]> = {
   ],
   PEOPLE: [
     AuditAction.USER_CREATED,
+    AuditAction.USER_INVITED,
     AuditAction.USER_ARCHIVED,
     AuditAction.USER_CONTACT_UPDATED,
     AuditAction.USER_HURTOK_CHANGED,

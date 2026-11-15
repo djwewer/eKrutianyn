@@ -7,4 +7,8 @@ describe('AUDIT_GROUPS', () => {
     expect(new Set(grouped).size).toBe(grouped.length);
     expect([...grouped].sort()).toEqual(Object.values(AuditAction).sort());
   });
+
+  it('puts USER_INVITED in PEOPLE', () => {
+    expect(AUDIT_GROUPS.PEOPLE).toContain(AuditAction.USER_INVITED);
+  });
 });
