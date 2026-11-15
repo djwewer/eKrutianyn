@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
+import { useResendInvite } from '@/lib/queries/users';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
@@ -12,8 +13,35 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Role, UserSummary } from '@/lib/types';
+import type { InviteResult, Role, UserSummary } from '@/lib/types';
 import { nativeSelectClass } from '@/components/ui/native-select';
+
+function CreatedNotice({ user, inviteSent }: { user: UserSummary; inviteSent: boolean }) {
+  const router = useRouter();
+  const resend = useResendInvite(user.id);
+  const sent = inviteSent || resend.data?.inviteSent;
+  return (
+    <Card className="max-w-md">
+      <CardContent className="space-y-3 p-6">
+        {sent ? (
+          <p>Запрошення надіслано на {user.email}</p>
+        ) : (
+          <>
+            <p className="text-destructive">
+              Користувача створено, але запрошення не вдалося надіслати на {user.email}.
+            </p>
+            <Button variant="outline" disabled={resend.isPending} onClick={() => resend.mutate()}>
+              Надіслати запрошення ще раз
+            </Button>
+          </>
+        )}
+        <div>
+          <Button onClick={() => router.push('/kurin')}>До списку</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function ZvyazkovyiDirectCreateForm({
   initialHurtokId,
@@ -22,7 +50,6 @@ function ZvyazkovyiDirectCreateForm({
   initialHurtokId: string;
   initialRole: Role;
 }) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: hurtky } = useHurtky();
   const [firstName, setFirstName] = useState('');
@@ -30,28 +57,29 @@ function ZvyazkovyiDirectCreateForm({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>(initialRole);
   const [hurtokId, setHurtokId] = useState(initialHurtokId);
-  const [password, setPassword] = useState('');
+  const [created, setCreated] = useState<(UserSummary & InviteResult) | null>(null);
 
   const createUser = useMutation({
     mutationFn: () =>
-      apiFetch<UserSummary>('/users', {
+      apiFetch<UserSummary & InviteResult>('/users', {
         method: 'POST',
         body: JSON.stringify({
           firstName,
           lastName,
           email,
           role,
-          password: password || undefined,
           hurtokId: hurtokId || undefined,
         }),
       }),
-    onSuccess: () => {
+    onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      router.push('/kurin');
+      setCreated(user);
     },
   });
 
   const needsHurtok = role === 'JUNAK';
+
+  if (created) return <CreatedNotice user={created} inviteSent={created.inviteSent} />;
 
   return (
     <>
@@ -88,10 +116,6 @@ function ZvyazkovyiDirectCreateForm({
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Пароль (опційно, можна додати пізніше)</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             {needsHurtok && (
               <div className="space-y-2">

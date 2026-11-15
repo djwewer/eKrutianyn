@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { adminHeaders, type AdminCredentials } from '@/lib/queries/admin-credentials';
-import type { AdminKurin } from '@/lib/types';
+import type { AdminKurin, InviteResult } from '@/lib/types';
 
 const QUERY_KEY = ['admin', 'kurins'];
 
@@ -25,12 +25,24 @@ export function useCreateKurin(credentials: AdminCredentials | null) {
       gender: 'MALE' | 'FEMALE';
       stanytsia: string;
       probyProgramId: string;
-      zvyazkovyi: { firstName: string; lastName: string; email: string; password: string };
+      zvyazkovyi: { firstName: string; lastName: string; email: string };
     }) =>
-      apiFetch<AdminKurin>('/admin/kurins', {
+      apiFetch<AdminKurin & InviteResult>('/admin/kurins', {
         method: 'POST',
         headers: adminHeaders(credentials!),
         body: JSON.stringify(dto),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
+export function useResendZvyazkovyiInvite(credentials: AdminCredentials | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<InviteResult>(`/admin/users/${userId}/resend-invite`, {
+        method: 'POST',
+        headers: adminHeaders(credentials!),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });

@@ -9,10 +9,17 @@ import {
   useFetchAllReferenceSourcesNow,
   useFetchReferenceSourceNow,
 } from '@/lib/queries/admin-reference-sources';
-import { useAdminKurins, useCreateKurin, useUpdateKurin, useDeleteKurin } from '@/lib/queries/admin-kurins';
+import {
+  useAdminKurins,
+  useCreateKurin,
+  useUpdateKurin,
+  useDeleteKurin,
+  useResendZvyazkovyiInvite,
+} from '@/lib/queries/admin-kurins';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ResendInvite } from '@/components/resend-invite';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { WideContent } from '@/components/app-shell';
@@ -219,10 +226,10 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
   const [zvyazkovyiFirstName, setZvyazkovyiFirstName] = useState('');
   const [zvyazkovyiLastName, setZvyazkovyiLastName] = useState('');
   const [zvyazkovyiEmail, setZvyazkovyiEmail] = useState('');
-  const [zvyazkovyiPassword, setZvyazkovyiPassword] = useState('');
+  const [inviteNotice, setInviteNotice] = useState<{ email: string; sent: boolean } | null>(null);
 
   const zvyazkovyiReady =
-    zvyazkovyiFirstName.trim() && zvyazkovyiLastName.trim() && zvyazkovyiEmail.trim() && zvyazkovyiPassword.length >= 8;
+    zvyazkovyiFirstName.trim() && zvyazkovyiLastName.trim() && zvyazkovyiEmail.trim();
 
   function handleCreate() {
     if (!name.trim() || !stanytsia.trim() || !probyProgramId || !zvyazkovyiReady) return;
@@ -237,11 +244,11 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           firstName: zvyazkovyiFirstName.trim(),
           lastName: zvyazkovyiLastName.trim(),
           email: zvyazkovyiEmail.trim(),
-          password: zvyazkovyiPassword,
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
+          setInviteNotice({ email: created.zvyazkovyi?.email ?? zvyazkovyiEmail.trim(), sent: created.inviteSent });
           setName('');
           setKurinNumber('');
           setStanytsia('');
@@ -249,7 +256,6 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           setZvyazkovyiFirstName('');
           setZvyazkovyiLastName('');
           setZvyazkovyiEmail('');
-          setZvyazkovyiPassword('');
         },
       },
     );
@@ -307,7 +313,7 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           <div className="space-y-2 border-t border-dashed border-border pt-2">
             <p className="text-sm font-medium">Перший зв'язковий куреня</p>
             <p className="text-xs text-muted-foreground">
-              Задайте тимчасовий пароль і передайте його зв'язковому — при першому вході система попросить його змінити.
+              Зв&apos;язковий отримає на пошту запрошення з посиланням, за яким сам встановить пароль.
             </p>
             <div className="flex gap-2">
               <Input
@@ -327,12 +333,6 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
               value={zvyazkovyiEmail}
               onChange={(e) => setZvyazkovyiEmail(e.target.value)}
             />
-            <Input
-              type="text"
-              placeholder="Тимчасовий пароль (мін. 8 символів)"
-              value={zvyazkovyiPassword}
-              onChange={(e) => setZvyazkovyiPassword(e.target.value)}
-            />
           </div>
 
           <Button
@@ -347,6 +347,15 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
               {kurinConflictMessage(create.error) ?? 'Не вдалося створити курінь'}
             </span>
           )}
+          {inviteNotice &&
+            (inviteNotice.sent ? (
+              <span className="block text-xs text-muted-foreground">Запрошення надіслано на {inviteNotice.email}</span>
+            ) : (
+              <span className="block text-xs text-destructive">
+                Курінь створено, але запрошення на {inviteNotice.email} не вдалося надіслати — скористайтеся
+                «Надіслати запрошення ще раз» у списку куренів.
+              </span>
+            ))}
         </div>
       </CardContent>
     </Card>
@@ -359,6 +368,7 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
   // reflect whichever row was edited last, not just this one.
   const onUpdate = useUpdateKurin(credentials);
   const onDelete = useDeleteKurin(credentials);
+  const resendInvite = useResendZvyazkovyiInvite(credentials);
   const [name, setName] = useState(kurin.name);
   const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber ?? '');
   const dirty = name !== kurin.name || kurinNumber !== (kurin.kurinNumber ?? '');
@@ -387,6 +397,14 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
       <p className="text-xs text-muted-foreground">
         {kurin.stanytsia} · {kurin.gender === 'FEMALE' ? 'Дівчата' : 'Хлопці'} · {kurin.userCount} учасн., {kurin.hurtokCount} гуртків
       </p>
+      {kurin.zvyazkovyi && !kurin.zvyazkovyi.activated && (
+        <ResendInvite
+          email={kurin.zvyazkovyi.email}
+          lastInviteAt={kurin.zvyazkovyi.lastInviteAt}
+          resend={resendInvite}
+          onResend={() => resendInvite.mutate(kurin.zvyazkovyi!.id)}
+        />
+      )}
       <div className="flex items-center gap-2">
         <Button size="sm" disabled={!dirty || onUpdate.isPending} onClick={handleSave}>
           Зберегти

@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useUser, useUpdateContactInfo, useUpdateHurtok, useArchiveUser } from '@/lib/queries/users';
+import { useUser, useUpdateContactInfo, useUpdateHurtok, useArchiveUser, useResendInvite } from '@/lib/queries/users';
 import { useHurtky } from '@/lib/queries/hurtky';
 import { useSession } from '@/lib/session-client';
 import { useCreateApprovalRequest } from '@/lib/queries/approval-requests';
@@ -21,6 +21,7 @@ import {
   useReopenStage,
 } from '@/lib/queries/proby';
 import type { GuardianContact, GuardianRelation, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
+import { ResendInvite } from '@/components/resend-invite';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
 import { JunakHistory } from '@/components/junak-history';
 import { ROLE_LABELS } from '@/lib/role-labels';
@@ -416,6 +417,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { data: user, isLoading } = useUser(id);
   const { data: session } = useSession();
   const updateContactInfo = useUpdateContactInfo(id);
+  const resendInvite = useResendInvite(id);
   const createRequest = useCreateApprovalRequest();
   const [notes, setNotes] = useState('');
   const [phone, setPhone] = useState('');
@@ -496,6 +498,16 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <p className="mt-[.3rem] mb-0 font-mono text-[.8rem] tracking-[.04em] text-ink-2 uppercase">
               {ROLE_LABELS[user.role]}
             </p>
+            {session?.role === 'ZVYAZKOVYI' && user.role !== 'ZVYAZKOVYI' && !user.archivedAt && !user.activated && (
+              <div className="mt-2">
+                <ResendInvite
+                  email={user.email}
+                  lastInviteAt={user.lastInviteAt}
+                  resend={resendInvite}
+                  onResend={() => resendInvite.mutate()}
+                />
+              </div>
+            )}
           </div>
         </div>
         <Card>

@@ -29,6 +29,12 @@ export interface UserDetail extends UserSummary {
   phone: string | null;
   residence: string | null;
   studyPlace: string | null;
+  activated: boolean;
+  lastInviteAt: string | null;
+}
+
+export interface InviteResult {
+  inviteSent: boolean;
 }
 
 export interface Hurtok {
@@ -243,6 +249,14 @@ export interface AdminKurin {
   createdAt: string;
   userCount: number;
   hurtokCount: number;
+  zvyazkovyi: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    activated: boolean;
+    lastInviteAt: string | null;
+  } | null;
 }
 
 export interface AdminReferenceSource {

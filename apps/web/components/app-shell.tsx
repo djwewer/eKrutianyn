@@ -12,7 +12,7 @@ import { BottomNav } from '@/components/bottom-nav';
 import { cn } from '@/lib/utils';
 
 // Повноекранні сторінки автентифікації: без колонки та відступів.
-const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change'];
+const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/confirm-email-change', '/welcome'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();

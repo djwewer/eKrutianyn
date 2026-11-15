@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import type { UserSummary, UserDetail, Role } from '@/lib/types';
+import type { UserSummary, UserDetail, Role, InviteResult } from '@/lib/types';
 
 export function useUsers(filters: { role?: Role; hurtokId?: string } = {}, options?: { enabled?: boolean }) {
   const queryParts = [];
@@ -22,6 +22,16 @@ export function useUser(id: string | undefined) {
     queryKey: ['users', id],
     queryFn: () => apiFetch<UserDetail>(`/users/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useResendInvite(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<InviteResult>(`/users/${id}/resend-invite`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', id] });
+    },
   });
 }
 
