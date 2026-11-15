@@ -30,18 +30,20 @@ export class InviteService {
       where: { id: userId },
       include: { kurin: true },
     });
-    await this.prisma.passwordResetToken.updateMany({
-      where: { userId, purpose: TokenPurpose.INVITE, usedAt: null },
-      data: { usedAt: new Date() },
-    });
     const { raw, hash } = generateToken();
-    await this.prisma.passwordResetToken.create({
-      data: {
-        userId,
-        tokenHash: hash,
-        purpose: TokenPurpose.INVITE,
-        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordResetToken.updateMany({
+        where: { userId, purpose: TokenPurpose.INVITE, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.passwordResetToken.create({
+        data: {
+          userId,
+          tokenHash: hash,
+          purpose: TokenPurpose.INVITE,
+          expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+        },
+      });
     });
 
     let sent = true;

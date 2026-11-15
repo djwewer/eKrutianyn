@@ -29,6 +29,7 @@ describe('InviteService', () => {
     };
     mail = { sendWelcomeInvite: jest.fn().mockResolvedValue(undefined) };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    prisma.$transaction = jest.fn(async (fn: any) => fn(prisma));
     service = new InviteService(prisma, mail as any, audit as any);
   });
 

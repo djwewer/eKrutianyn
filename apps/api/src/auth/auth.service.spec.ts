@@ -15,8 +15,13 @@ describe('AuthService', () => {
   beforeEach(() => {
     prisma = {
       user: { findUnique: jest.fn(), update: jest.fn() },
-      passwordResetToken: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn(), create: jest.fn() },
-      $transaction: jest.fn().mockResolvedValue([]),
+      passwordResetToken: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn(),
+      },
+      $transaction: jest.fn(async (fn: any) => fn(prisma)),
       kurinPosition: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
       kurin: { findUnique: jest.fn().mockResolvedValue({ kurinNumber: '75' }) },
     };
@@ -159,8 +164,8 @@ describe('AuthService', () => {
       expect(userUpdate.where).toEqual({ id: 'u1' });
       expect(userUpdate.data.mustChangePassword).toBe(false);
       await expect(argon2.verify(userUpdate.data.passwordHash, 'newpassword1')).resolves.toBe(true);
-      expect(prisma.passwordResetToken.update).toHaveBeenCalledWith({
-        where: { id: 't1' },
+      expect(prisma.passwordResetToken.updateMany.mock.calls[0][0]).toMatchObject({
+        where: { id: 't1', purpose: TokenPurpose.INVITE, usedAt: null },
         data: { usedAt: expect.any(Date) },
       });
       expect(prisma.$transaction).toHaveBeenCalled();
@@ -185,6 +190,14 @@ describe('AuthService', () => {
         tok({ user: { ...baseUser, archivedAt: new Date() } }),
       );
       await expect(service.acceptInvite('x', 'newpassword1')).rejects.toThrow(UnauthorizedException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('acceptInvite loses the claim race: count 0 gives NotFound and the user is not updated', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue(tok());
+      prisma.passwordResetToken.updateMany.mockResolvedValueOnce({ count: 0 });
+      await expect(service.acceptInvite('x', 'newpassword1')).rejects.toThrow(NotFoundException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
     it('resetPassword rejects INVITE tokens', async () => {

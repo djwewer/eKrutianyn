@@ -157,17 +157,24 @@ export class AuthService {
       throw new UnauthorizedException('Account archived');
     }
     const passwordHash = await this.hashPassword(newPassword);
-    await this.prisma.$transaction([
-      this.prisma.user.update({
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: { id: invite.id, purpose: TokenPurpose.INVITE, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (claimed.count === 0) {
+        throw new NotFoundException('Посилання недійсне або вже використане');
+      }
+      await tx.user.update({
         where: { id: invite.userId },
         data: { passwordHash, mustChangePassword: false },
-      }),
-      this.prisma.passwordResetToken.update({ where: { id: invite.id }, data: { usedAt: new Date() } }),
-      this.prisma.passwordResetToken.updateMany({
+      });
+      await tx.passwordResetToken.updateMany({
         where: { userId: invite.userId, usedAt: null, id: { not: invite.id } },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+        data: { usedAt: now },
+      });
+    });
     return this.issueSessionFor(invite.user);
   }
 
