@@ -45,6 +45,25 @@ describe('JunakImportRowProcessorService', () => {
     expect(result.inviteSent).toBe(true);
   });
 
+  it('an invite failure never skips positions or marks the row failed; the invite runs after them', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    invite.sendInvite.mockResolvedValue({ sent: false });
+
+    const result = await service.processRow('kurin-1', baseRow({ kurinPositionTypes: ['PYSARIUS' as any] }), 0, ACTOR);
+
+    expect(result.error).toBeUndefined();
+    expect(result.inviteSent).toBe(false);
+    expect(kurinPositions.assign.mock.invocationCallOrder[0]).toBeLessThan(invite.sendInvite.mock.invocationCallOrder[0]);
+  });
+
+  it('creates the user without a password', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    await service.processRow('kurin-1', baseRow(), 0, ACTOR);
+    const data = prisma.user.create.mock.calls[0][0].data;
+    expect(data.passwordHash).toBeUndefined();
+    expect(data.password).toBeUndefined();
+  });
+
   it('sends no invite for an updated row', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'JUNAK', kurinId: 'kurin-1' });
     prisma.user.update.mockResolvedValue({ id: 'user-2' });

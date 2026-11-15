@@ -47,13 +47,14 @@ export class JunakImportRowProcessorService {
       const { junakId, hurtokId } = await this.upsertUserHurtokContacts(kurinId, row, rowIndex, result, options, actor);
       result.junakId = junakId;
 
-      // Only freshly created users get an invite, and only once the upsert has committed.
+      await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
+      await this.backfillProbaProgress(kurinId, junakId, row, actor, result);
+
+      // Last, so an invite problem can never skip positions/backfill. Only freshly created
+      // users get one, and only after the upsert transaction has committed. Never throws.
       if (result.created) {
         result.inviteSent = (await this.inviteService.sendInvite(junakId, actor.userId)).sent;
       }
-
-      await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
-      await this.backfillProbaProgress(kurinId, junakId, row, actor, result);
     } catch (error) {
       result.error = (error as Error).message;
     }

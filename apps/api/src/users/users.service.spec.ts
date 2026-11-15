@@ -57,6 +57,12 @@ describe('UsersService invites', () => {
       expect(invite.sendInvite).not.toHaveBeenCalled();
     });
 
+    it('404 for an archived target', async () => {
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, archivedAt: new Date() });
+      await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(NotFoundException);
+      expect(invite.sendInvite).not.toHaveBeenCalled();
+    });
+
     it('404 for a user of another kurin or a missing user', async () => {
       prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-2', passwordHash: null });
       await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(NotFoundException);

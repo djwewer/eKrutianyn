@@ -25,7 +25,19 @@ export class InviteService {
     private readonly audit: AuditService,
   ) {}
 
+  /** Never throws: callers run it after their own commit, so any failure is logged and reported as `sent: false`. */
   async sendInvite(userId: string, actorId: string | null): Promise<{ sent: boolean }> {
+    try {
+      return await this.doSendInvite(userId, actorId);
+    } catch (err) {
+      this.logger.error(
+        `Failed to send invite to user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return { sent: false };
+    }
+  }
+
+  private async doSendInvite(userId: string, actorId: string | null): Promise<{ sent: boolean }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: { kurin: true },

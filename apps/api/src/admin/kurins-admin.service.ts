@@ -186,8 +186,10 @@ export class KurinsAdminService {
   }
 
   async resendInvite(userId: string): Promise<{ inviteSent: boolean }> {
-    const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
-    if (!target) {
+    const target = await this.prisma.user.findUnique({ where: { id: userId },
+      select: { passwordHash: true, archivedAt: true },
+    });
+    if (!target || target.archivedAt) {
       throw new NotFoundException('User not found');
     }
     if (target.passwordHash !== null) {

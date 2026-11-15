@@ -45,6 +45,16 @@ describe('KurinsAdminService invites', () => {
     expect(result).toMatchObject({ id: 'k-1', inviteSent: true });
   });
 
+  it('createKurin does not send an invite when the transaction fails (P2002 -> 409)', async () => {
+    prisma.$transaction = jest.fn().mockRejectedValue({ code: 'P2002' });
+    const dto: any = {
+      name: 'О', gender: 'MALE', stanytsia: 'К', probyProgramId: 'p-1',
+      zvyazkovyi: { firstName: 'А', lastName: 'Б', email: 'a@b.com' },
+    };
+    await expect(service.createKurin(dto)).rejects.toBeInstanceOf(ConflictException);
+    expect(invite.sendInvite).not.toHaveBeenCalled();
+  });
+
   it('createFirstZvyazkovyi sends an invite and returns inviteSent', async () => {
     prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1' });
     txResolved = true; // no transaction on this path: a single insert
@@ -60,6 +70,11 @@ describe('KurinsAdminService invites', () => {
       prisma.user.findUnique.mockResolvedValue({ passwordHash: null });
       txResolved = true;
       await expect(service.resendInvite('u-1')).resolves.toEqual({ inviteSent: true });
+    });
+    it('404 for an archived target', async () => {
+      prisma.user.findUnique.mockResolvedValue({ passwordHash: null, archivedAt: new Date() });
+      await expect(service.resendInvite('u-1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(invite.sendInvite).not.toHaveBeenCalled();
     });
     it('409 when activated, 404 when missing', async () => {
       prisma.user.findUnique.mockResolvedValue({ passwordHash: 'h' });

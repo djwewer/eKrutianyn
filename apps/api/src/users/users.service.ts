@@ -121,9 +121,9 @@ export class UsersService {
   async resendInvite(userId: string, actor: CurrentUserPayload): Promise<{ inviteSent: boolean }> {
     const target = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { kurinId: true, passwordHash: true },
+      select: { kurinId: true, passwordHash: true, archivedAt: true },
     });
-    if (!target || target.kurinId !== actor.kurinId) {
+    if (!target || target.kurinId !== actor.kurinId || target.archivedAt) {
       throw new NotFoundException('User not found');
     }
     if (target.passwordHash !== null) {

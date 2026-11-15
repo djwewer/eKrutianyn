@@ -33,6 +33,20 @@ describe('InviteService', () => {
     service = new InviteService(prisma, mail as any, audit as any);
   });
 
+  it('never throws: a failing token transaction resolves { sent: false }', async () => {
+    prisma.$transaction = jest.fn().mockRejectedValue(new Error('db down'));
+    await expect(service.sendInvite('u1', 'admin1')).resolves.toEqual({ sent: false });
+    expect(mail.sendWelcomeInvite).not.toHaveBeenCalled();
+  });
+
+  it('never throws: a failing user lookup or audit resolves { sent: false }', async () => {
+    prisma.user.findUniqueOrThrow.mockRejectedValue(new Error('missing'));
+    await expect(service.sendInvite('u1', 'admin1')).resolves.toEqual({ sent: false });
+    prisma.user.findUniqueOrThrow.mockResolvedValue(user);
+    audit.record.mockRejectedValue(new Error('audit down'));
+    await expect(service.sendInvite('u1', 'admin1')).resolves.toEqual({ sent: false });
+  });
+
   it('creates an INVITE token expiring in 7 days and invalidates earlier unused ones', async () => {
     await service.sendInvite('u1', 'admin1');
     expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith({
