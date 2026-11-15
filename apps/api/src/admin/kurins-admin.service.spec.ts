@@ -67,20 +67,25 @@ describe('KurinsAdminService invites', () => {
 
   describe('resendInvite', () => {
     it('works for a non-activated zvyazkovyi', async () => {
-      prisma.user.findUnique.mockResolvedValue({ passwordHash: null });
+      prisma.user.findUnique.mockResolvedValue({ passwordHash: null, googleId: null });
       txResolved = true;
       await expect(service.resendInvite('u-1')).resolves.toEqual({ inviteSent: true });
     });
     it('404 for an archived target', async () => {
-      prisma.user.findUnique.mockResolvedValue({ passwordHash: null, archivedAt: new Date() });
+      prisma.user.findUnique.mockResolvedValue({ passwordHash: null, googleId: null, archivedAt: new Date() });
       await expect(service.resendInvite('u-1')).rejects.toBeInstanceOf(NotFoundException);
       expect(invite.sendInvite).not.toHaveBeenCalled();
     });
     it('409 when activated, 404 when missing', async () => {
-      prisma.user.findUnique.mockResolvedValue({ passwordHash: 'h' });
+      prisma.user.findUnique.mockResolvedValue({ passwordHash: 'h', googleId: null });
       await expect(service.resendInvite('u-1')).rejects.toBeInstanceOf(ConflictException);
       prisma.user.findUnique.mockResolvedValue(null);
       await expect(service.resendInvite('u-1')).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('409 for a Google-only user without a password', async () => {
+      prisma.user.findUnique.mockResolvedValue({ passwordHash: null, googleId: 'g-1' });
+      await expect(service.resendInvite('u-1')).rejects.toBeInstanceOf(ConflictException);
+      expect(invite.sendInvite).not.toHaveBeenCalled();
     });
   });
 
@@ -90,7 +95,7 @@ describe('KurinsAdminService invites', () => {
       {
         id: 'k-1', name: 'Орлики', kurinNumber: '1', gender: 'MALE', stanytsia: 'Київ', probyProgramId: 'p', createdAt,
         _count: { users: 3, hurtky: 1 },
-        users: [{ id: 'u-1', firstName: 'А', lastName: 'Б', email: 'a@b.com', passwordHash: null, passwordResetTokens: [{ createdAt }] }],
+        users: [{ id: 'u-1', firstName: 'А', lastName: 'Б', email: 'a@b.com', passwordHash: null, googleId: null, passwordResetTokens: [{ createdAt }] }],
       },
       { id: 'k-2', name: 'Без', kurinNumber: '2', gender: 'MALE', stanytsia: 'Л', probyProgramId: 'p', createdAt, _count: { users: 0, hurtky: 0 }, users: [] },
     ]);
@@ -98,5 +103,14 @@ describe('KurinsAdminService invites', () => {
     expect(a.zvyazkovyi).toEqual({ id: 'u-1', firstName: 'А', lastName: 'Б', email: 'a@b.com', activated: false, lastInviteAt: createdAt });
     expect(JSON.stringify(a)).not.toContain('passwordHash');
     expect(b.zvyazkovyi).toBeNull();
+    prisma.kurin.findMany.mockResolvedValue([
+      {
+        id: 'k-3', name: 'Г', kurinNumber: '3', gender: 'MALE', stanytsia: 'К', probyProgramId: 'p', createdAt,
+        _count: { users: 1, hurtky: 0 },
+        users: [{ id: 'u-2', firstName: 'А', lastName: 'Б', email: 'g@b.com', passwordHash: null, googleId: 'g-1', passwordResetTokens: [] }],
+      },
+    ]);
+    const [g]: any[] = await service.listKurins();
+    expect(g.zvyazkovyi.activated).toBe(true);
   });
 });

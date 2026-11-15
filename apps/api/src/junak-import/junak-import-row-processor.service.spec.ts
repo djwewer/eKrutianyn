@@ -56,6 +56,17 @@ describe('JunakImportRowProcessorService', () => {
     expect(kurinPositions.assign.mock.invocationCallOrder[0]).toBeLessThan(invite.sendInvite.mock.invocationCallOrder[0]);
   });
 
+  it('still sends the invite for a created user when assigning positions throws', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+    kurinPositions.assign.mockRejectedValue(new Error('position failed'));
+
+    const result = await service.processRow('kurin-1', baseRow({ kurinPositionTypes: ['PYSARIUS' as any] }), 0, ACTOR);
+
+    expect(result.error).toBe('position failed');
+    expect(invite.sendInvite).toHaveBeenCalledWith('user-1', 'zvyazkovyi-1');
+    expect(result.inviteSent).toBe(true);
+  });
+
   it('creates the user without a password', async () => {
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
     await service.processRow('kurin-1', baseRow(), 0, ACTOR);

@@ -28,6 +28,7 @@ export class KurinsAdminService {
             lastName: true,
             email: true,
             passwordHash: true,
+            googleId: true,
             passwordResetTokens: {
               where: { purpose: TokenPurpose.INVITE },
               orderBy: { createdAt: 'desc' },
@@ -54,7 +55,7 @@ export class KurinsAdminService {
             firstName: k.users[0].firstName,
             lastName: k.users[0].lastName,
             email: k.users[0].email,
-            activated: k.users[0].passwordHash !== null,
+            activated: k.users[0].passwordHash !== null || k.users[0].googleId !== null,
             lastInviteAt: k.users[0].passwordResetTokens[0]?.createdAt ?? null,
           }
         : null,
@@ -187,12 +188,12 @@ export class KurinsAdminService {
 
   async resendInvite(userId: string): Promise<{ inviteSent: boolean }> {
     const target = await this.prisma.user.findUnique({ where: { id: userId },
-      select: { passwordHash: true, archivedAt: true },
+      select: { passwordHash: true, googleId: true, archivedAt: true },
     });
     if (!target || target.archivedAt) {
       throw new NotFoundException('User not found');
     }
-    if (target.passwordHash !== null) {
+    if (target.passwordHash !== null || target.googleId !== null) {
       throw new ConflictException('Користувач уже активував акаунт');
     }
     const { sent } = await this.inviteService.sendInvite(userId, null);

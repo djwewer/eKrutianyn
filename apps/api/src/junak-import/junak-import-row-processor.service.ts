@@ -49,14 +49,13 @@ export class JunakImportRowProcessorService {
 
       await this.assignPositions(kurinId, junakId, hurtokId, row, actor, result);
       await this.backfillProbaProgress(kurinId, junakId, row, actor, result);
-
-      // Last, so an invite problem can never skip positions/backfill. Only freshly created
-      // users get one, and only after the upsert transaction has committed. Never throws.
-      if (result.created) {
-        result.inviteSent = (await this.inviteService.sendInvite(junakId, actor.userId)).sent;
-      }
     } catch (error) {
       result.error = (error as Error).message;
+    }
+    // Last, and outside the try: the user is already committed, so a failed position/backfill
+    // step must not leave them without an invite. Only freshly created users get one. Never throws.
+    if (result.created && result.junakId) {
+      result.inviteSent = (await this.inviteService.sendInvite(result.junakId, actor.userId)).sent;
     }
     return result;
   }

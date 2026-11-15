@@ -46,25 +46,31 @@ describe('UsersService invites', () => {
 
   describe('resendInvite', () => {
     it('sends for a non-activated user of the own kurin', async () => {
-      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null });
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, googleId: null });
       await expect(service.resendInvite('u-1', ACTOR)).resolves.toEqual({ inviteSent: true });
       expect(invite.sendInvite).toHaveBeenCalledWith('u-1', 'z-1');
     });
 
     it('409 when the target is already activated', async () => {
-      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: 'hash' });
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: 'hash', googleId: null });
+      await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(ConflictException);
+      expect(invite.sendInvite).not.toHaveBeenCalled();
+    });
+
+    it('409 when the target signed in with Google and has no password', async () => {
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, googleId: 'g-1' });
       await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(ConflictException);
       expect(invite.sendInvite).not.toHaveBeenCalled();
     });
 
     it('404 for an archived target', async () => {
-      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, archivedAt: new Date() });
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-1', passwordHash: null, googleId: null, archivedAt: new Date() });
       await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(NotFoundException);
       expect(invite.sendInvite).not.toHaveBeenCalled();
     });
 
     it('404 for a user of another kurin or a missing user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-2', passwordHash: null });
+      prisma.user.findUnique.mockResolvedValue({ kurinId: 'kurin-2', passwordHash: null, googleId: null });
       await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(NotFoundException);
       prisma.user.findUnique.mockResolvedValue(null);
       await expect(service.resendInvite('u-1', ACTOR)).rejects.toBeInstanceOf(NotFoundException);
@@ -80,6 +86,7 @@ describe('UsersService invites', () => {
         role: 'VYKHOVNYK',
         hurtokId: null,
         passwordHash: null,
+        googleId: null,
         passwordResetTokens: [{ createdAt }],
       });
 
@@ -98,11 +105,27 @@ describe('UsersService invites', () => {
         role: 'VYKHOVNYK',
         hurtokId: null,
         passwordHash: 'h',
+        googleId: null,
         passwordResetTokens: [],
       });
       const result: any = await service.findScoped('u-1', ACTOR);
       expect(result.activated).toBe(true);
       expect(result.lastInviteAt).toBeNull();
+    });
+
+    it('activated=true for a Google-only user without a password', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u-1',
+        kurinId: 'kurin-1',
+        role: 'VYKHOVNYK',
+        hurtokId: null,
+        passwordHash: null,
+        googleId: 'g-1',
+        passwordResetTokens: [],
+      });
+      const result: any = await service.findScoped('u-1', ACTOR);
+      expect(result.activated).toBe(true);
+      expect(result).not.toHaveProperty('googleId');
     });
   });
 });

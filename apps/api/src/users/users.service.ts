@@ -29,6 +29,7 @@ const DETAIL_SELECT = {
   residence: true,
   studyPlace: true,
   passwordHash: true,
+  googleId: true,
   passwordResetTokens: {
     where: { purpose: TokenPurpose.INVITE },
     orderBy: { createdAt: 'desc' },
@@ -37,11 +38,13 @@ const DETAIL_SELECT = {
   },
 } satisfies Prisma.UserSelect;
 
-function toDetail<T extends { passwordHash: string | null; passwordResetTokens: { createdAt: Date }[] }>(user: T) {
-  const { passwordHash, passwordResetTokens, ...rest } = user;
+function toDetail<
+  T extends { passwordHash: string | null; googleId: string | null; passwordResetTokens: { createdAt: Date }[] },
+>(user: T) {
+  const { passwordHash, googleId, passwordResetTokens, ...rest } = user;
   return {
     ...rest,
-    activated: passwordHash !== null,
+    activated: passwordHash !== null || googleId !== null,
     lastInviteAt: passwordResetTokens[0]?.createdAt ?? null,
   };
 }
@@ -121,12 +124,12 @@ export class UsersService {
   async resendInvite(userId: string, actor: CurrentUserPayload): Promise<{ inviteSent: boolean }> {
     const target = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { kurinId: true, passwordHash: true, archivedAt: true },
+      select: { kurinId: true, passwordHash: true, googleId: true, archivedAt: true },
     });
     if (!target || target.kurinId !== actor.kurinId || target.archivedAt) {
       throw new NotFoundException('User not found');
     }
-    if (target.passwordHash !== null) {
+    if (target.passwordHash !== null || target.googleId !== null) {
       throw new ConflictException('Користувач уже активував акаунт');
     }
     const { sent } = await this.inviteService.sendInvite(userId, actor.userId);
