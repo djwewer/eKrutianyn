@@ -45,6 +45,7 @@ export function useResendZvyazkovyiInvite(credentials: AdminCredentials | null) 
         headers: adminHeaders(credentials!),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+    onError: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 }
 

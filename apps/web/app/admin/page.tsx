@@ -233,6 +233,7 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
 
   function handleCreate() {
     if (!name.trim() || !stanytsia.trim() || !probyProgramId || !zvyazkovyiReady) return;
+    setInviteNotice(null);
     create.mutate(
       {
         name: name.trim(),
@@ -257,6 +258,7 @@ function KurinsSection({ credentials, programs }: { credentials: AdminCredential
           setZvyazkovyiLastName('');
           setZvyazkovyiEmail('');
         },
+        onError: () => setInviteNotice(null),
       },
     );
   }

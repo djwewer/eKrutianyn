@@ -1,7 +1,14 @@
 'use client';
 
+import { ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import type { InviteResult } from '@/lib/types';
+
+function errorMessage(error: unknown) {
+  if (error instanceof ApiError && error.status === 409) return 'Користувач уже активував акаунт';
+  if (error instanceof ApiError && error.status === 404) return 'Користувача не знайдено';
+  return 'Не вдалося надіслати запрошення.';
+}
 
 /** Badge «Ще не активовано · запрошення надіслано {дата}» + «Надіслати запрошення ще раз». */
 export function ResendInvite({
@@ -12,7 +19,7 @@ export function ResendInvite({
 }: {
   email: string;
   lastInviteAt: string | null;
-  resend: { isPending: boolean; isSuccess: boolean; isError: boolean; data?: InviteResult };
+  resend: { isPending: boolean; isSuccess: boolean; isError: boolean; data?: InviteResult; error?: unknown };
   onResend: () => void;
 }) {
   const date = lastInviteAt
@@ -33,7 +40,7 @@ export function ResendInvite({
         {resend.data && !resend.data.inviteSent && (
           <span className="text-xs text-destructive">Не вдалося надіслати запрошення. Спробуйте ще раз.</span>
         )}
-        {resend.isError && <span className="text-xs text-destructive">Не вдалося надіслати запрошення.</span>}
+        {resend.isError && <span className="text-xs text-destructive">{errorMessage(resend.error)}</span>}
       </div>
     </div>
   );

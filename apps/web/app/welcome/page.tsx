@@ -2,8 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +11,6 @@ import { AuthLayout } from '@/components/auth-layout';
 type InviteInfo = { firstName: string; kurinLabel: string };
 
 function WelcomeContent() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const token = useSearchParams().get('token');
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [status, setStatus] = useState<'loading' | 'valid' | 'invalid'>(token ? 'loading' : 'invalid');
@@ -55,23 +52,32 @@ function WelcomeContent() {
       return;
     }
     setSubmitting(true);
-    const res = await fetch('/api/auth/accept-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, newPassword: password }),
-    });
+    let res: Response;
+    try {
+      res = await fetch('/api/auth/accept-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: password }),
+      });
+    } catch {
+      setSubmitting(false);
+      setError("Не вдалося з'єднатися. Спробуйте ще раз.");
+      return;
+    }
     if (!res.ok) {
       setSubmitting(false);
-      if (res.status === 400) {
+      // The API answers 404 for an unknown/used/expired token and 401 for an archived account.
+      if (res.status === 404 || res.status === 401) {
+        setStatus('invalid');
+      } else if (res.status === 400) {
         setError('Пароль має містити щонайменше 8 символів.');
       } else {
-        setStatus('invalid');
+        setError('Щось пішло не так. Спробуйте ще раз.');
       }
       return;
     }
-    queryClient.clear();
-    router.replace('/');
-    router.refresh();
+    // Full navigation so the session is always fresh.
+    window.location.assign('/');
   }
 
   if (status === 'loading') {

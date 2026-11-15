@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, ApiError } from '@/lib/api-client';
 import type { UserSummary, UserDetail, Role, InviteResult } from '@/lib/types';
 
 export function useUsers(filters: { role?: Role; hurtokId?: string } = {}, options?: { enabled?: boolean }) {
@@ -31,6 +31,12 @@ export function useResendInvite(id: string) {
     mutationFn: () => apiFetch<InviteResult>(`/users/${id}/resend-invite`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users', id] });
+    },
+    onError: (error) => {
+      // 409: the user activated meanwhile — refetch so the badge goes away.
+      if (error instanceof ApiError && error.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['users', id] });
+      }
     },
   });
 }
