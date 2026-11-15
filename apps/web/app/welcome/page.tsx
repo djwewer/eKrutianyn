@@ -61,7 +61,7 @@ function WelcomeContent() {
       });
     } catch {
       setSubmitting(false);
-      setError("Не вдалося з'єднатися. Спробуйте ще раз.");
+      setError('Не вдалося зʼєднатися. Спробуйте ще раз.');
       return;
     }
     if (!res.ok) {

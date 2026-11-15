@@ -19,7 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ResendInvite } from '@/components/resend-invite';
+import { ResendInvite, ResendInviteResult } from '@/components/resend-invite';
 import { PageHeader } from '@/components/ui/page-header';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { WideContent } from '@/components/app-shell';
@@ -399,13 +399,17 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
       <p className="text-xs text-muted-foreground">
         {kurin.stanytsia} · {kurin.gender === 'FEMALE' ? 'Дівчата' : 'Хлопці'} · {kurin.userCount} учасн., {kurin.hurtokCount} гуртків
       </p>
-      {kurin.zvyazkovyi && !kurin.zvyazkovyi.activated && (
-        <ResendInvite
-          email={kurin.zvyazkovyi.email}
-          lastInviteAt={kurin.zvyazkovyi.lastInviteAt}
-          resend={resendInvite}
-          onResend={() => resendInvite.mutate(kurin.zvyazkovyi!.id)}
-        />
+      {kurin.zvyazkovyi && (
+        <div className="space-y-1.5">
+          {!kurin.zvyazkovyi.activated && (
+            <ResendInvite
+              lastInviteAt={kurin.zvyazkovyi.lastInviteAt}
+              resend={resendInvite}
+              onResend={() => resendInvite.mutate(kurin.zvyazkovyi!.id)}
+            />
+          )}
+          <ResendInviteResult email={kurin.zvyazkovyi.email} resend={resendInvite} />
+        </div>
       )}
       <div className="flex items-center gap-2">
         <Button size="sm" disabled={!dirty || onUpdate.isPending} onClick={handleSave}>

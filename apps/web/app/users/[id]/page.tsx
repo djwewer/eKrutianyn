@@ -21,7 +21,7 @@ import {
   useReopenStage,
 } from '@/lib/queries/proby';
 import type { GuardianContact, GuardianRelation, ProbyCategory, UserDetail, CurrentUserPayload } from '@/lib/types';
-import { ResendInvite } from '@/components/resend-invite';
+import { ResendInvite, ResendInviteResult } from '@/components/resend-invite';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
 import { JunakHistory } from '@/components/junak-history';
 import { ROLE_LABELS } from '@/lib/role-labels';
@@ -498,14 +498,16 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <p className="mt-[.3rem] mb-0 font-mono text-[.8rem] tracking-[.04em] text-ink-2 uppercase">
               {ROLE_LABELS[user.role]}
             </p>
-            {session?.role === 'ZVYAZKOVYI' && user.role !== 'ZVYAZKOVYI' && !user.archivedAt && !user.activated && (
-              <div className="mt-2">
-                <ResendInvite
-                  email={user.email}
-                  lastInviteAt={user.lastInviteAt}
-                  resend={resendInvite}
-                  onResend={() => resendInvite.mutate()}
-                />
+            {session?.role === 'ZVYAZKOVYI' && user.role !== 'ZVYAZKOVYI' && !user.archivedAt && (
+              <div className="mt-2 space-y-1.5">
+                {!user.activated && (
+                  <ResendInvite
+                    lastInviteAt={user.lastInviteAt}
+                    resend={resendInvite}
+                    onResend={() => resendInvite.mutate()}
+                  />
+                )}
+                <ResendInviteResult email={user.email} resend={resendInvite} />
               </div>
             )}
           </div>

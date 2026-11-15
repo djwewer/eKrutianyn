@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { acceptInviteFor } from './helpers/invite';
 import { seedProbyProgram, ADMIN_API_KEY, ADMIN_USERNAME, ADMIN_PASSWORD } from './helpers/seed';
 
 const API_URL = 'http://localhost:3001';
@@ -79,4 +80,12 @@ test('invite link onboards a zvyazkovyi, who invites a user; resend replaces the
   await expect(page.getByText('Посилання недійсне або вже використане')).toBeVisible();
   await page.goto(newLink);
   await expect(page.getByRole('heading', { name: 'Вітаємо, Новий!' })).toBeVisible();
+
+  // A stale page: the user activates in the background, then resend gets a 409 and says so.
+  await page.goto(`/users/${created.id}`);
+  await expect(page.getByText('Ще не активовано')).toBeVisible();
+  await acceptInviteFor(userEmail);
+  await page.getByRole('button', { name: 'Надіслати запрошення ще раз' }).click();
+  await expect(page.getByText('Користувач уже активував акаунт.')).toBeVisible();
+  await expect(page.getByText('Ще не активовано')).toHaveCount(0);
 });
