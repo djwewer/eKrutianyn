@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 test('redirects any authenticated role from / to /news', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -30,15 +31,7 @@ test('redirects a junak from / to /news too', async ({ page }) => {
     password: junakPassword,
   });
 
-  // An admin-created user carries mustChangePassword:true, which would
-  // redirect straight to /settings on first navigation; clear it the same
-  // way a real first login would, so the test reaches / cleanly.
-  const junakToken = await loginForToken(junakEmail, junakPassword);
-  await fetch('http://localhost:3001/users/me/password', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
-    body: JSON.stringify({ currentPassword: junakPassword, newPassword: junakPassword }),
-  });
+  await acceptInviteFor(junakEmail);
 
   await loginAs(page, junakEmail, junakPassword);
   await page.goto('/');

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 test('lets zvyazkovyi add an event and see it in the timeline', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -40,15 +41,7 @@ test('a plain junak can see events but gets no add-event form', async ({ page })
     password: 'password123',
   });
 
-  // An admin-assigned password carries mustChangePassword:true, which would
-  // redirect straight to /settings on first navigation; clear it the same
-  // way a real first login would, so the test reaches the calendar page.
-  const junakToken = await loginForToken(junakEmail, 'password123');
-  await fetch('http://localhost:3001/users/me/password', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
-    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
-  });
+  await acceptInviteFor(junakEmail);
 
   await loginAs(page, junakEmail, 'password123');
   await page.getByRole('link', { name: 'Календар' }).click();

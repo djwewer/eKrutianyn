@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedDegreeProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { confirmPointAs, createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 const API_URL = 'http://localhost:3001';
 
@@ -120,14 +121,7 @@ test('lets the kurin judge edit the book data on a junak profile', async ({ page
     body: JSON.stringify({ userId: judge.id, scope: 'KURIN', positionType: 'SUDDIA' }),
   });
   expect(assigned.ok).toBeTruthy();
-  // An account created with a password by someone else must change it on first login;
-  // clear that the way a real first login would, so the page under test is reachable.
-  const judgeToken = await loginForToken(judgeEmail, 'password123');
-  await fetch(`${API_URL}/users/me/password`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${judgeToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
-  });
+  await acceptInviteFor(judgeEmail);
 
   await loginAs(page, judgeEmail, 'password123');
   await page.goto(`/users/${junak.id}`);

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 test('lists the kurin\'s own zvyazkovyi in Кадра виховників with a Зв\'язковий badge', async ({ page }) => {
   const { program } = await seedProbyProgram();
@@ -33,7 +34,7 @@ test('roster row shows the real uploaded profile photo as an <img>, not just ini
     role: 'VYKHOVNYK',
     password: vykhovnykPassword,
   });
-  const vykhovnykToken = await loginForToken(vykhovnykEmail, vykhovnykPassword);
+  const { accessToken: vykhovnykToken } = await acceptInviteFor(vykhovnykEmail, vykhovnykPassword);
 
   // Smallest possible valid PNG (1x1 red pixel), uploaded via the real
   // PATCH /users/me/photo flow so the server-side magic-byte sniff and

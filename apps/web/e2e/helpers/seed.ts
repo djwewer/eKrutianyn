@@ -1,3 +1,5 @@
+import { acceptInviteFor } from './invite';
+
 const API_URL = 'http://localhost:3001';
 export const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
 export const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? 'admin';
@@ -78,34 +80,13 @@ export async function seedKurinWithZvyazkovyi(
     gender: 'MALE',
     stanytsia: 'Тестова станиця',
     probyProgramId,
-    zvyazkovyi: { firstName: 'Зв\'язковий', lastName: 'Тестовий', email, password },
+    zvyazkovyi: { firstName: 'Зв\'язковий', lastName: 'Тестовий', email },
     ...(options?.driveFolderId ? { driveFolderId: options.driveFolderId } : {}),
     ...(options?.driveRefreshToken ? { driveRefreshToken: options.driveRefreshToken } : {}),
     ...(options?.driveConnectedEmail ? { driveConnectedEmail: options.driveConnectedEmail } : {}),
   });
 
-  // The admin-created zvyazkovyi carries mustChangePassword:true (same as a
-  // real onboarded account), which would make every other e2e spec using
-  // this fixture immediately get redirected to /settings on first navigation.
-  // Clear it here, the same way a real first login would, so downstream
-  // specs see a normal, already-onboarded account.
-  const loginRes = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!loginRes.ok) {
-    throw new Error(`Seed login failed for ${email}: ${loginRes.status} ${await loginRes.text()}`);
-  }
-  const { accessToken } = (await loginRes.json()) as { accessToken: string };
-  const changePasswordRes = await fetch(`${API_URL}/users/me/password`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ currentPassword: password, newPassword: password }),
-  });
-  if (!changePasswordRes.ok) {
-    throw new Error(`Seed password-clear failed for ${email}: ${changePasswordRes.status} ${await changePasswordRes.text()}`);
-  }
+  const { accessToken } = await acceptInviteFor(email, password);
   const zvyazkovyiId = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString('utf-8')).sub as string;
 
   const zvyazkovyi = { id: zvyazkovyiId, email };

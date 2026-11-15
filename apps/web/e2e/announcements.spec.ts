@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 const API_URL = 'http://localhost:3001';
 
@@ -66,15 +67,7 @@ test('a plain junak (no писар position) does not see edit/delete controls o
     password: junakPassword,
   });
 
-  // An admin-assigned password carries mustChangePassword:true, which would
-  // redirect straight to /settings on first navigation; clear it the same
-  // way a real first login would, so the test reaches /news cleanly.
-  const junakToken = await loginForToken(junakEmail, junakPassword);
-  await fetch(`${API_URL}/users/me/password`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
-    body: JSON.stringify({ currentPassword: junakPassword, newPassword: junakPassword }),
-  });
+  await acceptInviteFor(junakEmail);
 
   await loginAs(page, junakEmail, junakPassword);
   await page.goto('/news');

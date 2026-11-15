@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 const API_URL = 'http://localhost:3001';
 
@@ -50,7 +51,7 @@ test('shows a readable list of what a bulk import request will change instead of
     password: 'password123',
   });
 
-  const kurinniyToken = await loginForToken(kurinniyEmail, 'password123');
+  const { accessToken: kurinniyToken } = await acceptInviteFor(kurinniyEmail);
   const created = await request.post(`${API_URL}/approval-requests`, {
     headers: { Authorization: `Bearer ${kurinniyToken}`, 'Content-Type': 'application/json' },
     data: {

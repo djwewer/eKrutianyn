@@ -1,3 +1,5 @@
+import { acceptInviteFor } from './invite';
+
 const API_URL = 'http://localhost:3001';
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? 'dev-admin-key';
 
@@ -10,11 +12,14 @@ export async function createHurtok(zvyazkovyiToken: string, name: string) {
   return res.json();
 }
 
+// Users are invite-only: a legacy `password` in dto is ignored. The user stays unactivated
+// until acceptInviteFor(email) is called (needed only when a spec logs in as them).
 export async function createUserAs(zvyazkovyiToken: string, dto: Record<string, unknown>) {
+  const { password: _ignored, ...rest } = dto;
   const res = await fetch(`${API_URL}/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zvyazkovyiToken}` },
-    body: JSON.stringify(dto),
+    body: JSON.stringify(rest),
   });
   if (!res.ok) {
     throw new Error(`createUserAs failed: ${res.status} ${await res.text()}`);
@@ -55,19 +60,10 @@ export async function assignVykhovnyk(zvyazkovyiToken: string, vykhovnykId: stri
   return res.json();
 }
 
-// A user created with an explicit password carries mustChangePassword:true,
-// which redirects every navigation to /settings. Clear it like a first login.
+// Creates the user and activates them through the invite link, so they can log in with password123.
 export async function createOnboardedUserAs(zvyazkovyiToken: string, dto: Record<string, unknown>) {
   const password = 'password123';
-  const user = await createUserAs(zvyazkovyiToken, { ...dto, password });
-  const token = await loginForToken(dto.email as string, password);
-  const res = await fetch(`${API_URL}/users/me/password`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ currentPassword: password, newPassword: password }),
-  });
-  if (!res.ok) {
-    throw new Error(`createOnboardedUserAs failed: ${res.status} ${await res.text()}`);
-  }
+  const user = await createUserAs(zvyazkovyiToken, dto);
+  await acceptInviteFor(dto.email as string, password);
   return { user, email: dto.email as string, password };
 }

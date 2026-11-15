@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { seedProbyProgram, seedKurinWithZvyazkovyi } from './helpers/seed';
 import { loginAs } from './helpers/auth';
 import { createHurtok, createUserAs, loginForToken, confirmPointAs } from './helpers/proby-seed';
+import { acceptInviteFor } from './helpers/invite';
 
 test('shows a junak their own confirmed and unconfirmed points', async ({ page }) => {
   const { program, points } = await seedProbyProgram(['Точка А', 'Точка Б']);
@@ -24,7 +25,7 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
     hurtokId: hurtok.id,
     password: 'password123',
   });
-  const vykhovnykToken = await loginForToken(vykhovnyk.email, 'password123');
+  await acceptInviteFor(vykhovnyk.email);
   // vykhovnyk needs an assignment to confirm; assign directly via API for setup speed
   await fetch('http://localhost:3001/vykhovnyk-assignments', {
     method: 'POST',
@@ -34,15 +35,7 @@ test('shows a junak their own confirmed and unconfirmed points', async ({ page }
   const freshVykhovnykToken = await loginForToken(vykhovnyk.email, 'password123');
   await confirmPointAs(freshVykhovnykToken, junak.id, points[0].id);
 
-  // An admin-assigned password carries mustChangePassword:true, which would
-  // redirect straight to /settings on first navigation; clear it the same
-  // way a real first login would, so the test reaches the proby page.
-  const junakToken = await loginForToken(junak.email, 'password123');
-  await fetch('http://localhost:3001/users/me/password', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
-    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
-  });
+  await acceptInviteFor(junak.email);
 
   await loginAs(page, junak.email, 'password123');
   await page.goto('/proby');
@@ -73,12 +66,7 @@ test('marks a closed stage with a checkmark on its accordion header, not an open
     password: 'password123',
   });
 
-  const junakToken = await loginForToken(junak.email, 'password123');
-  await fetch('http://localhost:3001/users/me/password', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
-    body: JSON.stringify({ currentPassword: 'password123', newPassword: 'password123' }),
-  });
+  await acceptInviteFor(junak.email);
 
   await loginAs(page, junak.email, 'password123');
   await page.goto('/proby');
