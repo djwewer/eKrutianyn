@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
+import { InviteModule } from './invite.module';
 
 @Module({
   imports: [
@@ -15,9 +16,10 @@ import { MailModule } from '../mail/mail.module';
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN ?? '1d' },
     }),
     MailModule,
+    InviteModule,
   ],
   providers: [AuthService, GoogleTokenVerifierService, JwtStrategy],
   controllers: [AuthController],
-  exports: [AuthService, JwtModule, PassportModule],
+  exports: [AuthService, JwtModule, PassportModule, InviteModule],
 })
 export class AuthModule {}
