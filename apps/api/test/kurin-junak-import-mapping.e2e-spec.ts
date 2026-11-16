@@ -54,7 +54,7 @@ describe('Kurin Junak Import mapping (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toEqual({});
+    expect(response.body).toEqual({ driveConnected: false });
   });
 
   it('forbids a plain junak from accessing import status', async () => {
@@ -97,6 +97,22 @@ describe('Kurin Junak Import mapping (e2e)', () => {
 
     expect(status.body.connectedSpreadsheetId).toBe('sheet-1');
     expect(status.body.connectedSpreadsheetName).toBe('Книга судді');
+    expect(status.body.driveConnected).toBe(false);
+  });
+
+  it('reports driveConnected without exposing the refresh token', async () => {
+    const { kurin } = await setup();
+    await prisma.kurin.update({ where: { id: kurin.id }, data: { driveRefreshToken: 'secret-rt' } });
+    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, suddia);
+
+    const status = await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/junak-import/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(status.body.driveConnected).toBe(true);
+    expect(JSON.stringify(status.body)).not.toContain('secret-rt');
   });
 
   it('returns 403 for sheet-data when no spreadsheet is connected', async () => {

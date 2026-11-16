@@ -135,7 +135,7 @@ async function seedUser(zvyazkovyiToken: string, hurtokId: string, suddia: boole
 
 test('suddya sees the connect control, a plain vykhovnyk does not', async ({ page }) => {
   const { program } = await seedProbyProgram();
-  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id, { driveRefreshToken: 'fake-refresh-token' });
   const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(token, 'Орлики');
   const suddiaEmail = await seedUser(token, hurtok.id, true);
@@ -149,7 +149,21 @@ test('suddya sees the connect control, a plain vykhovnyk does not', async ({ pag
   await page.context().clearCookies();
   await loginAs(page, suddiaEmail, 'password123');
   await page.goto('/suddivstvo');
+  // Drive is connected for this kurin, so the suddya gets the connect button.
   await expect(page.getByRole('button', { name: 'Підключити Книгу судді' })).toBeVisible();
+});
+
+test('suddya in a kurin without Google Drive sees the hint instead of a connect button', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+  const hurtok = await createHurtok(token, 'Орлики');
+  const suddiaEmail = await seedUser(token, hurtok.id, true);
+
+  await loginAs(page, suddiaEmail, 'password123');
+  await page.goto('/suddivstvo');
+  await expect(page.getByText('Спершу звʼязковий має підключити Google Drive куреня.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Підключити Книгу судді' })).toHaveCount(0);
 });
 
 test('suddya disconnects the connected Книга судді after confirming', async ({ page }) => {
@@ -158,11 +172,12 @@ test('suddya disconnects the connected Книга судді after confirming', 
   const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(token, 'Орлики');
   const suddiaEmail = await seedUser(token, hurtok.id, true);
-  await fetch(`${API_URL}/kurins/${kurin.id}/junak-import/spreadsheet`, {
+  const connected = await fetch(`${API_URL}/kurins/${kurin.id}/junak-import/spreadsheet`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ spreadsheetId: 'fake-sheet-id', spreadsheetName: 'Книга судді 2026' }),
   });
+  expect(connected.ok).toBeTruthy();
 
   await loginAs(page, suddiaEmail, 'password123');
   await page.goto('/suddivstvo');

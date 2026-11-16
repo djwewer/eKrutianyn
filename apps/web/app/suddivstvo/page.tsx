@@ -35,28 +35,22 @@ export default function SuddivstvoPage() {
   const kurinId = kurin?.id;
   const canManageJudgeBook = session?.role === 'ZVYAZKOVYI' || !!session?.positions?.includes('SUDDIA');
   const junakImportStatus = useJunakImportStatus(kurinId);
+  const needsDriveFirst = session?.role !== 'ZVYAZKOVYI' && junakImportStatus.data?.driveConnected === false;
   const setJunakImportSpreadsheet = useSetJunakImportSpreadsheet(kurinId ?? '');
   const disconnect = useDisconnectJunakImportSpreadsheet(kurinId ?? '');
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
-  const [driveMissing, setDriveMissing] = useState(false);
   const syncNow = useSyncJudgeBookNow(kurinId ?? '');
   const [bookConnectError, setBookConnectError] = useState<string | null>(null);
 
   async function handleConnectJudgeBook() {
     if (!kurinId) return;
     setBookConnectError(null);
-    setDriveMissing(false);
     try {
       const accessToken = await fetchGoogleDrivePickerToken(kurinId);
       await openGoogleSheetPicker(accessToken, (spreadsheetId, spreadsheetName) => {
         setJunakImportSpreadsheet.mutate({ spreadsheetId, spreadsheetName });
       });
-    } catch (error) {
-      // The picker token fails with 503 until the zvyazkovyi connects Google Drive for the kurin.
-      if (error instanceof ApiError && error.status === 503 && session?.role !== 'ZVYAZKOVYI') {
-        setDriveMissing(true);
-        return;
-      }
+    } catch {
       setBookConnectError('Не вдалося підключити таблицю. Спробуйте ще раз.');
     }
   }
@@ -92,7 +86,13 @@ export default function SuddivstvoPage() {
                   <Button variant="outline" onClick={handleConnectJudgeBook}>
                     Змінити таблицю
                   </Button>
-                  <Button variant="outline" onClick={() => setConfirmDisconnect(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      disconnect.reset();
+                      setConfirmDisconnect(true);
+                    }}
+                  >
                     Відʼєднати таблицю
                   </Button>
                   <Button variant="signal" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
@@ -132,15 +132,15 @@ export default function SuddivstvoPage() {
           ) : (
             <>
               <p className="text-ink-2">Книга судді не підключена.</p>
-              {canManageJudgeBook && (
-                <Button disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
-                  Підключити Книгу судді
-                </Button>
-              )}
+              {canManageJudgeBook &&
+                (needsDriveFirst ? (
+                  <p className="text-ink-2">Спершу звʼязковий має підключити Google Drive куреня.</p>
+                ) : (
+                  <Button disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
+                    Підключити Книгу судді
+                  </Button>
+                ))}
             </>
-          )}
-          {driveMissing && (
-            <p className="text-sm text-ink-2">Спершу звʼязковий має підключити Google Drive куреня.</p>
           )}
           {bookConnectError && <p className="text-sm text-late">{bookConnectError}</p>}
         </CardContent>

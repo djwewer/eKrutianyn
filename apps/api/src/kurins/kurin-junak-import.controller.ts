@@ -41,10 +41,11 @@ export class KurinJunakImportController {
     this.assertCanAccessWizard(user);
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
-      select: { judgeBookSpreadsheetId: true, judgeBookSpreadsheetName: true },
+      select: { judgeBookSpreadsheetId: true, judgeBookSpreadsheetName: true, driveRefreshToken: true },
     });
     const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
     return {
+      driveConnected: kurin?.driveRefreshToken != null,
       connectedSpreadsheetId: kurin?.judgeBookSpreadsheetId ?? undefined,
       connectedSpreadsheetName: kurin?.judgeBookSpreadsheetName ?? undefined,
       mapping: mapping

@@ -376,6 +376,7 @@ export interface GoogleDriveStatus {
 }
 
 export interface JunakImportStatus {
+  driveConnected: boolean;
   connectedSpreadsheetId?: string;
   connectedSpreadsheetName?: string;
   mapping?: {
