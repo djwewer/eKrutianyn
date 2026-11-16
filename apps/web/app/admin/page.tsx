@@ -15,9 +15,16 @@ import {
   useUpdateKurin,
   useDeleteKurin,
   useResendZvyazkovyiInvite,
+  useSetKurinActive,
+  useKurinDeletePreview,
+  useForceDeleteKurin,
 } from '@/lib/queries/admin-kurins';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { formatEventDate } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { ResendInvite, ResendInviteResult } from '@/components/resend-invite';
 import { PageHeader } from '@/components/ui/page-header';
@@ -371,6 +378,9 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
   const onUpdate = useUpdateKurin(credentials);
   const onDelete = useDeleteKurin(credentials);
   const resendInvite = useResendZvyazkovyiInvite(credentials);
+  const setActive = useSetKurinActive(credentials);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [confirmForceDelete, setConfirmForceDelete] = useState(false);
   const [name, setName] = useState(kurin.name);
   const [kurinNumber, setKurinNumber] = useState(kurin.kurinNumber ?? '');
   const dirty = name !== kurin.name || kurinNumber !== (kurin.kurinNumber ?? '');
@@ -396,6 +406,7 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
         />
         <Input value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1" />
       </div>
+      {kurin.deactivatedAt && <Badge variant="mute">Деактивовано з {formatEventDate(kurin.deactivatedAt)}</Badge>}
       <p className="text-xs text-muted-foreground">
         {kurin.stanytsia} · {kurin.gender === 'FEMALE' ? 'Дівчата' : 'Хлопці'} · {kurin.userCount} учасн., {kurin.hurtokCount} гуртків
       </p>
@@ -424,12 +435,100 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
         >
           Видалити
         </Button>
+        {kurin.deactivatedAt ? (
+          <Button size="sm" variant="outline" disabled={setActive.isPending} onClick={() => setActive.mutate({ id: kurin.id, active: true })}>
+            Активувати
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled={setActive.isPending} onClick={() => setConfirmDeactivate(true)}>
+            Деактивувати
+          </Button>
+        )}
+        {kurin.deactivatedAt && (
+          <Button size="sm" variant="destructive" onClick={() => setConfirmForceDelete(true)}>
+            Видалити назавжди
+          </Button>
+        )}
         {!dirty && onUpdate.isSuccess && <span className="text-xs text-muted-foreground">Збережено</span>}
         {onUpdate.isError && (
           <span className="text-xs text-destructive">{kurinConflictMessage(onUpdate.error) ?? 'Не вдалося зберегти'}</span>
         )}
       </div>
+      {setActive.isError && <p className="text-xs text-destructive">Не вдалося змінити стан куреня</p>}
+      {confirmDeactivate && (
+        <Dialog open onOpenChange={(open) => !open && setConfirmDeactivate(false)}>
+          <DialogContent>
+            <DialogTitle>Деактивувати курінь?</DialogTitle>
+            <p className="text-sm">Користувачі куреня, крім звʼязкового, не зможуть увійти, доки ви не активуєте курінь.</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmDeactivate(false)}>
+                Скасувати
+              </Button>
+              <Button
+                disabled={setActive.isPending}
+                onClick={() => setActive.mutate({ id: kurin.id, active: false }, { onSettled: () => setConfirmDeactivate(false) })}
+              >
+                Деактивувати
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {confirmForceDelete && (
+        <ForceDeleteDialog kurin={kurin} credentials={credentials} onClose={() => setConfirmForceDelete(false)} />
+      )}
     </div>
+  );
+}
+
+function ForceDeleteDialog({
+  kurin,
+  credentials,
+  onClose,
+}: {
+  kurin: AdminKurin;
+  credentials: AdminCredentials;
+  onClose: () => void;
+}) {
+  const { data: preview, isError } = useKurinDeletePreview(credentials, kurin.id, true);
+  const forceDelete = useForceDeleteKurin(credentials);
+  const [confirmName, setConfirmName] = useState('');
+  const matches = confirmName.trim() === kurin.name.trim();
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogTitle>Видалити курінь назавжди</DialogTitle>
+        {preview && (
+          <p className="text-sm" data-testid="delete-preview">
+            Людей: {preview.users}, гуртків: {preview.hurtky}, оголошень: {preview.announcements}, подій:{' '}
+            {preview.calendarEvents}, реманенту: {preview.inventoryItems}, записів скарбництва:{' '}
+            {preview.treasuryTransactions}
+          </p>
+        )}
+        {isError && <p className="text-sm text-destructive">Не вдалося завантажити перелік даних</p>}
+        <p className="text-sm text-destructive">Цю дію не можна скасувати. Файли на Google Drive залишаться.</p>
+        <div className="space-y-2">
+          <Label htmlFor={`force-delete-${kurin.id}`}>Введіть назву куреня, щоб підтвердити</Label>
+          <Input id={`force-delete-${kurin.id}`} value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
+        </div>
+        {forceDelete.isError && (
+          <p className="text-sm text-destructive">{kurinConflictMessage(forceDelete.error) ?? 'Не вдалося видалити курінь'}</p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Скасувати
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!matches || forceDelete.isPending}
+            onClick={() => forceDelete.mutate({ id: kurin.id, confirmName }, { onSuccess: onClose })}
+          >
+            Видалити назавжди
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

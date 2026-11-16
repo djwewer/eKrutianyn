@@ -61,3 +61,30 @@ test('refuses to delete a kurin that still has members', async ({ page }) => {
   const row = page.getByTestId(`kurin-row-${kurin.id}`);
   await expect(row.getByRole('button', { name: 'Видалити' })).toBeDisabled();
 });
+
+test('force-deletes a deactivated kurin only after its name is typed', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { kurin, zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await logIntoAdmin(page);
+
+  const row = page.getByTestId(`kurin-row-${kurin.id}`);
+  await expect(row.getByRole('button', { name: 'Видалити назавжди' })).toHaveCount(0);
+
+  await row.getByRole('button', { name: 'Деактивувати', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Деактивувати', exact: true }).click();
+  await expect(row.getByText(/Деактивовано з/)).toBeVisible();
+
+  await row.getByRole('button', { name: 'Видалити назавжди' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByTestId('delete-preview')).toContainText('Людей: 1');
+  const confirm = dialog.getByRole('button', { name: 'Видалити назавжди' });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel('Введіть назву куреня, щоб підтвердити').fill('не та назва');
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel('Введіть назву куреня, щоб підтвердити').fill(kurin.name);
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+
+  await expect(page.getByTestId(`kurin-row-${kurin.id}`)).toHaveCount(0);
+});

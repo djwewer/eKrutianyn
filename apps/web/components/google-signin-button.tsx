@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { KURIN_DEACTIVATED_MESSAGE, isKurinDeactivated } from '@/lib/api-client';
 
 declare global {
   interface Window {
@@ -24,6 +25,7 @@ export function GoogleSignInButton() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const buttonRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
@@ -39,7 +41,10 @@ export function GoogleSignInButton() {
         queryClient.clear();
         router.push('/');
         router.refresh();
+        return;
       }
+      const body = res.status === 403 ? await res.json().catch(() => null) : null;
+      if (isKurinDeactivated(body)) setError(KURIN_DEACTIVATED_MESSAGE);
     }
 
     const script = document.createElement('script');
@@ -59,5 +64,10 @@ export function GoogleSignInButton() {
 
   if (!clientId) return null;
 
-  return <div ref={buttonRef} />;
+  return (
+    <div className="space-y-2">
+      <div ref={buttonRef} />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
 }

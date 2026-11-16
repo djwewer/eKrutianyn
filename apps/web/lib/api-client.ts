@@ -9,6 +9,19 @@ export class ApiError extends Error {
   }
 }
 
+export const KURIN_DEACTIVATED_MESSAGE = 'Курінь тимчасово деактивовано. Зверніться до звʼязкового.';
+
+export function isKurinDeactivated(body: unknown): boolean {
+  return typeof body === 'object' && body !== null && (body as { code?: unknown }).code === 'KURIN_DEACTIVATED';
+}
+
+// A deactivated kurin blocks every authed request: drop the session and show the login notice.
+async function handleKurinDeactivated(status: number, body: unknown) {
+  if (status !== 403 || !isKurinDeactivated(body) || typeof window === 'undefined') return;
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.assign('/login?reason=kurin-deactivated');
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`/api/backend${path}`, {
     ...options,
@@ -22,6 +35,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     } catch {
       // no JSON body
     }
+    await handleKurinDeactivated(res.status, body);
     throw new ApiError(res.status, body);
   }
 
@@ -41,6 +55,7 @@ export async function apiUpload<T>(path: string, formData: FormData, method: str
     } catch {
       // no JSON body
     }
+    await handleKurinDeactivated(res.status, body);
     throw new ApiError(res.status, body);
   }
 

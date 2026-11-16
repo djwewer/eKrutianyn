@@ -1,21 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/auth-layout';
+import { KURIN_DEACTIVATED_MESSAGE, isKurinDeactivated } from '@/lib/api-client';
 import { GoogleSignInButton } from '@/components/google-signin-button';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    useSearchParams().get('reason') === 'kurin-deactivated' ? KURIN_DEACTIVATED_MESSAGE : null,
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +32,8 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (!res.ok) {
-      setError('Невірний email або пароль');
+      const body = res.status === 403 ? await res.json().catch(() => null) : null;
+      setError(isKurinDeactivated(body) ? KURIN_DEACTIVATED_MESSAGE : 'Невірний email або пароль');
       return;
     }
     queryClient.clear();
@@ -79,5 +83,13 @@ export default function LoginPage() {
         </Link>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

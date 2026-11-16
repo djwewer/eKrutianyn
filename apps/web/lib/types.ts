@@ -247,6 +247,7 @@ export interface AdminKurin {
   stanytsia: string;
   probyProgramId: string;
   createdAt: string;
+  deactivatedAt: string | null;
   userCount: number;
   hurtokCount: number;
   zvyazkovyi: {
@@ -257,6 +258,15 @@ export interface AdminKurin {
     activated: boolean;
     lastInviteAt: string | null;
   } | null;
+}
+
+export interface KurinDeletePreview {
+  users: number;
+  hurtky: number;
+  announcements: number;
+  calendarEvents: number;
+  inventoryItems: number;
+  treasuryTransactions: number;
 }
 
 export interface AdminReferenceSource {
@@ -352,6 +362,7 @@ export interface Kurin {
   kurinNumber: string | null;
   gender: 'MALE' | 'FEMALE';
   stanytsia: string;
+  deactivatedAt: string | null;
   probyProgram: {
     version: 'OLD' | 'NEW';
   };

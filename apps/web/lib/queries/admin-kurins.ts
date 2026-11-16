@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { adminHeaders, type AdminCredentials } from '@/lib/queries/admin-credentials';
-import type { AdminKurin, InviteResult } from '@/lib/types';
+import type { AdminKurin, InviteResult, KurinDeletePreview } from '@/lib/types';
 
 const QUERY_KEY = ['admin', 'kurins'];
 
@@ -66,6 +66,41 @@ export function useDeleteKurin(credentials: AdminCredentials | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiFetch<void>(`/admin/kurins/${id}`, { method: 'DELETE', headers: adminHeaders(credentials!) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
+export function useSetKurinActive(credentials: AdminCredentials | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      apiFetch<{ id: string; deactivatedAt: string | null }>(`/admin/kurins/${id}/${active ? 'activate' : 'deactivate'}`, {
+        method: 'POST',
+        headers: adminHeaders(credentials!),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
+export function useKurinDeletePreview(credentials: AdminCredentials | null, id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, id, 'delete-preview'],
+    queryFn: () => apiFetch<KurinDeletePreview>(`/admin/kurins/${id}/delete-preview`, { headers: adminHeaders(credentials!) }),
+    enabled: enabled && !!credentials,
+    retry: false,
+    gcTime: 0,
+  });
+}
+
+export function useForceDeleteKurin(credentials: AdminCredentials | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, confirmName }: { id: string; confirmName: string }) =>
+      apiFetch<void>(`/admin/kurins/${id}/force`, {
+        method: 'DELETE',
+        headers: adminHeaders(credentials!),
+        body: JSON.stringify({ confirmName }),
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 }

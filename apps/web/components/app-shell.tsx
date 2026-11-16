@@ -38,6 +38,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div>
       {session && nav && !isAuthRoute && <BandHeader nav={nav} profile={profile} kurin={kurin} pathname={pathname} />}
+      {session && !isAuthRoute && isZvyazkovyi && kurin?.deactivatedAt && (
+        <div
+          role="status"
+          className="bg-signal-soft px-4 py-3 text-center text-sm font-semibold text-signal-ink"
+        >
+          Курінь деактивовано. Зверніться до адміністратора, щоб відновити доступ.
+        </div>
+      )}
       <main
         className={
           isAuthRoute

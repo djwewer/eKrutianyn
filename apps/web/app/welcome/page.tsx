@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthLayout } from '@/components/auth-layout';
+import { KURIN_DEACTIVATED_MESSAGE, isKurinDeactivated } from '@/lib/api-client';
 
 type InviteInfo = { firstName: string; kurinLabel: string };
 
@@ -67,7 +68,9 @@ function WelcomeContent() {
     if (!res.ok) {
       setSubmitting(false);
       // The API answers 404 for an unknown/used/expired token and 401 for an archived account.
-      if (res.status === 404 || res.status === 401) {
+      if (res.status === 403 && isKurinDeactivated(await res.json().catch(() => null))) {
+        setError(KURIN_DEACTIVATED_MESSAGE);
+      } else if (res.status === 404 || res.status === 401) {
         setStatus('invalid');
       } else if (res.status === 400) {
         setError('Пароль має містити щонайменше 8 символів.');
