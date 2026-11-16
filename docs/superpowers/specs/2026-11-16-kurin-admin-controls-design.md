@@ -6,7 +6,7 @@ _Date: 2026-11-16. Status: design approved by Andrii._
 
 1. The admin can **temporarily deactivate** a kurin (later: unpaid subscription) and activate it again.
 2. The admin can **force-delete** a kurin with all its people and data (e.g. a test kurin).
-3. The **суддя** (and the звʼязковий) can **connect and disconnect** the kurin's Книга судді Google Sheet. While disconnected, nothing syncs between the sheet and the DB.
+3. The **суддя** (and the звʼязковий) can **disconnect** the kurin's Книга судді Google Sheet. Connecting stays звʼязковий-only (see Security). While disconnected, nothing syncs between the sheet and the DB.
 4. The Google sign-in button on the login page is full form width and centered.
 
 ## 1. Deactivation
@@ -58,16 +58,16 @@ _Date: 2026-11-16. Status: design approved by Andrii._
 - It opens a dialog. The dialog lists what will be deleted from the preview counts and has an input «Введіть назву куреня, щоб підтвердити». The delete button is enabled only when the input equals the name.
 - On success the kurin list refetches.
 
-## 3. Книга судді: суддя connects and disconnects
+## 3. Книга судді: суддя disconnects
 
 ### Who
-- `canManageJudgeBook = role === ZVYAZKOVYI || positions.includes(SUDDIA)`.
+- Connect: звʼязковий only, as before.
+- Disconnect: `canDisconnectJudgeBook = role === ZVYAZKOVYI || positions.includes(SUDDIA)`.
 - Kurinniy keeps wizard access as today but doesn't get connect or disconnect.
 
 ### API
-- `PATCH /kurins/:kurinId/junak-import/spreadsheet` is now allowed for `canManageJudgeBook`. Today it is звʼязковий-only.
-- `GET /kurins/:kurinId/google-drive/picker-token` is now allowed for `canManageJudgeBook` too, since the суддя needs the picker to choose the file. Connecting the Google Drive account itself stays звʼязковий-only.
-- **New `DELETE /kurins/:kurinId/junak-import/spreadsheet`**, for `canManageJudgeBook` in their own kurin. In one transaction it:
+- `PATCH /kurins/:kurinId/junak-import/spreadsheet` and `GET /kurins/:kurinId/google-drive/picker-token` stay звʼязковий-only.
+- **New `DELETE /kurins/:kurinId/junak-import/spreadsheet`**, for `canDisconnectJudgeBook` in their own kurin. In one transaction it:
   - sets `judgeBookSpreadsheetId` and `judgeBookSpreadsheetName` to null;
   - deletes the kurin's `JunakImportMapping`;
   - sets `judgeBookRowNumber = null` for the kurin's users. This matches what happens today when a different file is connected.
@@ -76,9 +76,12 @@ _Date: 2026-11-16. Status: design approved by Andrii._
 - Once disconnected, the nightly sync no longer selects the kurin (its query already requires a spreadsheet id and a mapping). Import endpoints that need a sheet already handle «not connected».
 
 ### Web (`/suddivstvo`)
-- The connect button and the new «Відʼєднати таблицю» button show for `canManageJudgeBook`. That is the звʼязковий or a session with `SUDDIA` in `positions`.
+- The connect/change button shows only for the звʼязковий. The new «Відʼєднати таблицю» button shows for `canDisconnectJudgeBook`: the звʼязковий or a session with `SUDDIA` in `positions`.
 - Disconnect opens a confirm dialog: «Синхронізація з таблицею зупиниться. Якщо підключите таблицю знову, відповідність колонок доведеться налаштувати заново.»
-- If Google Drive is not connected, the суддя sees the existing state and a hint that the звʼязковий must connect Google Drive first.
+- When no sheet is connected, the суддя sees «Не підключено» and the hint «Підключити Книгу судді може звʼязковий куреня.»
+
+### Security
+- Opening the Google Picker requires handing the browser a short-lived access token to the звʼязковий's Drive (`drive.file` scope). A суддя is often a junak, so Andrii decided (2026-11-16) that only the звʼязковий connects the sheet and the суддя gets no Drive token; disconnecting needs no token.
 
 ## 4. Google sign-in button
 
@@ -93,7 +96,7 @@ _Date: 2026-11-16. Status: design approved by Andrii._
 - **`issueSessionFor`:** throws 403 `KURIN_DEACTIVATED` for a non-звʼязковий of a deactivated kurin and succeeds for the звʼязковий.
 - **`JwtStrategy`:** same rule.
 - **Force delete:** 409 when not deactivated, 400 on name mismatch, and success. The success test (e2e against the real DB) uses a kurin with users, hurtky, announcements, etc., and checks that another kurin is untouched.
-- **Judge book:** суддя can connect and disconnect, a plain виховник gets 403, and disconnect clears id, name, mapping and row numbers.
+- **Judge book:** суддя can disconnect but gets 403 on connect and picker-token; a plain user gets 403; disconnect clears id, name, mapping and row numbers.
 - **Sync:** skips deactivated kurins.
 
 ### E2E (Playwright)
@@ -104,7 +107,7 @@ _Date: 2026-11-16. Status: design approved by Andrii._
   4. The звʼязковий logs in and sees the banner.
   5. The admin activates the kurin, and the junak can log in again.
 - **Force delete:** the button is hidden on an active kurin. Deactivate, then type the name, then delete. The kurin is gone from the list.
-- **Суддя:** the connect and disconnect buttons are visible to a суддя and not to a plain виховник. The API calls themselves are covered by the unit tests, since the Google picker can't run in e2e.
+- **Суддя:** sees the disconnect button but not the connect button; a plain user sees neither.
 
 ### Visual
 - Screenshot the login page (light and dark, mobile and desktop) to check the Google button.
