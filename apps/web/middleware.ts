@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/welcome', '/confirm-email-change', '/privacy', '/terms'];
+// /admin has its own two factors (admin key + login/password, checked by the
+// API on every /admin/* call), so it must not require an єПластун session.
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/welcome', '/confirm-email-change', '/privacy', '/terms', '/admin'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
