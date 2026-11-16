@@ -225,6 +225,7 @@ export class JudgeBookSyncService {
         driveRefreshToken: { not: null },
         judgeBookSpreadsheetId: { not: null },
         junakImportMapping: { isNot: null },
+        deactivatedAt: null,
       },
       select: { id: true },
     });

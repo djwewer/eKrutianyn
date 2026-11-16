@@ -11,7 +11,7 @@ export const AUDIT_GROUP_LABELS: Record<AuditGroup, string> = {
 export function auditGroupOf(action: string): AuditGroup {
   if (/^(PROBY_|DEGREE_DATE_)/.test(action)) return 'PROBY';
   if (/^(TREASURY_|INVENTORY_)/.test(action)) return 'MONEY';
-  if (/^(KURIN_PROBY_PROGRAM_|DRIVE_|JUDGE_BOOK_|APD_|ANNOUNCEMENT_)/.test(action)) return 'SETTINGS';
+  if (/^(KURIN_PROBY_PROGRAM_|KURIN_DEACTIVATED|KURIN_ACTIVATED|DRIVE_|JUDGE_BOOK_|APD_|ANNOUNCEMENT_)/.test(action)) return 'SETTINGS';
   return 'PEOPLE';
 }
 
@@ -180,6 +180,12 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Записав дані в Книгу судді вручну (оновлено комірок: ${s(d, 'updated')}, пропущено: ${s(d, 'skipped')})`;
     case 'JUDGE_BOOK_SYNCED_NIGHTLY':
       return `Нічна синхронізація з Книгою судді (оновлено комірок: ${s(d, 'updated')}, пропущено: ${s(d, 'skipped')})`;
+    case 'JUDGE_BOOK_DISCONNECTED':
+      return 'Книгу судді відʼєднано';
+    case 'KURIN_DEACTIVATED':
+      return 'Курінь деактивовано';
+    case 'KURIN_ACTIVATED':
+      return 'Курінь активовано';
     case 'APD_CREATED':
       return `Створив АПД «${s(d, 'title')}» (псевдо: ${s(d, 'pseudoCount')})`;
     case 'ANNOUNCEMENT_PUBLISHED':

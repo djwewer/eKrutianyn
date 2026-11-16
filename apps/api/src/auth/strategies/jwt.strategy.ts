@@ -3,7 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PositionScope, PositionType } from '@prisma/client';
+import { kurinDeactivatedException } from '../../common/kurin-deactivated';
+import { PositionScope, PositionType, Role } from '@prisma/client';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -26,6 +27,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       where: { id: payload.sub },
       select: {
         archivedAt: true,
+        role: true,
+        kurin: { select: { deactivatedAt: true } },
         positionsHeld: {
           where: { removedAt: null },
           select: { positionType: true, scope: true, kurinId: true },
@@ -34,6 +37,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!user || user.archivedAt) {
       throw new UnauthorizedException('Account not found or archived');
+    }
+    // DB role, not payload.role: a stale token must not bypass the check.
+    if (user.kurin.deactivatedAt && user.role !== Role.ZVYAZKOVYI) {
+      throw kurinDeactivatedException();
     }
     const isKurinniy = user.positionsHeld.some((p) => p.positionType === PositionType.KURINNYI);
     const positions = user.positionsHeld

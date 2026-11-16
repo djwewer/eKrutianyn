@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { kurinDeactivatedException } from '../common/kurin-deactivated';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PositionType, Role, TokenPurpose } from '@prisma/client';
@@ -71,6 +72,9 @@ export class AuthService {
     const isKurinniy = await isKurinniyForUser(this.prisma, user.id);
     const positions = await getActiveKurinPositions(this.prisma, user.id, user.kurinId);
     const kurin = await this.prisma.kurin.findUnique({ where: { id: user.kurinId } });
+    if (kurin!.deactivatedAt && user.role !== Role.ZVYAZKOVYI) {
+      throw kurinDeactivatedException();
+    }
     return this.signToken(user.id, user.role, user.kurinId, isKurinniy, positions, kurin!.kurinNumber);
   }
 

@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtStrategy } from './jwt.strategy';
 
 describe('JwtStrategy', () => {
@@ -8,7 +8,7 @@ describe('JwtStrategy', () => {
   beforeEach(() => {
     process.env.JWT_SECRET = 'test-secret';
     prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue({ archivedAt: null, positionsHeld: [] }) },
+      user: { findUnique: jest.fn().mockResolvedValue({ archivedAt: null, role: 'ZVYAZKOVYI', kurin: { deactivatedAt: null }, positionsHeld: [] }) },
     };
     strategy = new JwtStrategy(prisma);
   });
@@ -49,6 +49,33 @@ describe('JwtStrategy', () => {
     ).rejects.toThrow(UnauthorizedException);
   });
 
+  it('rejects a non-zvyazkovyi of a deactivated kurin with code KURIN_DEACTIVATED, using the DB role', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      archivedAt: null,
+      role: 'JUNAK',
+      kurin: { deactivatedAt: new Date() },
+      positionsHeld: [],
+    });
+    // Stale token claims ZVYAZKOVYI; the DB says JUNAK.
+    const err: any = await strategy
+      .validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any)
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(err.getResponse()).toMatchObject({ code: 'KURIN_DEACTIVATED' });
+  });
+
+  it('lets the zvyazkovyi of a deactivated kurin through', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      archivedAt: null,
+      role: 'ZVYAZKOVYI',
+      kurin: { deactivatedAt: new Date() },
+      positionsHeld: [],
+    });
+    await expect(
+      strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any),
+    ).resolves.toMatchObject({ userId: 'user-1' });
+  });
+
   it('never loads photoData — this runs on every authenticated request', async () => {
     await strategy.validate({ sub: 'user-1', role: 'ZVYAZKOVYI', kurinId: 'kurin-1' } as any);
 
@@ -65,6 +92,8 @@ describe('JwtStrategy', () => {
   it('derives isKurinniy from any active KURINNYI position and positions from KURIN scope in the token kurin', async () => {
     prisma.user.findUnique.mockResolvedValue({
       archivedAt: null,
+      role: 'VYKHOVNYK',
+      kurin: { deactivatedAt: null },
       positionsHeld: [
         { positionType: 'KURINNYI', scope: 'KURIN', kurinId: 'kurin-1' },
         { positionType: 'SECRETARY', scope: 'KURIN', kurinId: 'kurin-1' },

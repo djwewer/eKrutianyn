@@ -73,6 +73,9 @@ model Kurin {
   probyProgram                 ProbyProgram @relation(fields: [probyProgramId], references: [id])
   createdAt                    DateTime     @default(now())
   updatedAt                    DateTime     @updatedAt
+  // Set by the admin to temporarily switch a kurin off (e.g. unpaid
+  // subscription). Only the zvyazkovyi can still log in while it is set.
+  deactivatedAt                DateTime?
   driveFolderId                String?
   driveFolderName              String?
   driveRefreshToken            String?
@@ -820,6 +823,9 @@ enum AuditAction {
   JUDGE_BOOK_IMPORTED
   JUDGE_BOOK_SYNCED
   JUDGE_BOOK_SYNCED_NIGHTLY
+  KURIN_DEACTIVATED
+  KURIN_ACTIVATED
+  JUDGE_BOOK_DISCONNECTED
   APD_CREATED
   ANNOUNCEMENT_PUBLISHED
   ANNOUNCEMENT_UPDATED

@@ -31,6 +31,18 @@ export class KurinsAdminController {
     return this.service.updateKurin(id, dto);
   }
 
+  @Post(':id/deactivate')
+  @HttpCode(200)
+  deactivate(@Param('id') id: string) {
+    return this.service.setDeactivated(id, true);
+  }
+
+  @Post(':id/activate')
+  @HttpCode(200)
+  activate(@Param('id') id: string) {
+    return this.service.setDeactivated(id, false);
+  }
+
   @Delete(':id')
   @HttpCode(204)
   async delete(@Param('id') id: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { Role, TokenPurpose } from '@prisma/client';
+import { AuditAction, Role, TokenPurpose } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InviteService } from '../auth/invite.service';
 import { CreateKurinDto } from './dto/create-kurin.dto';
@@ -11,6 +12,7 @@ export class KurinsAdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inviteService: InviteService,
+    private readonly audit: AuditService,
   ) {}
 
   async listKurins() {
@@ -47,6 +49,7 @@ export class KurinsAdminService {
       stanytsia: k.stanytsia,
       probyProgramId: k.probyProgramId,
       createdAt: k.createdAt,
+      deactivatedAt: k.deactivatedAt,
       userCount: k._count.users,
       hurtokCount: k._count.hurtky,
       zvyazkovyi: k.users[0]
@@ -60,6 +63,22 @@ export class KurinsAdminService {
           }
         : null,
     }));
+  }
+
+  async setDeactivated(id: string, deactivated: boolean): Promise<{ id: string; deactivatedAt: Date | null }> {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id }, select: { id: true, deactivatedAt: true } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    // Deactivating an already deactivated kurin keeps the original date.
+    const deactivatedAt = deactivated ? (kurin.deactivatedAt ?? new Date()) : null;
+    await this.prisma.kurin.update({ where: { id }, data: { deactivatedAt } });
+    await this.audit.record({
+      kurinId: id,
+      actorId: null,
+      action: deactivated ? AuditAction.KURIN_DEACTIVATED : AuditAction.KURIN_ACTIVATED,
+    });
+    return { id, deactivatedAt };
   }
 
   async updateKurin(id: string, dto: UpdateKurinDto) {

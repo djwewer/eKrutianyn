@@ -227,7 +227,7 @@ describe('JudgeBookSyncService', () => {
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
-    it('queries only kurins with a drive connection, a spreadsheet, and a mapping', async () => {
+    it('queries only active kurins with a drive connection, a spreadsheet, and a mapping', async () => {
       prisma.kurin.findMany.mockResolvedValue([]);
 
       await service.syncAllKurins();
@@ -237,6 +237,7 @@ describe('JudgeBookSyncService', () => {
           driveRefreshToken: { not: null },
           judgeBookSpreadsheetId: { not: null },
           junakImportMapping: { isNot: null },
+          deactivatedAt: null,
         },
         select: { id: true },
       });

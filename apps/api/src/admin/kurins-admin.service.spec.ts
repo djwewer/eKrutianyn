@@ -5,13 +5,14 @@ describe('KurinsAdminService invites', () => {
   let service: KurinsAdminService;
   let prisma: any;
   let invite: any;
+  let audit: any;
   let txResolved: boolean;
 
   beforeEach(() => {
     txResolved = false;
     prisma = {
       probyProgram: { findUnique: jest.fn().mockResolvedValue({ id: 'p-1' }) },
-      kurin: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn().mockResolvedValue({ id: 'k-1', name: 'Орлики' }) },
+      kurin: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn().mockResolvedValue({}), create: jest.fn().mockResolvedValue({ id: 'k-1', name: 'Орлики' }) },
       user: { create: jest.fn().mockResolvedValue({ id: 'u-1' }), findFirst: jest.fn().mockResolvedValue(null), findUnique: jest.fn() },
       $transaction: jest.fn(async (fn: any) => {
         const r = await fn(prisma);
@@ -25,7 +26,41 @@ describe('KurinsAdminService invites', () => {
         return { sent: true };
       }),
     };
-    service = new KurinsAdminService(prisma, invite);
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
+    service = new KurinsAdminService(prisma, invite, audit);
+  });
+
+  describe('setDeactivated', () => {
+    it('sets deactivatedAt and records KURIN_DEACTIVATED', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1', deactivatedAt: null });
+      const result = await service.setDeactivated('k-1', true);
+      expect(result.id).toBe('k-1');
+      expect(result.deactivatedAt).toBeInstanceOf(Date);
+      expect(prisma.kurin.update).toHaveBeenCalledWith({ where: { id: 'k-1' }, data: { deactivatedAt: result.deactivatedAt } });
+      expect(audit.record).toHaveBeenCalledWith({ kurinId: 'k-1', actorId: null, action: 'KURIN_DEACTIVATED' });
+    });
+
+    it('keeps the original date when already deactivated', async () => {
+      const original = new Date('2026-01-01');
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1', deactivatedAt: original });
+      const result = await service.setDeactivated('k-1', true);
+      expect(result.deactivatedAt).toBe(original);
+      expect(prisma.kurin.update).toHaveBeenCalledWith({ where: { id: 'k-1' }, data: { deactivatedAt: original } });
+    });
+
+    it('clears deactivatedAt and records KURIN_ACTIVATED', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1', deactivatedAt: new Date() });
+      await expect(service.setDeactivated('k-1', false)).resolves.toEqual({ id: 'k-1', deactivatedAt: null });
+      expect(prisma.kurin.update).toHaveBeenCalledWith({ where: { id: 'k-1' }, data: { deactivatedAt: null } });
+      expect(audit.record).toHaveBeenCalledWith({ kurinId: 'k-1', actorId: null, action: 'KURIN_ACTIVATED' });
+    });
+
+    it('404s for an unknown kurin without writing or auditing', async () => {
+      prisma.kurin.findUnique.mockResolvedValue(null);
+      await expect(service.setDeactivated('nope', true)).rejects.toThrow(NotFoundException);
+      expect(prisma.kurin.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
   });
 
   it('createKurin creates an invite-only zvyazkovyi, sends after commit and returns inviteSent', async () => {

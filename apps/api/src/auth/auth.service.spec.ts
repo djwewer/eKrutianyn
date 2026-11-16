@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PositionType, Role, TokenPurpose } from '@prisma/client';
@@ -99,6 +99,65 @@ describe('AuthService', () => {
       });
       await expect(service.loginWithPassword('a@example.com', 'wrong')).rejects.toThrow(
         UnauthorizedException,
+      );
+    });
+  });
+
+  describe('deactivated kurin', () => {
+    const deactivatedAt = new Date('2026-11-01');
+    const userOf = (role: Role, hash: string | null = null) => ({
+      id: 'user-1',
+      email: 'a@example.com',
+      passwordHash: hash,
+      googleId: 'g-1',
+      role,
+      kurinId: 'kurin-1',
+    });
+
+    beforeEach(() => {
+      prisma.kurin.findUnique.mockResolvedValue({ kurinNumber: '75', deactivatedAt });
+    });
+
+    it('loginWithPassword blocks a JUNAK with code KURIN_DEACTIVATED', async () => {
+      const hash = await argon2.hash('secret123');
+      prisma.user.findUnique.mockResolvedValue(userOf(Role.JUNAK, hash));
+      const err: any = await service.loginWithPassword('a@example.com', 'secret123').catch((e) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect(err.getResponse()).toMatchObject({ code: 'KURIN_DEACTIVATED' });
+    });
+
+    it('loginWithPassword still lets the ZVYAZKOVYI in', async () => {
+      const hash = await argon2.hash('secret123');
+      prisma.user.findUnique.mockResolvedValue(userOf(Role.ZVYAZKOVYI, hash));
+      const result = await service.loginWithPassword('a@example.com', 'secret123');
+      expect(result.accessToken).toEqual(expect.any(String));
+    });
+
+    it('loginWithGoogle blocks a VYKHOVNYK', async () => {
+      googleVerifier.verify.mockResolvedValue({ email: 'a@example.com', sub: 'g-1' });
+      prisma.user.findUnique.mockResolvedValue(userOf(Role.VYKHOVNYK));
+      const err: any = await service.loginWithGoogle('t').catch((e) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect(err.getResponse()).toMatchObject({ code: 'KURIN_DEACTIVATED' });
+    });
+
+    it('acceptInvite commits the password and consumes the token, but refuses the session', async () => {
+      prisma.passwordResetToken.findUnique.mockResolvedValue({
+        id: 't1',
+        userId: 'u1',
+        purpose: TokenPurpose.INVITE,
+        usedAt: null,
+        expiresAt: new Date(Date.now() + 3600_000),
+        user: { id: 'u1', firstName: 'О', role: Role.JUNAK, kurinId: 'k1', archivedAt: null },
+      });
+      const err: any = await service.acceptInvite('raw', 'newpassword1').catch((e) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect(err.getResponse()).toMatchObject({ code: 'KURIN_DEACTIVATED' });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'u1' }, data: expect.objectContaining({ passwordHash: expect.any(String) }) }),
+      );
+      expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { usedAt: expect.any(Date) } }),
       );
     });
   });

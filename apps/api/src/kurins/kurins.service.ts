@@ -9,6 +9,7 @@ const KURIN_PUBLIC_SELECT = {
   kurinNumber: true,
   gender: true,
   stanytsia: true,
+  deactivatedAt: true,
   probyProgram: { select: { version: true } },
 } as const;
 
