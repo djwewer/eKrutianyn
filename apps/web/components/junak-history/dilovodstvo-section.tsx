@@ -116,24 +116,14 @@ const SCOPE_OPTIONS: Record<PositionScope, PositionType[]> = {
   HURTOK: HURTOK_SCOPE_POSITIONS,
 };
 
-/** Same rule as the Провід куреня: звʼязковий — all; курінний — all except КУРІННИЙ. */
+/**
+ * Only the звʼязковий assigns from here (the API's звʼязковий rule: any scope and type). The курінний is a junak, so he never
+ * reaches this dialog — he assigns through Провід куреня; the виховник гуртка gets archive mode only.
+ */
 function useAssignableTypes(hurtokId: string | null): Record<PositionScope, PositionType[]> {
   const { data: session } = useSession();
-  if (session?.role === 'ZVYAZKOVYI') {
-    return {
-      KURIN: KURIN_SCOPE_POSITIONS,
-      HURTOK: hurtokId ? HURTOK_SCOPE_POSITIONS : [],
-    };
-  }
-  // The API lets a hurtok-scoped position be assigned only by a звʼязковий or a суддя.
-  const mayAssignHurtok = !!hurtokId && (session?.positions ?? []).includes('SUDDIA');
-  if (session?.isKurinniy) {
-    return {
-      KURIN: KURIN_SCOPE_POSITIONS.filter((t) => t !== 'KURINNYI'),
-      HURTOK: mayAssignHurtok ? HURTOK_SCOPE_POSITIONS : [],
-    };
-  }
-  return { KURIN: [], HURTOK: [] };
+  if (session?.role !== 'ZVYAZKOVYI') return { KURIN: [], HURTOK: [] };
+  return { KURIN: KURIN_SCOPE_POSITIONS, HURTOK: hurtokId ? HURTOK_SCOPE_POSITIONS : [] };
 }
 
 function PositionDialog({
@@ -200,10 +190,12 @@ function AssignFields({
   const options = assignable[scope];
   const chosen = options.includes(positionType as PositionType) ? (positionType as PositionType) : '';
 
+  const inScope = (active ?? []).filter((p) => p.scope === scope && (scope === 'KURIN' || p.hurtokId === hurtokId));
+  const own = inScope.find((p) => p.user.id === junakId);
+  const alreadyThere = !!chosen && own?.positionType === chosen;
+
   function submit() {
-    if (!chosen) return;
-    const inScope = (active ?? []).filter((p) => p.scope === scope && (scope === 'KURIN' || p.hurtokId === hurtokId));
-    const own = inScope.find((p) => p.user.id === junakId);
+    if (!chosen || alreadyThere) return;
     const slotHolder = inScope.find((p) => p.positionType === chosen && p.user.id !== junakId);
     if (own || slotHolder) {
       const text = own
@@ -254,8 +246,9 @@ function AssignFields({
           ))}
         </select>
       </div>
+      {alreadyThere && <p className="text-sm text-ink-2">Юнак уже на цій посаді.</p>}
       {assign.isError && <p className="text-sm text-destructive">{accessErrorMessage(assign.error) ?? 'Помилка при призначенні.'}</p>}
-      <DialogActions onCancel={onClose} onSubmit={submit} disabled={!chosen || assign.isPending} />
+      <DialogActions onCancel={onClose} onSubmit={submit} disabled={!chosen || alreadyThere || assign.isPending} />
     </>
   );
 }
@@ -292,6 +285,18 @@ function PastPositionFields({ junakId, entry, onClose }: { junakId: string; entr
   return (
     <>
       <div className="space-y-2">
+        <Label htmlFor="past-position-scope">Де</Label>
+        <select
+          id="past-position-scope"
+          value={scope}
+          onChange={(e) => setScope(e.target.value as PositionScope)}
+          className={nativeSelectClass}
+        >
+          <option value="HURTOK">У гуртку</option>
+          <option value="KURIN">У курені</option>
+        </select>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="past-position-title">Посада</Label>
         <select id="past-position-title" value={validTitle} onChange={(e) => setTitle(e.target.value)} className={nativeSelectClass}>
           <option value="" disabled>
@@ -302,18 +307,6 @@ function PastPositionFields({ junakId, entry, onClose }: { junakId: string; entr
               {t}
             </option>
           ))}
-        </select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="past-position-scope">Де</Label>
-        <select
-          id="past-position-scope"
-          value={scope}
-          onChange={(e) => setScope(e.target.value as PositionScope)}
-          className={nativeSelectClass}
-        >
-          <option value="HURTOK">У гуртку</option>
-          <option value="KURIN">У курені</option>
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">

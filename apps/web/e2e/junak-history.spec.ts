@@ -262,6 +262,10 @@ test('zvyazkovyi assigns a current position from «Додати посаду»; 
   await expect(row).toContainText('зараз');
 
   await dilovodstvo.getByRole('button', { name: 'Додати посаду' }).click();
+  await dialog.getByLabel('Де').selectOption('KURIN');
+  await dialog.getByLabel('Посада').selectOption('Писар');
+  await expect(dialog.getByText('Юнак уже на цій посаді.')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Зберегти' })).toBeDisabled();
   await dialog.getByRole('radio', { name: 'Посада до застосунку' }).click();
   await expect(dialog.getByLabel('Посада')).toHaveJSProperty('tagName', 'SELECT');
   await expect(dialog.getByRole('textbox', { name: 'Посада' })).toHaveCount(0);

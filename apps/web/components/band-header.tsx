@@ -161,7 +161,7 @@ export function BandHeader({
           </Link>
           <Link
             href={nav.settings.href}
-            aria-label={nav.settings.badge > 0 ? `Налаштування, запитів: ${nav.settings.badge}` : 'Налаштування'}
+            aria-label={`Налаштування${profile ? `, ${profile.firstName}` : ''}${nav.settings.badge > 0 ? `, запитів: ${nav.settings.badge}` : ''}`}
             aria-current={settingsActive ? 'page' : undefined}
             className={cn(
               'relative flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,currentColor_12%,transparent)] p-[.15rem] min-[761px]:py-[.15rem] min-[761px]:pl-[.15rem] min-[761px]:pr-[.6rem]',
