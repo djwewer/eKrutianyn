@@ -133,37 +133,29 @@ async function seedUser(zvyazkovyiToken: string, hurtokId: string, suddia: boole
   return email;
 }
 
-test('suddya sees the connect control, a plain vykhovnyk does not', async ({ page }) => {
+test('suddya sees the hint instead of a connect button, a plain vykhovnyk sees neither', async ({ page }) => {
   const { program } = await seedProbyProgram();
   const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id, { driveRefreshToken: 'fake-refresh-token' });
   const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
   const hurtok = await createHurtok(token, 'Орлики');
   const suddiaEmail = await seedUser(token, hurtok.id, true);
   const plainEmail = await seedUser(token, hurtok.id, false);
+  const hint = page.getByText('Підключити Книгу судді може звʼязковий куреня.');
+  const connectButton = page.getByRole('button', { name: 'Підключити Книгу судді' });
 
   await loginAs(page, plainEmail, 'password123');
   await page.goto('/suddivstvo');
-  await expect(page.getByText('Книга судді не підключена.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Підключити Книгу судді' })).toHaveCount(0);
+  // The status endpoint is 403 for a plain user, so the page shows only the access message.
+  await expect(page.getByText('Немає доступу.')).toBeVisible();
+  await expect(connectButton).toHaveCount(0);
+  await expect(hint).toHaveCount(0);
 
   await page.context().clearCookies();
   await loginAs(page, suddiaEmail, 'password123');
   await page.goto('/suddivstvo');
-  // Drive is connected for this kurin, so the suddya gets the connect button.
-  await expect(page.getByRole('button', { name: 'Підключити Книгу судді' })).toBeVisible();
-});
-
-test('suddya in a kurin without Google Drive sees the hint instead of a connect button', async ({ page }) => {
-  const { program } = await seedProbyProgram();
-  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
-  const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
-  const hurtok = await createHurtok(token, 'Орлики');
-  const suddiaEmail = await seedUser(token, hurtok.id, true);
-
-  await loginAs(page, suddiaEmail, 'password123');
-  await page.goto('/suddivstvo');
-  await expect(page.getByText('Спершу звʼязковий має підключити Google Drive куреня.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Підключити Книгу судді' })).toHaveCount(0);
+  await expect(page.getByText('Не підключено', { exact: true })).toBeVisible();
+  await expect(hint).toBeVisible();
+  await expect(connectButton).toHaveCount(0);
 });
 
 test('suddya disconnects the connected Книга судді after confirming', async ({ page }) => {
@@ -182,6 +174,7 @@ test('suddya disconnects the connected Книга судді after confirming', 
   await loginAs(page, suddiaEmail, 'password123');
   await page.goto('/suddivstvo');
   await expect(page.getByText('Підключено', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Змінити таблицю' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Відʼєднати таблицю' }).click();
   await expect(page.getByText('Синхронізація з таблицею зупиниться.')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Відʼєднати таблицю' }).click();

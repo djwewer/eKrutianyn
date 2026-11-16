@@ -41,11 +41,10 @@ export class KurinJunakImportController {
     this.assertCanAccessWizard(user);
     const kurin = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
-      select: { judgeBookSpreadsheetId: true, judgeBookSpreadsheetName: true, driveRefreshToken: true },
+      select: { judgeBookSpreadsheetId: true, judgeBookSpreadsheetName: true },
     });
     const mapping = await this.prisma.junakImportMapping.findUnique({ where: { kurinId } });
     return {
-      driveConnected: kurin?.driveRefreshToken != null,
       connectedSpreadsheetId: kurin?.judgeBookSpreadsheetId ?? undefined,
       connectedSpreadsheetName: kurin?.judgeBookSpreadsheetName ?? undefined,
       mapping: mapping
@@ -61,7 +60,7 @@ export class KurinJunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
-    this.assertCanManageJudgeBook(user);
+    this.assertZvyazkovyi(user);
     const current = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
       select: { judgeBookSpreadsheetId: true },
@@ -100,7 +99,7 @@ export class KurinJunakImportController {
   @Delete(':kurinId/junak-import/spreadsheet')
   async disconnectSpreadsheet(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
-    this.assertCanManageJudgeBook(user);
+    this.assertCanDisconnectJudgeBook(user);
     await this.prisma.$transaction([
       this.prisma.kurin.update({
         where: { id: kurinId },
@@ -207,9 +206,9 @@ export class KurinJunakImportController {
     }
   }
 
-  private assertCanManageJudgeBook(user: CurrentUserPayload) {
+  private assertCanDisconnectJudgeBook(user: CurrentUserPayload) {
     if (user.role !== Role.ZVYAZKOVYI && !user.positions.includes(PositionType.SUDDIA)) {
-      throw new ForbiddenException('Only zvyazkovyi or suddya can manage the judge book');
+      throw new ForbiddenException('Only zvyazkovyi or suddya can disconnect the judge book');
     }
   }
 

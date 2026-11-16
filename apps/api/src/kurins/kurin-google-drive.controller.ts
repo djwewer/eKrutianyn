@@ -74,13 +74,11 @@ export class KurinGoogleDriveController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ZVYAZKOVYI)
   @Get(':kurinId/google-drive/picker-token')
   async pickerToken(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
     this.assertOwnKurin(kurinId, user);
-    if (user.role !== Role.ZVYAZKOVYI && !user.positions.includes(PositionType.SUDDIA)) {
-      throw new ForbiddenException('Insufficient role');
-    }
     const accessToken = await this.googleDrive.getPickerAccessToken(kurinId);
     return { accessToken };
   }

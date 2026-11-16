@@ -108,9 +108,9 @@ for (const viewport of ['desktop', 'phone'] as const) {
       await s.page.screenshot({ path: path.join(OUT, `suddivstvo-disconnect-dialog-${tag}.png`) });
       await s.ctx.close();
 
-      // Suddya without Drive: the hint.
-      const nodrive = await seedKurinWithZvyazkovyi(program.id);
-      const t2 = await loginForToken(nodrive.zvyazkovyiEmail, nodrive.zvyazkovyiPassword);
+      // Suddya, nothing connected: status + hint (connecting is zvyazkovyi-only).
+      const plainKurin = await seedKurinWithZvyazkovyi(program.id);
+      const t2 = await loginForToken(plainKurin.zvyazkovyiEmail, plainKurin.zvyazkovyiPassword);
       const h2 = await createHurtok(t2, 'Орлики');
       const email2 = `suddia2-${Date.now()}@example.com`;
       const u2 = await createUserAs(t2, { firstName: 'Тест', lastName: 'Суддя', email: email2, role: 'JUNAK', hurtokId: h2.id, password: 'password123' });
@@ -123,9 +123,9 @@ for (const viewport of ['desktop', 'phone'] as const) {
       const s2 = await newPage(browser, viewport, theme);
       await loginAs(s2.page, email2, 'password123');
       await s2.page.goto('/suddivstvo');
-      await expect(s2.page.getByText('Спершу звʼязковий має підключити Google Drive куреня.')).toBeVisible();
+      await expect(s2.page.getByText('Підключити Книгу судді може звʼязковий куреня.')).toBeVisible();
       await settle(s2.page);
-      await s2.page.screenshot({ path: path.join(OUT, `suddivstvo-no-drive-hint-${tag}.png`), fullPage: true });
+      await s2.page.screenshot({ path: path.join(OUT, `suddivstvo-not-connected-hint-${tag}.png`), fullPage: true });
       await s2.ctx.close();
     });
   }

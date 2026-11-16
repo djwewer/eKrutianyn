@@ -131,31 +131,18 @@ describe('Kurin Google Drive OAuth (e2e)', () => {
     expect(response.body).toEqual({ accessToken: 'picker-access-token' });
   });
 
-  it('lets a suddya get a picker token but not a plain hurtkovyi junak', async () => {
+  it('forbids a suddya and a plain junak from getting a picker token', async () => {
     const { kurin } = await setup();
     fakeGoogleDrive.getPickerAccessToken.mockResolvedValue('picker-access-token');
     const suddya = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
-    const vykhovnyk = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
-    await prisma.kurinPosition.create({
-      data: {
-        kurinId: kurin.id,
-        scope: PositionScope.KURIN,
-        positionType: PositionType.HURTKOVYI,
-        userId: vykhovnyk.id,
-        assignedById: vykhovnyk.id,
-      },
-    });
+    const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
 
-    const ok = await request(app.getHttpServer())
-      .get(`/kurins/${kurin.id}/google-drive/picker-token`)
-      .set('Authorization', `Bearer ${issueTokenFor(jwtService, suddya)}`)
-      .expect(200);
-    expect(ok.body).toEqual({ accessToken: 'picker-access-token' });
-
-    await request(app.getHttpServer())
-      .get(`/kurins/${kurin.id}/google-drive/picker-token`)
-      .set('Authorization', `Bearer ${issueTokenFor(jwtService, vykhovnyk)}`)
-      .expect(403);
+    for (const u of [suddya, junak]) {
+      await request(app.getHttpServer())
+        .get(`/kurins/${kurin.id}/google-drive/picker-token`)
+        .set('Authorization', `Bearer ${issueTokenFor(jwtService, u)}`)
+        .expect(403);
+    }
   });
 
   it('saves the picked folder', async () => {

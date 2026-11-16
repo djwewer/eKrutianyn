@@ -54,7 +54,7 @@ describe('Kurin Junak Import mapping (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(response.body).toEqual({ driveConnected: false });
+    expect(response.body).toEqual({});
   });
 
   it('forbids a plain junak from accessing import status', async () => {
@@ -97,22 +97,6 @@ describe('Kurin Junak Import mapping (e2e)', () => {
 
     expect(status.body.connectedSpreadsheetId).toBe('sheet-1');
     expect(status.body.connectedSpreadsheetName).toBe('Книга судді');
-    expect(status.body.driveConnected).toBe(false);
-  });
-
-  it('reports driveConnected without exposing the refresh token', async () => {
-    const { kurin } = await setup();
-    await prisma.kurin.update({ where: { id: kurin.id }, data: { driveRefreshToken: 'secret-rt' } });
-    const suddia = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
-    const token = issueTokenFor(jwtService, suddia);
-
-    const status = await request(app.getHttpServer())
-      .get(`/kurins/${kurin.id}/junak-import/status`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(status.body.driveConnected).toBe(true);
-    expect(JSON.stringify(status.body)).not.toContain('secret-rt');
   });
 
   it('returns 403 for sheet-data when no spreadsheet is connected', async () => {
@@ -274,7 +258,7 @@ describe('Kurin Junak Import mapping (e2e)', () => {
       return createUser(prisma, { role: Role.JUNAK, kurinId });
     }
 
-    it('lets a suddya connect and disconnect the judge book', async () => {
+    it('forbids a suddya from connecting the judge book but lets her disconnect it', async () => {
       const { kurin } = await setup();
       const suddya = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
       const token = issueTokenFor(jwtService, suddya);
@@ -283,9 +267,10 @@ describe('Kurin Junak Import mapping (e2e)', () => {
         .patch(`/kurins/${kurin.id}/junak-import/spreadsheet`)
         .set('Authorization', `Bearer ${token}`)
         .send(connectBody)
-        .expect(200);
-      expect((await prisma.kurin.findUnique({ where: { id: kurin.id } }))?.judgeBookSpreadsheetId).toBe('sheet-1');
+        .expect(403);
+      expect((await prisma.kurin.findUnique({ where: { id: kurin.id } }))?.judgeBookSpreadsheetId).toBeNull();
 
+      await prisma.kurin.update({ where: { id: kurin.id }, data: { judgeBookSpreadsheetId: 'sheet-1' } });
       const res = await request(app.getHttpServer())
         .delete(`/kurins/${kurin.id}/junak-import/spreadsheet`)
         .set('Authorization', `Bearer ${token}`)

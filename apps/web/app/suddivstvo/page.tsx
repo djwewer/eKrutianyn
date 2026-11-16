@@ -33,9 +33,10 @@ export default function SuddivstvoPage() {
   const { data: session } = useSession();
   const { data: kurin } = useKurin();
   const kurinId = kurin?.id;
-  const canManageJudgeBook = session?.role === 'ZVYAZKOVYI' || !!session?.positions?.includes('SUDDIA');
+  const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
+  const isSuddya = !!session?.positions?.includes('SUDDIA');
+  const canDisconnectJudgeBook = isZvyazkovyi || isSuddya;
   const junakImportStatus = useJunakImportStatus(kurinId);
-  const needsDriveFirst = session?.role !== 'ZVYAZKOVYI' && junakImportStatus.data?.driveConnected === false;
   const setJunakImportSpreadsheet = useSetJunakImportSpreadsheet(kurinId ?? '');
   const disconnect = useDisconnectJunakImportSpreadsheet(kurinId ?? '');
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -81,11 +82,13 @@ export default function SuddivstvoPage() {
                   </dd>
                 </div>
               </dl>
-              {canManageJudgeBook && (
+              {canDisconnectJudgeBook && (
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={handleConnectJudgeBook}>
-                    Змінити таблицю
-                  </Button>
+                  {isZvyazkovyi && (
+                    <Button variant="outline" onClick={handleConnectJudgeBook}>
+                      Змінити таблицю
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -95,9 +98,11 @@ export default function SuddivstvoPage() {
                   >
                     Відʼєднати таблицю
                   </Button>
-                  <Button variant="signal" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
-                    {syncNow.isPending ? 'Записую...' : 'Записати зміни в таблицю зараз'}
-                  </Button>
+                  {isZvyazkovyi && (
+                    <Button variant="signal" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
+                      {syncNow.isPending ? 'Записую...' : 'Записати зміни в таблицю зараз'}
+                    </Button>
+                  )}
                 </div>
               )}
               {syncNow.isError && (
@@ -132,14 +137,13 @@ export default function SuddivstvoPage() {
           ) : (
             <>
               <p className="text-ink-2">Книга судді не підключена.</p>
-              {canManageJudgeBook &&
-                (needsDriveFirst ? (
-                  <p className="text-ink-2">Спершу звʼязковий має підключити Google Drive куреня.</p>
-                ) : (
-                  <Button disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
-                    Підключити Книгу судді
-                  </Button>
-                ))}
+              {isZvyazkovyi ? (
+                <Button disabled={setJunakImportSpreadsheet.isPending} onClick={handleConnectJudgeBook}>
+                  Підключити Книгу судді
+                </Button>
+              ) : (
+                isSuddya && <p className="text-ink-2">Підключити Книгу судді може звʼязковий куреня.</p>
+              )}
             </>
           )}
           {bookConnectError && <p className="text-sm text-late">{bookConnectError}</p>}
