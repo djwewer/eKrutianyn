@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Logger,
@@ -59,7 +60,7 @@ export class KurinJunakImportController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     this.assertOwnKurin(kurinId, user);
-    this.assertZvyazkovyi(user);
+    this.assertCanManageJudgeBook(user);
     const current = await this.prisma.kurin.findUnique({
       where: { id: kurinId },
       select: { judgeBookSpreadsheetId: true },
@@ -92,6 +93,25 @@ export class KurinJunakImportController {
       action: AuditAction.JUDGE_BOOK_CONNECTED,
       details: { spreadsheetName: dto.spreadsheetName },
     });
+    return { success: true };
+  }
+
+  @Delete(':kurinId/junak-import/spreadsheet')
+  async disconnectSpreadsheet(@Param('kurinId') kurinId: string, @CurrentUser() user: CurrentUserPayload) {
+    this.assertOwnKurin(kurinId, user);
+    this.assertCanManageJudgeBook(user);
+    await this.prisma.$transaction([
+      this.prisma.kurin.update({
+        where: { id: kurinId },
+        data: { judgeBookSpreadsheetId: null, judgeBookSpreadsheetName: null },
+      }),
+      this.prisma.junakImportMapping.deleteMany({ where: { kurinId } }),
+      this.prisma.user.updateMany({
+        where: { kurinId, judgeBookRowNumber: { not: null } },
+        data: { judgeBookRowNumber: null },
+      }),
+    ]);
+    await this.audit.record({ kurinId, actorId: user.userId, action: AuditAction.JUDGE_BOOK_DISCONNECTED });
     return { success: true };
   }
 
@@ -183,6 +203,12 @@ export class KurinJunakImportController {
   private assertZvyazkovyi(user: CurrentUserPayload) {
     if (user.role !== Role.ZVYAZKOVYI) {
       throw new ForbiddenException('Only zvyazkovyi can perform this action');
+    }
+  }
+
+  private assertCanManageJudgeBook(user: CurrentUserPayload) {
+    if (user.role !== Role.ZVYAZKOVYI && !user.positions.includes(PositionType.SUDDIA)) {
+      throw new ForbiddenException('Only zvyazkovyi or suddya can manage the judge book');
     }
   }
 

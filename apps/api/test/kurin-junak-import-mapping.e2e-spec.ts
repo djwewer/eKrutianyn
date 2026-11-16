@@ -2,10 +2,10 @@ import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient, Role, ProbyProgramVersion } from '@prisma/client';
+import { PrismaClient, Role, ProbyProgramVersion, PositionScope, PositionType } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { cleanDatabase } from './utils/clean-db';
-import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, issueTokenFor } from './utils/fixtures';
+import { createProbyProgramTree, createKurin, createUser, createKurinniyUser, createKurinSuddiaUser, issueTokenFor } from './utils/fixtures';
 import { GoogleDriveService } from '../src/google-drive/google-drive.service';
 
 describe('Kurin Junak Import mapping (e2e)', () => {
@@ -243,5 +243,109 @@ describe('Kurin Junak Import mapping (e2e)', () => {
 
     expect(await prisma.junakImportMapping.findUnique({ where: { kurinId: kurin.id } })).not.toBeNull();
     expect((await prisma.user.findUnique({ where: { id: junak.id } }))?.judgeBookRowNumber).toBe(7);
+  });
+  describe('judge book connect/disconnect permissions', () => {
+    const connectBody = { spreadsheetId: 'sheet-1', spreadsheetName: 'Книга судді' };
+
+    async function seedConnected(kurinId: string) {
+      await prisma.kurin.update({
+        where: { id: kurinId },
+        data: { judgeBookSpreadsheetId: 'sheet-1', judgeBookSpreadsheetName: 'Книга судді' },
+      });
+      await prisma.junakImportMapping.create({
+        data: { kurinId, columnMapping: { name: 0 } as any, positionValueMapping: {} as any },
+      });
+      return createUser(prisma, { role: Role.JUNAK, kurinId });
+    }
+
+    it('lets a suddya connect and disconnect the judge book', async () => {
+      const { kurin } = await setup();
+      const suddya = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+      const token = issueTokenFor(jwtService, suddya);
+
+      await request(app.getHttpServer())
+        .patch(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(connectBody)
+        .expect(200);
+      expect((await prisma.kurin.findUnique({ where: { id: kurin.id } }))?.judgeBookSpreadsheetId).toBe('sheet-1');
+
+      const res = await request(app.getHttpServer())
+        .delete(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(res.body).toEqual({ success: true });
+    });
+
+    it('forbids a plain junak (hurtkovyi) and a kurinniy without SUDDIA from connect and disconnect', async () => {
+      const { kurin } = await setup();
+      const plain = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+      await prisma.kurinPosition.create({
+        data: {
+          kurinId: kurin.id,
+          scope: PositionScope.KURIN,
+          positionType: PositionType.HURTKOVYI,
+          userId: plain.id,
+          assignedById: plain.id,
+        },
+      });
+      const kurinnyi = await createKurinniyUser(prisma, { kurinId: kurin.id });
+      for (const u of [plain, kurinnyi]) {
+        const token = issueTokenFor(jwtService, u);
+        await request(app.getHttpServer())
+          .patch(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+          .set('Authorization', `Bearer ${token}`)
+          .send(connectBody)
+          .expect(403);
+        await request(app.getHttpServer())
+          .delete(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(403);
+      }
+    });
+
+    it('disconnect clears the spreadsheet, mapping and row numbers for this kurin only and writes an audit entry', async () => {
+      const { kurin } = await setup();
+      const junak = await seedConnected(kurin.id);
+      await prisma.user.update({ where: { id: junak.id }, data: { judgeBookRowNumber: 7 } });
+      const other = await createKurin(prisma, { probyProgramId: kurin.probyProgramId });
+      const otherJunak = await seedConnected(other.id);
+      await prisma.user.update({ where: { id: otherJunak.id }, data: { judgeBookRowNumber: 9 } });
+      const suddya = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+      const token = issueTokenFor(jwtService, suddya);
+
+      await request(app.getHttpServer())
+        .delete(`/kurins/${kurin.id}/junak-import/spreadsheet`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      const k = await prisma.kurin.findUnique({ where: { id: kurin.id } });
+      expect(k?.judgeBookSpreadsheetId).toBeNull();
+      expect(k?.judgeBookSpreadsheetName).toBeNull();
+      expect(await prisma.junakImportMapping.findUnique({ where: { kurinId: kurin.id } })).toBeNull();
+      expect((await prisma.user.findUnique({ where: { id: junak.id } }))?.judgeBookRowNumber).toBeNull();
+
+      expect((await prisma.kurin.findUnique({ where: { id: other.id } }))?.judgeBookSpreadsheetId).toBe('sheet-1');
+      expect(await prisma.junakImportMapping.findUnique({ where: { kurinId: other.id } })).not.toBeNull();
+      expect((await prisma.user.findUnique({ where: { id: otherJunak.id } }))?.judgeBookRowNumber).toBe(9);
+
+      const audits = await prisma.auditLog.findMany({
+        where: { kurinId: kurin.id, action: 'JUDGE_BOOK_DISCONNECTED' },
+      });
+      expect(audits).toHaveLength(1);
+      expect(audits[0].actorId).toBe(suddya.id);
+    });
+
+    it('forbids disconnecting another kurin', async () => {
+      const { kurin } = await setup();
+      const other = await createKurin(prisma, { probyProgramId: kurin.probyProgramId });
+      const suddya = await createKurinSuddiaUser(prisma, { kurinId: kurin.id });
+      const token = issueTokenFor(jwtService, suddya);
+
+      await request(app.getHttpServer())
+        .delete(`/kurins/${other.id}/junak-import/spreadsheet`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403);
+    });
   });
 });
