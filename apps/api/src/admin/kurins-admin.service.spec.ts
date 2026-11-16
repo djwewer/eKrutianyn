@@ -40,12 +40,20 @@ describe('KurinsAdminService invites', () => {
       expect(audit.record).toHaveBeenCalledWith({ kurinId: 'k-1', actorId: null, action: 'KURIN_DEACTIVATED' });
     });
 
-    it('keeps the original date when already deactivated', async () => {
+    it('is a no-op when already deactivated: keeps the original date, no update, no audit', async () => {
       const original = new Date('2026-01-01');
       prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1', deactivatedAt: original });
       const result = await service.setDeactivated('k-1', true);
-      expect(result.deactivatedAt).toBe(original);
-      expect(prisma.kurin.update).toHaveBeenCalledWith({ where: { id: 'k-1' }, data: { deactivatedAt: original } });
+      expect(result).toEqual({ id: 'k-1', deactivatedAt: original });
+      expect(prisma.kurin.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when activating an already active kurin', async () => {
+      prisma.kurin.findUnique.mockResolvedValue({ id: 'k-1', deactivatedAt: null });
+      await expect(service.setDeactivated('k-1', false)).resolves.toEqual({ id: 'k-1', deactivatedAt: null });
+      expect(prisma.kurin.update).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
     });
 
     it('clears deactivatedAt and records KURIN_ACTIVATED', async () => {

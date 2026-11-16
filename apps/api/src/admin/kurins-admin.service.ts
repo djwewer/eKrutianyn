@@ -72,8 +72,11 @@ export class KurinsAdminService {
     if (!kurin) {
       throw new NotFoundException('Kurin not found');
     }
-    // Deactivating an already deactivated kurin keeps the original date.
-    const deactivatedAt = deactivated ? (kurin.deactivatedAt ?? new Date()) : null;
+    // Already in the target state: nothing to change, nothing to audit.
+    if (Boolean(kurin.deactivatedAt) === deactivated) {
+      return { id, deactivatedAt: kurin.deactivatedAt };
+    }
+    const deactivatedAt = deactivated ? new Date() : null;
     await this.prisma.kurin.update({ where: { id }, data: { deactivatedAt } });
     await this.audit.record({
       kurinId: id,
@@ -155,6 +158,11 @@ export class KurinsAdminService {
 
     await this.prisma.$transaction(
       async (tx) => {
+        // Re-check inside the transaction: a concurrent activate must not slip past the pre-check.
+        const current = await tx.kurin.findUnique({ where: { id }, select: { deactivatedAt: true } });
+        if (!current?.deactivatedAt) {
+          throw new ConflictException('Спершу деактивуйте курінь');
+        }
         const userIds = (await tx.user.findMany({ where: { kurinId: id }, select: { id: true } })).map((u) => u.id);
         const byJunak = { junakId: { in: userIds } };
 
@@ -213,8 +221,7 @@ export class KurinsAdminService {
         await tx.junakImportMapping.deleteMany({ where: { kurinId: id } });
         // Self-references, then hurtky and users
         await tx.hurtok.updateMany({ where: { kurinId: id }, data: { archivedById: null } });
-        await tx.user.updateMany({ where: { kurinId: id }, data: { archivedById: null } });
-        await tx.user.updateMany({ where: { kurinId: id }, data: { hurtokId: null } });
+        await tx.user.updateMany({ where: { kurinId: id }, data: { archivedById: null, hurtokId: null } });
         await tx.hurtok.deleteMany({ where: { kurinId: id } });
         await tx.user.deleteMany({ where: { kurinId: id } });
         await tx.kurin.delete({ where: { id } });

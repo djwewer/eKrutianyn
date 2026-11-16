@@ -89,6 +89,7 @@ describe('Kurin deactivation (e2e)', () => {
     const first = await admin(`/admin/kurins/${kurinId}/deactivate`).expect(200);
     const second = await admin(`/admin/kurins/${kurinId}/deactivate`).expect(200);
     expect(second.body.deactivatedAt).toBe(first.body.deactivatedAt);
+    expect(await prisma.auditLog.count({ where: { kurinId, action: 'KURIN_DEACTIVATED' } })).toBe(1);
 
     const act = await admin(`/admin/kurins/${kurinId}/activate`).expect(200);
     expect(act.body).toEqual({ id: kurinId, deactivatedAt: null });

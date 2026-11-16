@@ -59,6 +59,19 @@ describe('Admin kurins (e2e)', () => {
     ...overrides,
   });
 
+  const acceptInviteFor = async (email: string, password: string) => {
+    const mail = await request(app.getHttpServer())
+      .get('/admin/test-mail')
+      .query({ to: email })
+      .set('x-admin-key', adminKey)
+      .set('x-admin-username', adminUsername)
+      .set('x-admin-password', adminPassword)
+      .expect(200);
+    expect(mail.body.type).toBe('welcome-invite');
+    const token = new URL(mail.body.link).searchParams.get('token')!;
+    await request(app.getHttpServer()).post('/auth/accept-invite').send({ token, newPassword: password }).expect(201);
+  };
+
   describe('POST /admin/kurins', () => {
     it('creates a kurin together with its first zvyazkovyi, who can then log in', async () => {
       const { program } = await createProbyProgramTree(prisma, ProbyProgramVersion.OLD, ['Point 1']);
@@ -82,16 +95,17 @@ describe('Admin kurins (e2e)', () => {
       expect(response.body.id).toEqual(expect.any(String));
       expect(response.body.name).toBe('Курінь Тестовий');
 
+      const created = await prisma.user.findUniqueOrThrow({ where: { email: zv.email } });
+      expect(created.role).toBe('ZVYAZKOVYI');
+      expect(created.kurinId).toBe(response.body.id);
+      expect(created.mustChangePassword).toBe(false);
+
+      await acceptInviteFor(zv.email, zv.password);
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: zv.email, password: zv.password })
         .expect(201);
       expect(loginResponse.body.accessToken).toEqual(expect.any(String));
-
-      const created = await prisma.user.findUniqueOrThrow({ where: { email: zv.email } });
-      expect(created.role).toBe('ZVYAZKOVYI');
-      expect(created.kurinId).toBe(response.body.id);
-      expect(created.mustChangePassword).toBe(true);
     });
 
     it('returns 401 with a missing or wrong admin key', async () => {
@@ -311,6 +325,7 @@ describe('Admin kurins (e2e)', () => {
       expect(response.body.role).toBe('ZVYAZKOVYI');
       expect(response.body.passwordHash).toBeUndefined();
 
+      await acceptInviteFor('zvyazkovyi-bootstrap@example.com', 'secret123');
       const loginResponse = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: 'zvyazkovyi-bootstrap@example.com', password: 'secret123' })

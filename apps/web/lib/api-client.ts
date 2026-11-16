@@ -18,8 +18,11 @@ export function isKurinDeactivated(body: unknown): boolean {
 // A deactivated kurin blocks every authed request: drop the session and show the login notice.
 async function handleKurinDeactivated(status: number, body: unknown) {
   if (status !== 403 || !isKurinDeactivated(body) || typeof window === 'undefined') return;
-  await fetch('/api/auth/logout', { method: 'POST' });
-  window.location.assign('/login?reason=kurin-deactivated');
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } finally {
+    window.location.assign('/login?reason=kurin-deactivated');
+  }
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
