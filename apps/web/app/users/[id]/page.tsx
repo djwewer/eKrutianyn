@@ -660,7 +660,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             canEdit={!!canEditContactInfo || session?.role === 'VYKHOVNYK'}
           />
         )}
-        {isJunak && <JunakHistory junakId={id} />}
+        {isJunak && <JunakHistory junakId={id} hurtokId={user.hurtokId} />}
         {isJunak && probyProgram && (
           <Card>
             <CardHeader>

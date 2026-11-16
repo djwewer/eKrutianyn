@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useKurinPositions, useAssignPosition, useRemovePosition } from '@/lib/queries/positions';
 import { useUsers } from '@/lib/queries/users';
@@ -63,7 +64,9 @@ function ProvidSlot({
         {current ? (
           <>
             <b className="min-w-0 flex-1 text-[.98rem] leading-tight">
-              {current.user.lastName} {current.user.firstName}
+              <Link href={`/users/${current.user.id}`} className="rounded-[2px] hover:underline focus-visible:underline">
+                {current.user.lastName} {current.user.firstName}
+              </Link>
             </b>
             {canEdit && (
               <Button variant="outline" size="sm" onClick={() => remove.mutate(current.id)} disabled={remove.isPending}>

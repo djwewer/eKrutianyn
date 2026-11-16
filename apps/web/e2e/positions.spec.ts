@@ -122,3 +122,26 @@ test('lets kurinniy edit a non-Курінний slot but not the Курінни�
   await page.getByText('Писар').locator('..').getByRole('button', { name: 'Призначити' }).click();
   await expect(page.getByText('Писар').locator('..').getByText('Петренко Петро')).toBeVisible();
 });
+
+test('a Провід holder name links to the junak profile', async ({ page }) => {
+  const { program } = await seedProbyProgram();
+  const { zvyazkovyiEmail, zvyazkovyiPassword } = await seedKurinWithZvyazkovyi(program.id);
+  const token = await loginForToken(zvyazkovyiEmail, zvyazkovyiPassword);
+  const hurtok = await createHurtok(token, 'Орлики');
+  const junak = await createUserAs(token, {
+    firstName: 'Петро',
+    lastName: 'Петренко',
+    email: `provid-link-${Date.now()}@example.com`,
+    role: 'JUNAK',
+    hurtokId: hurtok.id,
+    password: 'password123',
+  });
+  await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
+  await page.goto('/kurin');
+  await page.getByText('Провід куреня').click();
+  await page.getByText('Писар').locator('..').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Петренко Петро' }).click();
+  await page.getByText('Писар').locator('..').getByRole('button', { name: 'Призначити' }).click();
+  await page.getByRole('link', { name: 'Петренко Петро' }).click();
+  await expect(page).toHaveURL(new RegExp(`/users/${junak.id}$`));
+});

@@ -21,6 +21,8 @@ export function useAssignPosition() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['kurin-positions'] });
+      // a junak's «Діловодство» lists their current positions too
+      queryClient.invalidateQueries({ queryKey: ['junak-history'] });
     },
   });
 }

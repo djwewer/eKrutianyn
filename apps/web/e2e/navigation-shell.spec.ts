@@ -16,7 +16,7 @@ const DESKTOP = { width: 1280, height: 800 };
 test.describe('phone', () => {
   test.use({ viewport: PHONE });
 
-  test('junak: five-item bottom bar without діловодство, centre and avatar links', async ({ page }) => {
+  test('junak: four-item bottom bar without діловодство or settings tab, avatar opens settings', async ({ page }) => {
     const { token } = await seed();
     const hurtok = await createHurtok(token, `Орлики${Date.now()}`);
     const { email, password } = await createOnboardedUserAs(token, {
@@ -31,11 +31,12 @@ test.describe('phone', () => {
 
     const nav = page.getByRole('navigation', { name: 'Основна навігація' });
     await expect(nav).toBeVisible();
-    for (const name of ['Новини', 'Календар', 'Моє пластування', 'Курінь', 'Налаштування']) {
+    for (const name of ['Новини', 'Календар', 'Моє пластування', 'Курінь']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
     }
+    await expect(nav.getByRole('link', { name: 'Налаштування' })).toHaveCount(0);
     await expect(nav.getByRole('button', { name: 'Діловодство' })).toHaveCount(0);
-    await expect(nav.getByRole('link')).toHaveCount(5);
+    await expect(nav.getByRole('link')).toHaveCount(4);
 
     // No old burger / theme toggle on the phone.
     await expect(page.getByRole('button', { name: 'Меню' })).toHaveCount(0);
@@ -43,7 +44,10 @@ test.describe('phone', () => {
     await nav.getByRole('link', { name: 'Моє пластування', exact: true }).click();
     await expect(page).toHaveURL(/\/plastuvannia$/);
 
-    await page.getByRole('link', { name: 'Моя сторінка' }).click();
+    await page.getByRole('banner').getByRole('link', { name: 'Налаштування' }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Налаштування' })).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('main').getByRole('link', { name: 'Мій профіль' }).click();
     await expect(page).toHaveURL(/\/me$/);
   });
 
@@ -72,15 +76,12 @@ test.describe('phone', () => {
 
     const nav = page.getByRole('navigation', { name: 'Основна навігація' });
     await expect(nav.getByRole('link', { name: 'Моя проба', exact: true })).toHaveAttribute('href', '/plastuvannia');
-    await expect(nav.getByRole('link', { name: 'Налаштування', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Налаштування' })).toHaveCount(0);
 
     const dilovody = nav.getByRole('button', { name: 'Діловодство' });
-    // Six columns: five links plus the діловодство button; adjacent labels must not touch.
-    await expect(nav.getByRole('link')).toHaveCount(5);
+    // Four links plus the діловодство button.
+    await expect(nav.getByRole('link')).toHaveCount(4);
     await expect(dilovody).toHaveCount(1);
-    const dBox = await dilovody.boundingBox();
-    const sBox = await nav.getByRole('link', { name: 'Налаштування', exact: true }).boundingBox();
-    expect(dBox && sBox && sBox.x - (dBox.x + dBox.width)).toBeGreaterThan(0);
     await expect(dilovody).toHaveAttribute('aria-expanded', 'false');
     await dilovody.click();
     await expect(dilovody).toHaveAttribute('aria-expanded', 'true');
@@ -137,10 +138,11 @@ test.describe('desktop', () => {
     await expect(navs).toHaveCount(1);
     const nav = navs.first();
     await expect(nav).toBeVisible();
-    for (const name of ['Моя проба', 'Новини', 'Календар', 'Курінь', 'Налаштування']) {
+    for (const name of ['Моя проба', 'Новини', 'Календар', 'Курінь']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
     }
-    await expect(page.getByRole('link', { name: 'Моя сторінка' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Налаштування' })).toHaveCount(0);
+    await expect(page.getByRole('banner').getByRole('link', { name: /^Налаштування/ })).toHaveAttribute('href', '/settings');
 
     const dilovody = nav.getByRole('button', { name: 'Діловодство' });
     await expect(dilovody).toHaveAttribute('aria-expanded', 'false');

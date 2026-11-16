@@ -136,12 +136,14 @@ test('zvyazkovyi records a warning (both fields required), an award, an archive 
 
   const dilovodstvo = page.getByTestId('history-dilovodstvo');
   await dilovodstvo.getByRole('button', { name: 'Додати посаду' }).click();
-  await dialog.getByLabel('Посада').fill('Скарбник гуртка');
+  await dialog.getByRole('radio', { name: 'Посада до застосунку' }).click();
+  await expect(dialog.locator('input#past-position-title')).toHaveCount(0);
   await dialog.getByLabel('Де').selectOption('HURTOK');
+  await dialog.getByLabel('Посада').selectOption('Скарбник');
   await dialog.getByLabel('Рік початку').fill('2019');
   await dialog.getByLabel('Рік завершення (необовʼязково)').fill('2021');
   await dialog.getByRole('button', { name: 'Зберегти' }).click();
-  await expect(dilovodstvo).toContainText('Скарбник гуртка');
+  await expect(dilovodstvo).toContainText('Скарбник');
   await expect(dilovodstvo).toContainText('до застосунку');
   await expect(dilovodstvo).toContainText('Гуртковий');
   await expect(dilovodstvo).toContainText('зараз');
@@ -164,19 +166,20 @@ test('zvyazkovyi records a warning (both fields required), an award, an archive 
   await remarks.getByRole('button', { name: /Видалити: Відзначення від 01.08.2024/ }).click();
   await expect(remarks.getByTestId('history-remark')).toHaveCount(1);
 
-  await dilovodstvo.getByRole('button', { name: 'Змінити: Скарбник гуртка' }).click();
-  await dialog.getByLabel('Посада').fill('Скарбник гуртка (архів)');
+  await dilovodstvo.getByRole('button', { name: 'Змінити: Скарбник' }).click();
+  await dialog.getByLabel('Посада').selectOption('Писар');
   await dialog.getByRole('button', { name: 'Зберегти' }).click();
-  await expect(dilovodstvo).toContainText('Скарбник гуртка (архів)');
+  await expect(dilovodstvo).toContainText('Писар');
   page.once('dialog', (d) => d.accept());
-  await dilovodstvo.getByRole('button', { name: 'Видалити: Скарбник гуртка (архів)' }).click();
-  await expect(dilovodstvo).not.toContainText('Скарбник гуртка');
+  await dilovodstvo.getByRole('button', { name: 'Видалити: Писар' }).click();
+  await expect(dilovodstvo).not.toContainText('Писар');
   await dilovodstvo.getByRole('button', { name: 'Додати посаду' }).click();
-  await dialog.getByLabel('Посада').fill('Скарбник гуртка');
+  await dialog.getByRole('radio', { name: 'Посада до застосунку' }).click();
+  await dialog.getByLabel('Посада').selectOption('Скарбник');
   await dialog.getByLabel('Рік початку').fill('2019');
   await dialog.getByLabel('Рік завершення (необовʼязково)').fill('2021');
   await dialog.getByRole('button', { name: 'Зберегти' }).click();
-  await expect(dilovodstvo).toContainText('Скарбник гуртка');
+  await expect(dilovodstvo).toContainText('Скарбник');
 
   await page.goto('/audit-log');
   await expect(page.getByText(/Додав пересторогу для .* \(від 2025-03-10\)/)).toBeVisible();
@@ -184,9 +187,9 @@ test('zvyazkovyi records a warning (both fields required), an award, an archive 
   await expect(page.getByText(/Видалив відзначення для .* \(від 2024-08-01\)/)).toBeVisible();
   await expect(page.getByText('Запізнився на три сходини поспіль')).toHaveCount(0);
   await expect(page.getByText('Відвідати наступні чотири сходини вчасно')).toHaveCount(0);
-  await expect(page.getByText(/Додав до архіву діловодства посаду «Скарбник гуртка»/).first()).toBeVisible();
-  await expect(page.getByText(/Змінив запис архіву діловодства «Скарбник гуртка \(архів\)»/)).toBeVisible();
-  await expect(page.getByText(/Видалив з архіву діловодства посаду «Скарбник гуртка \(архів\)»/)).toBeVisible();
+  await expect(page.getByText(/Додав до архіву діловодства посаду «Скарбник»/).first()).toBeVisible();
+  await expect(page.getByText(/Змінив запис архіву діловодства «Писар»/)).toBeVisible();
+  await expect(page.getByText(/Видалив з архіву діловодства посаду «Писар»/)).toBeVisible();
   await expect(page.getByText(/Змінив дати вступу до УПЮ та пластової присяги/)).toBeVisible();
 
   await page.context().clearCookies();
@@ -195,7 +198,7 @@ test('zvyazkovyi records a warning (both fields required), an award, an archive 
   const ownRemarks = page.getByTestId('history-remarks');
   await expect(ownRemarks).toContainText('Запізнився на три сходини поспіль');
   await expect(ownRemarks).toContainText('Відвідати наступні чотири сходини вчасно');
-  await expect(page.getByTestId('history-dilovodstvo')).toContainText('Скарбник гуртка');
+  await expect(page.getByTestId('history-dilovodstvo')).toContainText('Скарбник');
   await expect(page.getByTestId('history-dates')).toContainText('22.02.2019');
   await expect(page.getByRole('main').getByRole('button', { name: /^Додати|^Змінити/ })).toHaveCount(0);
   // the old «Діловодство» card is hidden for a junak: only the history section shows it
@@ -239,4 +242,27 @@ test('vykhovnyk sees history edit buttons only for junaks of own hurtok', async 
   for (const name of editButtons) {
     await expect(page.getByRole('button', { name })).toHaveCount(0);
   }
+});
+
+test('zvyazkovyi assigns a current position from «Додати посаду»; archive mode offers a select', async ({ page }) => {
+  const s = await seedJunak();
+  await loginAs(page, s.zvyazkovyiEmail, s.zvyazkovyiPassword);
+  await page.goto(`/users/${s.junak.user.id}`);
+
+  const dilovodstvo = page.getByTestId('history-dilovodstvo');
+  const dialog = page.getByRole('dialog');
+  await dilovodstvo.getByRole('button', { name: 'Додати посаду' }).click();
+  await expect(dialog.getByRole('radio', { name: 'Призначити зараз' })).toHaveAttribute('aria-checked', 'true');
+  await dialog.getByLabel('Де').selectOption('KURIN');
+  await dialog.getByLabel('Посада').selectOption('Писар');
+  await dialog.getByRole('button', { name: 'Зберегти' }).click();
+  await expect(dialog).toHaveCount(0);
+  const row = dilovodstvo.getByRole('listitem').filter({ hasText: 'Писар' });
+  await expect(row).toContainText('курінь');
+  await expect(row).toContainText('зараз');
+
+  await dilovodstvo.getByRole('button', { name: 'Додати посаду' }).click();
+  await dialog.getByRole('radio', { name: 'Посада до застосунку' }).click();
+  await expect(dialog.getByLabel('Посада')).toHaveJSProperty('tagName', 'SELECT');
+  await expect(dialog.getByRole('textbox', { name: 'Посада' })).toHaveCount(0);
 });

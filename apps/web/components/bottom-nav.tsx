@@ -14,7 +14,7 @@ function Label({ children }: { children: React.ReactNode }) {
   return <span className="max-w-full text-balance text-center leading-[1.1]">{children}</span>;
 }
 
-function Item({ item, active, badge = 0 }: { item: NavItem; active: boolean; badge?: number }) {
+function Item({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
@@ -23,12 +23,6 @@ function Item({ item, active, badge = 0 }: { item: NavItem; active: boolean; bad
     >
       <NavIcon name={item.icon} className="size-[1.45rem]" />
       <Label>{item.label}</Label>
-      {badge > 0 && (
-        <>
-          <span aria-hidden="true" className="absolute right-[22%] top-[.1rem] size-[.55rem] rounded-full bg-signal" />
-          <span className="sr-only">, нових: {badge}</span>
-        </>
-      )}
     </Link>
   );
 }
@@ -56,7 +50,7 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
   const count = nav.dilovody.length;
   const dilovodyActive = nav.dilovody.some((p) => isActive(p, pathname));
   const centerActive = isActive(nav.center, pathname);
-  const columns = count > 0 ? 6 : 5;
+  const columns = count > 0 ? 5 : 4;
 
   return (
     <div className="min-[761px]:hidden">
@@ -104,13 +98,7 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
         )}
         <nav
           aria-label="Основна навігація"
-          className={cn(
-            'grid gap-[.2rem]',
-            // 5 columns keep the prototype's .05em tracking (from ITEM) on purpose; 6 columns need tracking-normal to fit.
-            columns === 6
-              ? '[&_a]:text-[.62rem] [&_a]:tracking-normal [&_button]:text-[.62rem] [&_button]:tracking-normal'
-              : '[&_a]:text-[.66rem] [&_button]:text-[.66rem]',
-          )}
+          className="grid gap-[.2rem] [&_a]:text-[.66rem] [&_button]:text-[.66rem]"
           style={{
             gridTemplateColumns: `repeat(${columns}, minmax(min-content, 1fr))`,
           }}
@@ -144,7 +132,6 @@ export function BottomNav({ nav, pathname }: { nav: NavModel; pathname: string |
               <Label>Діловодство</Label>
             </button>
           )}
-          <Item item={nav.settings} active={isActive(nav.settings, pathname)} badge={nav.settings.badge} />
         </nav>
       </div>
     </div>

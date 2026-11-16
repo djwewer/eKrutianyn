@@ -16,7 +16,7 @@ const HISTORY_IDS = ['history-dates', 'history-skills', 'history-vfv', 'history-
  * «Історія» юнака. Хто може редагувати, вирішує бекенд (`canEdit`): звʼязковий
  * або виховник гуртка юнака. `readOnly` примусово вимикає редагування (/me).
  */
-export function JunakHistory({ junakId, readOnly = false }: { junakId: string; readOnly?: boolean }) {
+export function JunakHistory({ junakId, hurtokId = null, readOnly = false }: { junakId: string; hurtokId?: string | null; readOnly?: boolean }) {
   const { data, isError, error } = useJunakHistory(junakId);
   const canEdit = !!data?.canEdit && !readOnly;
   return (
@@ -32,7 +32,7 @@ export function JunakHistory({ junakId, readOnly = false }: { junakId: string; r
           <VfvSection junakId={junakId} entries={data.vfv} canEdit={canEdit} />
           <CampsSection junakId={junakId} entries={data.camps} canEdit={canEdit} />
           <RemarksSection junakId={junakId} entries={data.remarks} canEdit={canEdit} />
-          <DilovodstvoSection junakId={junakId} positions={data.positions} pastPositions={data.pastPositions} canEdit={canEdit} />
+          <DilovodstvoSection junakId={junakId} hurtokId={hurtokId} positions={data.positions} pastPositions={data.pastPositions} canEdit={canEdit} />
         </AccordionRoot>
       )}
     </section>

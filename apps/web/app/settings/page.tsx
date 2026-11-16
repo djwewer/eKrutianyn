@@ -121,6 +121,20 @@ export default function SettingsPage() {
         subtitle={`${profile.firstName} ${profile.lastName}${session?.role ? ` · ${ROLE_LABELS[session.role]}` : ''}`}
       />
 
+      <Card>
+        <CardContent>
+          <RowList>
+            <Link href="/me" className={quickActionClass}>
+              <span className="flex min-w-0 flex-1 flex-col gap-px">
+                <b className="text-base leading-tight">Мій профіль</b>
+                <small className="text-[.82rem] text-ink-2">Ваші дані, посади та історія</small>
+              </span>
+              <span className="text-xl text-ink-2" aria-hidden="true">›</span>
+            </Link>
+          </RowList>
+        </CardContent>
+      </Card>
+
       {isZvyazkovyi && (
         <Card>
           <CardHeader>

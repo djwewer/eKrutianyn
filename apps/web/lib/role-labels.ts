@@ -16,3 +16,7 @@ export const POSITION_LABELS: Record<PositionType, string> = {
   SMM: 'СММник',
   HURTKOVYI: 'Гуртковий',
 };
+
+/** Positions that can be held per scope (mirrors apps/api/src/kurin-positions/position-rules.ts). */
+export const KURIN_SCOPE_POSITIONS: PositionType[] = ['KURINNYI', 'SUDDIA', 'PYSAR', 'SKARBNYK', 'INTENDANT', 'KHORUNZHYI', 'SMM'];
+export const HURTOK_SCOPE_POSITIONS: PositionType[] = ['HURTKOVYI', 'SUDDIA', 'PYSAR', 'SKARBNYK'];

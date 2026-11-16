@@ -9,6 +9,7 @@ test('zvyazkovyi sees all quick actions on /settings', async ({ page }) => {
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto('/settings');
   const main = page.locator('main');
+  await expect(main.getByRole('link', { name: 'Мій профіль' })).toHaveAttribute('href', '/me');
   await expect(main.getByRole('link', { name: 'Запити' })).toHaveAttribute('href', '/approval-requests');
   await expect(main.getByRole('link', { name: 'Журнал дій' })).toHaveAttribute('href', '/audit-log');
 

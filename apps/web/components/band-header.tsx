@@ -13,7 +13,7 @@ const TAB =
 const TAB_IDLE = 'opacity-80 hover:opacity-100';
 const TAB_ACTIVE = 'bg-background text-foreground opacity-100 shadow-[inset_0_3px_0_var(--sky)]';
 
-function Tab({ item, active, badge = 0 }: { item: NavItem; active: boolean; badge?: number }) {
+function Tab({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
@@ -21,11 +21,6 @@ function Tab({ item, active, badge = 0 }: { item: NavItem; active: boolean; badg
       className={cn(TAB, active ? TAB_ACTIVE : TAB_IDLE)}
     >
       {item.label}
-      {badge > 0 && (
-        <span className="rounded-full bg-signal px-[.4rem] font-mono text-[.66rem] leading-[1.4] tracking-normal text-white">
-          {badge}
-        </span>
-      )}
     </Link>
   );
 }
@@ -130,6 +125,7 @@ export function BandHeader({
   const photoUrl = profile?.photoUpdatedAt
     ? `/api/backend/users/${profile.id}/photo?v=${profile.photoUpdatedAt}`
     : null;
+  const settingsActive = isActive(nav.settings, pathname);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const photoFailed = failedPhotoUrl === photoUrl;
 
@@ -164,9 +160,13 @@ export function BandHeader({
             </div>
           </Link>
           <Link
-            href="/me"
-            aria-label="Моя сторінка"
-            className="flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,currentColor_12%,transparent)] p-[.15rem] min-[761px]:py-[.15rem] min-[761px]:pl-[.15rem] min-[761px]:pr-[.6rem]"
+            href={nav.settings.href}
+            aria-label={nav.settings.badge > 0 ? `Налаштування, запитів: ${nav.settings.badge}` : 'Налаштування'}
+            aria-current={settingsActive ? 'page' : undefined}
+            className={cn(
+              'relative flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,currentColor_12%,transparent)] p-[.15rem] min-[761px]:py-[.15rem] min-[761px]:pl-[.15rem] min-[761px]:pr-[.6rem]',
+              settingsActive && 'ring-2 ring-sky',
+            )}
           >
             <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-band-ink font-display text-[.75rem] font-bold text-band">
               {photoUrl && !photoFailed ? (
@@ -178,6 +178,14 @@ export function BandHeader({
             {profile && (
               <span className="hidden whitespace-nowrap text-[.82rem] font-bold min-[761px]:inline">
                 {profile.firstName}
+              </span>
+            )}
+            {nav.settings.badge > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -right-[.25rem] -top-[.25rem] min-w-[1.1rem] rounded-full bg-signal px-[.3rem] text-center font-mono text-[.62rem] leading-[1.4] text-white"
+              >
+                {nav.settings.badge}
               </span>
             )}
           </Link>
@@ -194,8 +202,6 @@ export function BandHeader({
           {nav.dilovody.length > 0 && <span aria-hidden="true" className="my-[.55rem] mx-[.35rem] w-px flex-none bg-current opacity-30" />}
           {nav.dilovody.length === 1 && <Tab item={nav.dilovody[0]} active={isActive(nav.dilovody[0], pathname)} />}
           {nav.dilovody.length > 1 && <Dilovody items={nav.dilovody} pathname={pathname} />}
-          <span aria-hidden="true" className="my-[.55rem] mx-[.35rem] w-px flex-none bg-current opacity-30" />
-          <Tab item={nav.settings} active={isActive(nav.settings, pathname)} badge={nav.settings.badge} />
         </nav>
       </div>
     </header>
