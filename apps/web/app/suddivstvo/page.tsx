@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api-client';
 import { fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
 import { openGoogleSheetPicker } from '@/lib/google-picker';
 import {
+  useDisconnectJunakImportSpreadsheet,
   useJunakImportStatus,
   useSetJunakImportSpreadsheet,
   useSyncJudgeBookNow,
@@ -16,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
 
 /** The sync endpoint's 400/503 bodies carry a specific, actionable message (Google error, missing mapping...) — show it as is. */
@@ -31,21 +33,30 @@ export default function SuddivstvoPage() {
   const { data: session } = useSession();
   const { data: kurin } = useKurin();
   const kurinId = kurin?.id;
-  const canManageJudgeBook = session?.role === 'ZVYAZKOVYI';
+  const canManageJudgeBook = session?.role === 'ZVYAZKOVYI' || !!session?.positions?.includes('SUDDIA');
   const junakImportStatus = useJunakImportStatus(kurinId);
   const setJunakImportSpreadsheet = useSetJunakImportSpreadsheet(kurinId ?? '');
+  const disconnect = useDisconnectJunakImportSpreadsheet(kurinId ?? '');
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [driveMissing, setDriveMissing] = useState(false);
   const syncNow = useSyncJudgeBookNow(kurinId ?? '');
   const [bookConnectError, setBookConnectError] = useState<string | null>(null);
 
   async function handleConnectJudgeBook() {
     if (!kurinId) return;
     setBookConnectError(null);
+    setDriveMissing(false);
     try {
       const accessToken = await fetchGoogleDrivePickerToken(kurinId);
       await openGoogleSheetPicker(accessToken, (spreadsheetId, spreadsheetName) => {
         setJunakImportSpreadsheet.mutate({ spreadsheetId, spreadsheetName });
       });
-    } catch {
+    } catch (error) {
+      // The picker token fails with 503 until the zvyazkovyi connects Google Drive for the kurin.
+      if (error instanceof ApiError && error.status === 503 && session?.role !== 'ZVYAZKOVYI') {
+        setDriveMissing(true);
+        return;
+      }
       setBookConnectError('Не вдалося підключити таблицю. Спробуйте ще раз.');
     }
   }
@@ -80,6 +91,9 @@ export default function SuddivstvoPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={handleConnectJudgeBook}>
                     Змінити таблицю
+                  </Button>
+                  <Button variant="outline" onClick={() => setConfirmDisconnect(true)}>
+                    Відʼєднати таблицю
                   </Button>
                   <Button variant="signal" disabled={syncNow.isPending} onClick={() => syncNow.mutate()}>
                     {syncNow.isPending ? 'Записую...' : 'Записати зміни в таблицю зараз'}
@@ -125,9 +139,31 @@ export default function SuddivstvoPage() {
               )}
             </>
           )}
+          {driveMissing && (
+            <p className="text-sm text-ink-2">Спершу звʼязковий має підключити Google Drive куреня.</p>
+          )}
           {bookConnectError && <p className="text-sm text-late">{bookConnectError}</p>}
         </CardContent>
       </Card>
+      {confirmDisconnect && (
+        <Dialog open onOpenChange={(open) => !open && setConfirmDisconnect(false)}>
+          <DialogContent>
+            <DialogTitle>Відʼєднати таблицю?</DialogTitle>
+            <p className="text-sm">
+              Синхронізація з таблицею зупиниться. Якщо підключите таблицю знову, відповідність колонок доведеться налаштувати заново.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmDisconnect(false)}>
+                Скасувати
+              </Button>
+              <Button disabled={disconnect.isPending} onClick={() => disconnect.mutate(undefined, { onSettled: () => setConfirmDisconnect(false) })}>
+                Відʼєднати таблицю
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {disconnect.isError && <p className="text-sm text-late">Не вдалося відʼєднати таблицю.</p>}
       {junakImportStatus.data?.connectedSpreadsheetId && (
         <Link
           href="/suddivstvo/junak-import"

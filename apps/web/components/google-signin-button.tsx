@@ -14,7 +14,14 @@ declare global {
             client_id: string;
             callback: (response: { credential: string }) => void;
           }) => void;
-          renderButton: (parent: HTMLElement, options: { theme: string; size: string }) => void;
+          renderButton: (parent: HTMLElement, options: {
+              theme: string;
+              size: string;
+              width?: number;
+              text?: string;
+              shape?: string;
+              logo_alignment?: string;
+            },) => void;
         };
       };
     };
@@ -53,7 +60,17 @@ export function GoogleSignInButton() {
     script.onload = () => {
       if (window.google && buttonRef.current) {
         window.google.accounts.id.initialize({ client_id: clientId, callback: handleCredential });
-        window.google.accounts.id.renderButton(buttonRef.current, { theme: 'outline', size: 'large' });
+        // The theme script in layout.tsx marks the resolved theme with the `dark` class on <html>.
+        const dark = document.documentElement.classList.contains('dark');
+        const width = buttonRef.current.parentElement?.clientWidth ?? 0;
+        window.google.accounts.id.renderButton(buttonRef.current, {
+          theme: dark ? 'filled_black' : 'outline',
+          size: 'large',
+          ...(width > 0 ? { width: Math.min(400, Math.floor(width)) } : {}),
+          text: 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'center',
+        });
       }
     };
     document.body.appendChild(script);
@@ -66,7 +83,7 @@ export function GoogleSignInButton() {
 
   return (
     <div className="space-y-2">
-      <div ref={buttonRef} />
+      <div ref={buttonRef} className="flex w-full justify-center" />
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

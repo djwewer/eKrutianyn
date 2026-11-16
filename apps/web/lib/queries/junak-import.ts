@@ -26,6 +26,17 @@ export function useSetJunakImportSpreadsheet(kurinId: string) {
   });
 }
 
+export function useDisconnectJunakImportSpreadsheet(kurinId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: true }>(`/kurins/${kurinId}/junak-import/spreadsheet`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['junak-import-status', kurinId] });
+    },
+  });
+}
+
 export function useJunakImportSheetData(kurinId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['junak-import-sheet-data', kurinId],
