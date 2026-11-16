@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuditAction, Role, TokenPurpose } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +9,8 @@ import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 
 @Injectable()
 export class KurinsAdminService {
+  private readonly logger = new Logger(KurinsAdminService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly inviteService: InviteService,
@@ -117,6 +119,110 @@ export class KurinsAdminService {
       );
     }
     await this.prisma.kurin.delete({ where: { id } });
+  }
+
+  async deleteKurinPreview(id: string) {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id }, select: { id: true } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    const [users, hurtky, announcements, calendarEvents, inventoryItems, treasuryTransactions] = await Promise.all([
+      this.prisma.user.count({ where: { kurinId: id } }),
+      this.prisma.hurtok.count({ where: { kurinId: id } }),
+      this.prisma.announcement.count({ where: { kurinId: id } }),
+      this.prisma.kurinCalendarEvent.count({ where: { kurinId: id } }),
+      this.prisma.inventoryItem.count({ where: { kurinId: id } }),
+      this.prisma.treasuryTransaction.count({ where: { kurinId: id } }),
+    ]);
+    return { users, hurtky, announcements, calendarEvents, inventoryItems, treasuryTransactions };
+  }
+
+  // Irreversibly removes a deactivated kurin and everything that hangs off it.
+  // Global catalog data (proby program, reference sources, point mappings,
+  // global skills with kurinId = null) is deliberately left alone.
+  async forceDeleteKurin(id: string, confirmName: string): Promise<void> {
+    const kurin = await this.prisma.kurin.findUnique({ where: { id }, select: { id: true, name: true, deactivatedAt: true } });
+    if (!kurin) {
+      throw new NotFoundException('Kurin not found');
+    }
+    if (!kurin.deactivatedAt) {
+      throw new ConflictException('Спершу деактивуйте курінь');
+    }
+    if (confirmName.trim() !== kurin.name.trim()) {
+      throw new BadRequestException('Назва не збігається');
+    }
+    const counts = await this.deleteKurinPreview(id);
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        const userIds = (await tx.user.findMany({ where: { kurinId: id }, select: { id: true } })).map((u) => u.id);
+        const byJunak = { junakId: { in: userIds } };
+
+        // AI
+        await tx.aiMessage.deleteMany({ where: { conversation: { userId: { in: userIds } } } });
+        await tx.aiConversation.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.aiUsageEvent.deleteMany({ where: { userId: { in: userIds } } });
+        // Announcements
+        await tx.announcementReaction.deleteMany({
+          where: { OR: [{ userId: { in: userIds } }, { announcement: { kurinId: id } }] },
+        });
+        await tx.announcementImage.deleteMany({ where: { OR: [{ kurinId: id }, { uploaderId: { in: userIds } }] } });
+        await tx.announcement.deleteMany({ where: { OR: [{ kurinId: id }, { authorId: { in: userIds } }] } });
+        // Notifications and account
+        await tx.pushSubscription.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.passwordResetToken.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.emailChangeRequest.deleteMany({ where: { userId: { in: userIds } } });
+        await tx.profileChangeLog.deleteMany({ where: { userId: { in: userIds } } });
+        // Approvals
+        await tx.approvalRequest.deleteMany({
+          where: { OR: [{ initiatedById: { in: userIds } }, { approvedById: { in: userIds } }] },
+        });
+        // Junak history
+        await tx.junakActivityEntry.deleteMany({ where: byJunak });
+        await tx.junakVfv.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.junakCamp.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.junakRemark.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.junakPastPosition.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.guardianContact.deleteMany({ where: byJunak });
+        await tx.junakSkill.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.junakProgress.deleteMany({ where: { OR: [byJunak, { confirmedById: { in: userIds } }] } });
+        await tx.junakStageProgress.deleteMany({ where: { OR: [byJunak, { closedById: { in: userIds } }] } });
+        // Kurin-owned skills (levels cascade; global skills have kurinId null)
+        await tx.junakSkill.deleteMany({ where: { level: { skill: { kurinId: id } } } });
+        await tx.skill.deleteMany({ where: { kurinId: id } });
+        // Assignments and positions
+        await tx.vykhovnykHurtok.deleteMany({
+          where: { OR: [{ vykhovnykId: { in: userIds } }, { hurtok: { kurinId: id } }] },
+        });
+        await tx.kurinPosition.deleteMany({
+          where: {
+            OR: [
+              { kurinId: id },
+              { userId: { in: userIds } },
+              { assignedById: { in: userIds } },
+              { removedById: { in: userIds } },
+            ],
+          },
+        });
+        // Stock and money (inventory photos cascade from the item)
+        await tx.inventoryItem.deleteMany({ where: { OR: [{ kurinId: id }, { createdById: { in: userIds } }] } });
+        await tx.treasuryTransaction.deleteMany({ where: { OR: [{ kurinId: id }, { createdById: { in: userIds } }] } });
+        await tx.kurinCalendarEvent.deleteMany({ where: { OR: [{ kurinId: id }, { createdById: { in: userIds } }] } });
+        // Audit and import
+        await tx.auditLog.deleteMany({ where: { OR: [{ kurinId: id }, { actorId: { in: userIds } }] } });
+        await tx.junakImportMapping.deleteMany({ where: { kurinId: id } });
+        // Self-references, then hurtky and users
+        await tx.hurtok.updateMany({ where: { kurinId: id }, data: { archivedById: null } });
+        await tx.user.updateMany({ where: { kurinId: id }, data: { archivedById: null } });
+        await tx.user.updateMany({ where: { kurinId: id }, data: { hurtokId: null } });
+        await tx.hurtok.deleteMany({ where: { kurinId: id } });
+        await tx.user.deleteMany({ where: { kurinId: id } });
+        await tx.kurin.delete({ where: { id } });
+      },
+      { timeout: 60_000 },
+    );
+
+    this.logger.warn(`Force-deleted kurin ${id} "${kurin.name}": ${JSON.stringify(counts)}`);
   }
 
   async createKurin(dto: CreateKurinDto) {

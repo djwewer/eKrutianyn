@@ -4,6 +4,7 @@ import { AdminCredentialsGuard } from '../common/guards/admin-credentials.guard'
 import { CreateKurinDto } from './dto/create-kurin.dto';
 import { UpdateKurinDto } from './dto/update-kurin.dto';
 import { CreateAdminUserDto } from './dto/create-admin-user.dto';
+import { ForceDeleteKurinDto } from './dto/force-delete-kurin.dto';
 import { KurinsAdminService } from './kurins-admin.service';
 
 @UseGuards(AdminKeyGuard, AdminCredentialsGuard)
@@ -41,6 +42,17 @@ export class KurinsAdminController {
   @HttpCode(200)
   activate(@Param('id') id: string) {
     return this.service.setDeactivated(id, false);
+  }
+
+  @Get(':id/delete-preview')
+  deletePreview(@Param('id') id: string) {
+    return this.service.deleteKurinPreview(id);
+  }
+
+  @Delete(':id/force')
+  @HttpCode(204)
+  async forceDelete(@Param('id') id: string, @Body() dto: ForceDeleteKurinDto): Promise<void> {
+    await this.service.forceDeleteKurin(id, dto.confirmName);
   }
 
   @Delete(':id')
