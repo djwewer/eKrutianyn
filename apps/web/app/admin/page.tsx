@@ -422,7 +422,7 @@ function KurinRow({ kurin, credentials }: { kurin: AdminKurin; credentials: Admi
           <ResendInviteResult email={kurin.zvyazkovyi.email} resend={resendInvite} />
         </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" disabled={!dirty || onUpdate.isPending} onClick={handleSave}>
           Зберегти
         </Button>
