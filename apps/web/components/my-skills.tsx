@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { useJunakSkills, useRemoveJunakSkill } from '@/lib/queries/junak-history';
-import { mutationErrorText } from '@/lib/error-message';
+import { useQueryClient } from '@tanstack/react-query';
+import { junakHistoryKey, junakSkillsKey, useJunakSkills, useRemoveJunakSkill } from '@/lib/queries/junak-history';
+import { ApiError } from '@/lib/api-client';
+import { accessErrorMessage, mutationErrorText } from '@/lib/error-message';
 import { SKILL_LEVEL_LABELS } from '@/lib/history-labels';
 import { formatDate } from '@/components/junak-history/shared';
 import type { JunakSkill } from '@/lib/types';
@@ -50,7 +52,7 @@ function StartedSkill({ skill, onRemove }: { skill: JunakSkill; onRemove: (skill
                 )}
                 {sign && (
                   <p className="text-xs text-ink-2">
-                    {sign.signedByName}, {formatDate(sign.signedAt.slice(0, 10))}
+                    {sign.signedByName}, {new Date(sign.signedAt).toLocaleDateString('uk-UA')}
                   </p>
                 )}
               </li>
@@ -58,7 +60,12 @@ function StartedSkill({ skill, onRemove }: { skill: JunakSkill; onRemove: (skill
           })}
         </ul>
         {done === 0 && (
-          <Button size="sm" variant="outline" className="mt-3" onClick={() => onRemove(skill)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            aria-label={`Прибрати «${skill.skillName}»`}
+            onClick={() => onRemove(skill)}>
             Прибрати
           </Button>
         )}
@@ -67,11 +74,39 @@ function StartedSkill({ skill, onRemove }: { skill: JunakSkill; onRemove: (skill
   );
 }
 
+function removeErrorText(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) {
+    const message = (error.body as { message?: unknown } | null)?.message;
+    if (typeof message === 'string' && message) return message;
+    return 'Цю вмілість уже підписано — прибрати її може лише виховник.';
+  }
+  return mutationErrorText(error, 'Не вдалося прибрати вмілість.');
+}
+
 export function MySkills({ junakId }: { junakId: string }) {
-  const { data } = useJunakSkills(junakId);
+  const { data, isError, error } = useJunakSkills(junakId);
   const remove = useRemoveJunakSkill(junakId);
+  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState<JunakSkill | null>(null);
 
+  function setConfirm(skill: JunakSkill | null) {
+    remove.reset();
+    setConfirming(skill);
+  }
+
+  function removeConfirmed(skill: JunakSkill) {
+    remove.mutate(skill.id, {
+      onSuccess: () => setConfirming(null),
+      onError: () => {
+        queryClient.invalidateQueries({ queryKey: junakSkillsKey(junakId) });
+        queryClient.invalidateQueries({ queryKey: junakHistoryKey(junakId) });
+      },
+    });
+  }
+
+  if (isError) {
+    return <p className="mb-6 text-sm text-destructive">{accessErrorMessage(error) ?? 'Не вдалося завантажити твої вмілості.'}</p>;
+  }
   if (!data) return null;
   const started = data.items.filter((s) => s.status === 'STARTED');
   const achieved = data.items.filter((s) => s.status === 'ACHIEVED');
@@ -91,7 +126,7 @@ export function MySkills({ junakId }: { junakId: string }) {
           <h3 className="font-display text-[.8rem] font-semibold tracking-[.1em] text-ink-2 uppercase">Розпочаті</h3>
           <AccordionRoot multiple>
             {started.map((skill) => (
-              <StartedSkill key={skill.id} skill={skill} onRemove={setConfirming} />
+              <StartedSkill key={skill.id} skill={skill} onRemove={setConfirm} />
             ))}
           </AccordionRoot>
         </div>
@@ -112,23 +147,23 @@ export function MySkills({ junakId }: { junakId: string }) {
           </ul>
         </div>
       )}
-      <Dialog open={!!confirming} onOpenChange={(open) => !open && setConfirming(null)}>
+      <Dialog open={!!confirming} onOpenChange={(open) => !open && setConfirm(null)}>
         <DialogContent>
           <DialogTitle>Прибрати вмілість?</DialogTitle>
           <p className="text-sm">
             «{confirming?.skillName}» буде прибрано зі списку розпочатих. Далі її можна розпочати знову.
           </p>
           {remove.isError && (
-            <p className="text-sm text-destructive">{mutationErrorText(remove.error, 'Не вдалося прибрати вмілість.')}</p>
+            <p className="text-sm text-destructive">{removeErrorText(remove.error)}</p>
           )}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirming(null)}>
+            <Button variant="outline" onClick={() => setConfirm(null)}>
               Скасувати
             </Button>
             <Button
               variant="destructive"
               disabled={remove.isPending}
-              onClick={() => confirming && remove.mutate(confirming.id, { onSuccess: () => setConfirming(null) })}
+              onClick={() => confirming && removeConfirmed(confirming)}
             >
               Прибрати
             </Button>

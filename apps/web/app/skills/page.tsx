@@ -18,13 +18,26 @@ import type { Skill } from '@/lib/types';
 
 type LevelStatus = Map<string, 'STARTED' | 'ACHIEVED'>;
 
-function StartControl({ junakId, levelId, status }: { junakId: string; levelId: string; status: LevelStatus }) {
+function StartControl({
+  junakId,
+  levelId,
+  status,
+  canStart,
+  label,
+}: {
+  junakId: string;
+  levelId: string;
+  status: LevelStatus;
+  canStart: boolean;
+  label: string;
+}) {
   const start = useStartJunakSkill(junakId);
   const current = status.get(levelId);
   if (current) return <Badge variant={current === 'STARTED' ? 'signal' : 'ok'}>{current === 'STARTED' ? 'розпочата' : 'здобута'}</Badge>;
+  if (!canStart) return null;
   return (
     <div className="space-y-1">
-      <Button size="sm" disabled={start.isPending} onClick={() => start.mutate(levelId)}>
+      <Button size="sm" aria-label={`Розпочати ${label}`} disabled={start.isPending} onClick={() => start.mutate(levelId)}>
         Розпочати
       </Button>
       {start.isError && <p className="text-sm text-destructive">{mutationErrorText(start.error, 'Не вдалося розпочати вмілість.')}</p>}
@@ -37,12 +50,14 @@ function SkillCard({
   canManage,
   onEdit,
   junakId,
+  canStart,
   levelStatus,
 }: {
   skill: Skill;
   canManage: boolean;
   onEdit: (skill: Skill) => void;
   junakId?: string;
+  canStart: boolean;
   levelStatus: LevelStatus;
 }) {
   const [selected, setSelected] = useState(skill.levels[0]?.level);
@@ -80,7 +95,15 @@ function SkillCard({
         <div role="tabpanel" aria-label={SKILL_LEVEL_LABELS[level.level]} className="space-y-2 text-sm">
           {level.note && <p className="font-medium text-sky-ink">{level.note}</p>}
           <SkillRequirementList requirements={level.requirements} />
-          {junakId && <StartControl junakId={junakId} levelId={level.id} status={levelStatus} />}
+          {junakId && (
+            <StartControl
+              junakId={junakId}
+              levelId={level.id}
+              status={levelStatus}
+              canStart={canStart}
+              label={`«${skill.name}», ${SKILL_LEVEL_LABELS[level.level] ?? level.level}`}
+            />
+          )}
         </div>
       )}
       {canManage && skill.isCustom && (
@@ -158,7 +181,8 @@ export default function SkillsPage() {
                         skill={skill}
                         canManage={canManage}
                         onEdit={(s) => setDialog({ skill: s })}
-                        junakId={isJunak && mine?.canStart ? session.userId : undefined}
+                        junakId={isJunak && mine ? session.userId : undefined}
+                        canStart={!!mine?.canStart}
                         levelStatus={levelStatus}
                       />
                     ))}

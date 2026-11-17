@@ -252,6 +252,17 @@ describe('Junak skills in progress — start, sign, credit, remove (e2e)', () =>
       await sign(w.junak.id, zv, id, 1).expect(400);
     });
 
+    it('a junak can self-remove a started record whose only sign is stale', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const id = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
+      await sign(w.junak.id, zv, id, 1).expect(200);
+      await prisma.skillLevel.update({ where: { id: w.level2.id }, data: { requirements: [{ text: '1. Перша' }] } });
+      await remove(w.junak.id, w.token(w.junak), id).expect(200);
+      expect(await prisma.junakSkill.count()).toBe(0);
+      expect(await prisma.junakSkillRequirementSign.count()).toBe(0);
+    });
+
     it('concurrent first signs do not 500 and audit once', async () => {
       const w = await setup();
       const zv = w.token(w.zvyazkovyi);

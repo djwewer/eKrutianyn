@@ -159,7 +159,13 @@ export class JunakSkillsService {
       if (!own.achievedAt) {
         const { junak } = await loadJunakForSelfOrWrite(this.prisma, junakId, actor);
         const res = await this.prisma.junakSkill.deleteMany({
-          where: { id, junakId, achievedAt: null, signs: { none: {} } },
+          where: {
+            id,
+            junakId,
+            achievedAt: null,
+            // Stale signs (beyond the level's current requirements) are hidden in the view, so they don't block.
+            signs: { none: { requirementIndex: { lt: (own.level.requirements as unknown as unknown[]).length } } },
+          },
         });
         if (res.count === 0) {
           const again = await this.prisma.junakSkill.findUnique({ where: { id }, select: { id: true } });
