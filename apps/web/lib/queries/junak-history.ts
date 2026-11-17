@@ -10,6 +10,7 @@ import type {
   JunakRemark,
   JunakRemarkKind,
   JunakSkill,
+  JunakSkillsList,
   JunakVfv,
   PositionScope,
 } from '@/lib/types';
@@ -24,12 +25,26 @@ export function useJunakHistory(junakId: string | undefined) {
   });
 }
 
+export const junakSkillsKey = (junakId: string) => ['junak-skills', junakId] as const;
+
+export function useJunakSkills(junakId: string | undefined) {
+  return useQuery({
+    queryKey: junakSkillsKey(junakId as string),
+    queryFn: () => apiFetch<JunakSkillsList>(`/users/${junakId}/skills`),
+    enabled: !!junakId,
+  });
+}
+
 /** Every history change refreshes everything cached under ['junak-history', junakId]. */
 function useHistoryMutation<TVars, TResult>(junakId: string, mutationFn: (vars: TVars) => Promise<TResult>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: junakHistoryKey(junakId) }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: junakHistoryKey(junakId) }),
+        queryClient.invalidateQueries({ queryKey: junakSkillsKey(junakId) }),
+      ]),
   });
 }
 
@@ -50,6 +65,37 @@ export interface JunakSkillPatch {
 export function useAddJunakSkill(junakId: string) {
   return useHistoryMutation(junakId, (dto: JunakSkillInput) =>
     apiFetch<JunakSkill>(`/users/${junakId}/skills`, { method: 'POST', body: JSON.stringify(dto) }),
+  );
+}
+
+export function useStartJunakSkill(junakId: string) {
+  return useHistoryMutation(junakId, (levelId: string) =>
+    apiFetch<JunakSkill>(`/users/${junakId}/skills/start`, { method: 'POST', body: JSON.stringify({ levelId }) }),
+  );
+}
+
+export function useSignSkillRequirement(junakId: string) {
+  return useHistoryMutation(junakId, ({ id, index }: { id: string; index: number }) =>
+    apiFetch<JunakSkill>(`/users/${junakId}/skills/${id}/requirements/${index}`, { method: 'PUT' }),
+  );
+}
+
+export function useUnsignSkillRequirement(junakId: string) {
+  return useHistoryMutation(junakId, ({ id, index }: { id: string; index: number }) =>
+    apiFetch<JunakSkill>(`/users/${junakId}/skills/${id}/requirements/${index}`, { method: 'DELETE' }),
+  );
+}
+
+export interface AchieveSkillInput {
+  id: string;
+  achievedAt: string;
+  examiner?: string;
+  certificateNumber?: string;
+}
+
+export function useAchieveJunakSkill(junakId: string) {
+  return useHistoryMutation(junakId, ({ id, ...dto }: AchieveSkillInput) =>
+    apiFetch<JunakSkill>(`/users/${junakId}/skills/${id}/achieve`, { method: 'POST', body: JSON.stringify(dto) }),
   );
 }
 

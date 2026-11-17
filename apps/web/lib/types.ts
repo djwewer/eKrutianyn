@@ -527,9 +527,26 @@ export interface JunakSkill {
   group: SkillGroup;
   level: number;
   isCustom: boolean;
-  achievedAt: string;
+  status: 'STARTED' | 'ACHIEVED';
+  startedAt: string | null;
+  /** null while the skill is only started. */
+  achievedAt: string | null;
+  requirements: SkillRequirement[];
+  signs: JunakSkillSign[];
   examiner: string | null;
   certificateNumber: string | null;
+}
+
+export interface JunakSkillSign {
+  index: number;
+  signedAt: string;
+  signedByName: string;
+}
+
+export interface JunakSkillsList {
+  canEdit: boolean;
+  canStart: boolean;
+  items: JunakSkill[];
 }
 
 export type JunakActivityRole = 'PARTICIPANT' | 'PROVID';

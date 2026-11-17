@@ -15,7 +15,8 @@ import type { JunakSkill } from '@/lib/types';
 import { DialogActions, EmptyText, HistoryCard, RowActions, formatDate, today } from './shared';
 import { nativeSelectClass } from '@/components/ui/native-select';
 
-export function SkillsSection({ junakId, skills, canEdit }: { junakId: string; skills: JunakSkill[]; canEdit: boolean }) {
+export function SkillsSection({ junakId, skills: allSkills, canEdit }: { junakId: string; skills: JunakSkill[]; canEdit: boolean }) {
+  const skills = allSkills.filter((s) => s.achievedAt);
   const [dialog, setDialog] = useState<{ entry: JunakSkill | null } | null>(null);
   const remove = useRemoveJunakSkill(junakId);
   const byGroup = SKILL_GROUP_ORDER.map((group) => ({ group, items: skills.filter((s) => s.group === group) })).filter(
@@ -47,7 +48,7 @@ export function SkillsSection({ junakId, skills, canEdit }: { junakId: string; s
                     <Badge variant="mute" className="min-w-0 max-w-full shrink whitespace-normal [overflow-wrap:anywhere]">
                       {s.skillName} {s.level}
                     </Badge>
-                    <span className="text-muted-foreground">{formatDate(s.achievedAt)}</span>
+                    <span className="text-muted-foreground">{s.achievedAt && formatDate(s.achievedAt)}</span>
                     {s.examiner && <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-muted-foreground">екзаменатор: {s.examiner}</span>}
                     {s.certificateNumber && (
                       <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-muted-foreground">
