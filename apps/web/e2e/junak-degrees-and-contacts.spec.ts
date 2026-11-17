@@ -32,6 +32,7 @@ test('closing a proby with a chosen date makes it the junak\'s degree; dates are
   await expect(page.getByTestId('current-degree')).toHaveText('ще не здобуто');
 
   await page.getByTestId('junak-proba').getByRole('button', { name: /^Проба/ }).click();
+  await page.getByTestId('junak-proba-stage').first().getByRole('button').first().click();
 
   // Close the first proby with the date it was really earned, not today.
   await page.getByLabel('Дата здобуття ступеня', { exact: true }).fill('2024-05-17');

@@ -273,23 +273,17 @@ function ProbyCategorySection({
   onConfirm: (pointId: string) => void;
   onUnconfirm: (pointId: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
   const doneCount = category.points.filter((p) => doneByPointId.has(p.id)).length;
 
   return (
-    <div className="border-b py-2 last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between text-left font-semibold"
-      >
-        <span>
+    <AccordionItem value={category.id}>
+      <AccordionTrigger className="py-2 text-[.95rem]">
+        <span className="normal-case">
           {category.name} ({doneCount}/{category.points.length})
         </span>
-        <span aria-hidden>{isOpen ? '▾' : '▸'}</span>
-      </button>
-      {isOpen && (
-        <ul className="mt-2 space-y-1 pl-4">
+      </AccordionTrigger>
+      <AccordionContent>
+        <ul className="space-y-1">
           {category.points
             .slice()
             .sort((a, b) => a.order - b.order)
@@ -314,8 +308,8 @@ function ProbyCategorySection({
               );
             })}
         </ul>
-      )}
-    </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 
@@ -675,7 +669,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             <AccordionTrigger>
               <span className="min-w-0 flex-1 space-y-1.5">
                 <span className="block">Проба</span>
-                {!isJunakProgressError && (
+                {!isJunakProgressError && junakProgress && (
                   <span className="flex items-center gap-2 font-sans text-sm font-normal tracking-normal text-ink-2 normal-case">
                     <ProgressBar value={probyTotal ? (probyDone / probyTotal) * 100 : 0} className="w-24" />
                     <span data-testid="junak-proba-progress">
@@ -702,7 +696,9 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                   const hasDebtByStageId = new Map(
                     (junakProgress?.stages ?? []).map((s) => [s.stageId, s.hasDebt]),
                   );
-                  return probyProgram.stages
+                  return (
+                    <AccordionRoot multiple>
+                  {probyProgram.stages
                     .slice()
                     .sort((a, b) => a.order - b.order)
                     .map((stage) => {
@@ -720,39 +716,53 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                           </div>
                         );
                       }
+                      const stagePoints = stage.categories.flatMap((c) => c.points);
+                      const stageDone = stagePoints.filter((p) => doneByPointId.has(p.id)).length;
                       return (
-                        <div key={stage.id} className="mb-4 last:mb-0">
-                          <div className="mb-2 flex items-center justify-between">
-                            <h3 className="text-sm font-bold uppercase text-ink-2">{stage.name}</h3>
-                            {canConfirmProby &&
-                              (status === 'CLOSED' ? (
-                                <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
-                                  🔓 Перевідкрити пробу
-                                </Button>
-                              ) : hasDebt ? (
-                                <span className="text-xs text-ink-2">
-                                  Закрито (є непідтверджені точки)
-                                </span>
-                              ) : (
-                                <CloseStageControl
-                                  disabled={closeStage.isPending}
-                                  onClose={(date) => closeStage.mutate({ stageId: stage.id, date })}
+                        <AccordionItem key={stage.id} value={stage.id} data-testid="junak-proba-stage">
+                          <AccordionTrigger className="text-[1rem]">
+                            <span className="min-w-0 flex-1 space-y-1">
+                              <span className="block normal-case [overflow-wrap:anywhere]">{stage.name}</span>
+                              <span className="block font-sans text-sm font-normal tracking-normal text-ink-2 normal-case">
+                                {stageDone} з {stagePoints.length} точок
+                              </span>
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            {canConfirmProby && (
+                              <div className="mb-3 flex items-center justify-between">
+                                {status === 'CLOSED' ? (
+                                  <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
+                                    🔓 Перевідкрити пробу
+                                  </Button>
+                                ) : hasDebt ? (
+                                  <span className="text-xs text-ink-2">Закрито (є непідтверджені точки)</span>
+                                ) : (
+                                  <CloseStageControl
+                                    disabled={closeStage.isPending}
+                                    onClose={(date) => closeStage.mutate({ stageId: stage.id, date })}
+                                  />
+                                )}
+                              </div>
+                            )}
+                            <AccordionRoot multiple className="gap-[.4rem]">
+                              {stage.categories.map((category) => (
+                                <ProbyCategorySection
+                                  key={category.id}
+                                  category={category}
+                                  doneByPointId={doneByPointId}
+                                  canConfirm={canConfirmProby && status !== 'CLOSED'}
+                                  onConfirm={(pointId) => confirmPoint.mutate(pointId)}
+                                  onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
                                 />
                               ))}
-                          </div>
-                          {stage.categories.map((category) => (
-                            <ProbyCategorySection
-                              key={category.id}
-                              category={category}
-                              doneByPointId={doneByPointId}
-                              canConfirm={canConfirmProby && status !== 'CLOSED'}
-                              onConfirm={(pointId) => confirmPoint.mutate(pointId)}
-                              onUnconfirm={(pointId) => unconfirmPoint.mutate(pointId)}
-                            />
-                          ))}
-                        </div>
+                            </AccordionRoot>
+                          </AccordionContent>
+                        </AccordionItem>
                       );
-                    });
+                    })}
+                    </AccordionRoot>
+                  );
                 })()}
             </AccordionContent>
           </AccordionItem>

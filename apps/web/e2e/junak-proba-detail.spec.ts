@@ -25,10 +25,17 @@ test('lets zvyazkovyi expand a proba category and confirm a point from the junak
   // Collapsed by default: neither stages nor points are rendered until expanded.
   await expect(page.getByText('Категорія 1 (0/1)')).toHaveCount(0);
   await proba.getByRole('button', { name: /^Проба/ }).click();
+  // Stages are collapsed too, each with its own count.
+  await expect(page.getByText('Категорія 1 (0/1)')).toHaveCount(0);
+  const stage = page.getByRole('button', { name: /^Ступінь 1/ });
+  await expect(stage).toContainText('0 з 1 точок');
+  await expect(stage).toHaveAttribute('aria-expanded', 'false');
+  await stage.click();
   await page.getByText('Категорія 1 (0/1)').click();
   await expect(page.getByRole('button', { name: 'Підтвердити' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Підтвердити' }).click();
   await expect(page.getByRole('button', { name: 'Зняти' })).toBeVisible();
   await expect(proba).toContainText('1 з 1 точок');
+  await expect(stage).toContainText('1 з 1 точок');
 });

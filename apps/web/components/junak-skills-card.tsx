@@ -69,7 +69,12 @@ export function JunakSkillsCard({ junakId, readOnly = false }: { junakId: string
               className="block font-sans text-sm font-normal tracking-normal text-ink-2 normal-case"
               data-testid="junak-skills-summary"
             >
-              Розпочато: {started.length} · Здобуто: {achieved.length}
+              {started.length > 0 ? (
+                <Badge className="mr-1.5 align-middle">Розпочато: {started.length}</Badge>
+              ) : (
+                <>Розпочато: 0</>
+              )}{' '}
+              · Здобуто: {achieved.length}
             </span>
           </span>
         </AccordionTrigger>
@@ -173,7 +178,13 @@ export function JunakSkillsCard({ junakId, readOnly = false }: { junakId: string
         <JunakSkillDialog junakId={junakId} entry={dialog.skill} takenLevelIds={takenLevelIds} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'credit' && <CreditDialog junakId={junakId} skill={dialog.skill} onClose={() => setDialog(null)} />}
-      <Dialog open={dialog?.kind === 'remove'} onOpenChange={(open) => !open && setDialog(null)}>
+      <Dialog open={dialog?.kind === 'remove'} onOpenChange={(open) => {
+          if (!open) {
+            remove.reset();
+            setDialog(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogTitle>Прибрати вмілість?</DialogTitle>
           <p className="text-sm">
@@ -182,7 +193,13 @@ export function JunakSkillsCard({ junakId, readOnly = false }: { junakId: string
           </p>
           {remove.isError && <p className="text-sm text-destructive">{removeErrorText(remove.error)}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDialog(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                remove.reset();
+                setDialog(null);
+              }}
+            >
               Скасувати
             </Button>
             <Button
@@ -258,13 +275,20 @@ function StartedSkill({
                       className="mt-1 size-4 shrink-0 accent-[var(--navy)]"
                       checked={!!s}
                       disabled={busy}
-                      aria-label={`Підпис вимоги ${index + 1}: ${skill.skillName}`}
+                      id={`req-${skill.id}-${index}`}
+                      aria-label={`Підпис вимоги ${index + 1}: ${levelName(skill)}`}
                       onChange={() => toggle(index, !!s)}
                     />
                   ) : (
                     s && <Badge variant="ok">підписано</Badge>
                   )}
-                  <p className="min-w-0 [overflow-wrap:anywhere]">{requirement.text}</p>
+                  {canEdit ? (
+                    <label htmlFor={`req-${skill.id}-${index}`} className="min-w-0 [overflow-wrap:anywhere]">
+                      {requirement.text}
+                    </label>
+                  ) : (
+                    <p className="min-w-0 [overflow-wrap:anywhere]">{requirement.text}</p>
+                  )}
                 </div>
                 {requirement.items && requirement.items.length > 0 && (
                   <ul className="space-y-0.5 pl-6 text-ink-2">
@@ -286,12 +310,12 @@ function StartedSkill({
         {(canEdit || canRemove) && (
           <div className="mt-3 flex flex-wrap gap-2">
             {canEdit && (
-              <Button size="sm" aria-label={`Зарахувати вмілість «${skill.skillName}»`} onClick={onCredit}>
+              <Button size="sm" aria-label={`Зарахувати вмілість «${levelName(skill)}»`} onClick={onCredit}>
                 Зарахувати вмілість
               </Button>
             )}
             {canRemove && (
-              <Button size="sm" variant="outline" aria-label={`Прибрати «${skill.skillName}»`} onClick={onRemove}>
+              <Button size="sm" variant="outline" aria-label={`Прибрати «${levelName(skill)}»`} onClick={onRemove}>
                 Прибрати
               </Button>
             )}

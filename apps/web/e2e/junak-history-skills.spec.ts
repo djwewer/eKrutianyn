@@ -127,7 +127,7 @@ test('started skill is highlighted; zvyazkovyi signs 2 requirements and credits 
   const item = card.getByTestId('junak-started-skill');
   await expect(item).toHaveCount(1);
   await expect(item).toContainText('Природознавство');
-  await item.getByRole('button').first().click();
+  await item.getByRole('button', { name: /^Природознавство/ }).click();
 
   await item.getByRole('checkbox', { name: /^Підпис вимоги 1: Природознавство/ }).click();
   await expect(item.getByTestId('junak-skill-progress')).toContainText(/^1 з \d+ вимог/);
@@ -144,12 +144,14 @@ test('started skill is highlighted; zvyazkovyi signs 2 requirements and credits 
   await expect(card).toContainText('Розпочато: 0 · Здобуто: 1');
   await expect(card.getByTestId('junak-started-skill')).toHaveCount(0);
   await expect(card.getByTestId('junak-skill')).toContainText('Природознавство 1');
+  await expect(card.getByTestId('junak-skill')).toContainText(new Date().toLocaleDateString('uk-UA'));
 
   // The proba card is collapsed by default.
   const proba = page.getByTestId('junak-proba');
   await expect(proba).toContainText('0 з 1 точок');
   await expect(page.getByText('Категорія 1 (0/1)')).toHaveCount(0);
   await proba.getByRole('button', { name: /^Проба/ }).click();
+  await proba.getByRole('button', { name: /^Ступінь 1/ }).click();
   await page.getByText('Категорія 1 (0/1)').click();
   await page.getByRole('button', { name: 'Підтвердити' }).click();
   await expect(proba).toContainText('1 з 1 точок');
@@ -172,4 +174,44 @@ test('zvyazkovyi starts a skill for the junak from the catalog picker', async ({
 
   await expect(card).toContainText('Розпочато: 1 · Здобуто: 0');
   await expect(card.getByTestId('junak-started-skill')).toContainText('Перша допомога');
+});
+
+test('junak sees own started skill read-only: remove only with zero signs, signed marks show the signer', async ({ page }) => {
+  const s = await seedJunak();
+  const junakToken = await loginForToken(s.junak.email, s.junak.password);
+  const api = 'http://localhost:3001';
+  const groups = (await (await fetch(`${api}/skills`, { headers: { Authorization: `Bearer ${junakToken}` } })).json()) as {
+    skills: { name: string; levels: { id: string; level: number }[] }[];
+  }[];
+  const skill = groups.flatMap((g) => g.skills).find((x) => x.name === 'Природознавство')!;
+  const started = await fetch(`${api}/users/${s.junak.user.id}/skills/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${junakToken}` },
+    body: JSON.stringify({ levelId: skill.levels.find((l) => l.level === 1)!.id }),
+  });
+  expect(started.ok).toBe(true);
+  const { id } = (await started.json()) as { id: string };
+
+  await loginAs(page, s.junak.email, s.junak.password);
+  await page.goto('/me');
+  const card = page.getByTestId('junak-skills');
+  await openSkills(card);
+  const item = card.getByTestId('junak-started-skill');
+  await item.getByRole('button', { name: /^Природознавство/ }).click();
+  await expect(item.getByRole('checkbox')).toHaveCount(0);
+  await expect(item.getByRole('button', { name: /^Прибрати/ })).toBeVisible();
+  await expect(item.getByRole('button', { name: /^Зарахувати/ })).toHaveCount(0);
+
+  const signed = await fetch(`${api}/users/${s.junak.user.id}/skills/${id}/requirements/0`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${s.token}` },
+  });
+  expect(signed.ok).toBe(true);
+
+  await page.reload();
+  await openSkills(card);
+  await item.getByRole('button', { name: /^Природознавство/ }).click();
+  await expect(item).toContainText('підписано');
+  await expect(item).toContainText("Зв'язковий Тестовий");
+  await expect(item.getByRole('button', { name: /^Прибрати/ })).toHaveCount(0);
 });
