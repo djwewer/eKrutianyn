@@ -72,6 +72,7 @@ test('lets zvyazkovyi close a stage with debt, work in the next stage, then clos
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/users/${junak.id}`);
 
+  await page.getByTestId('junak-proba').getByRole('button', { name: /^Проба/ }).click();
   await expect(page.getByText('🔒 Стадія 2')).toBeVisible();
 
   await page.getByRole('button', { name: 'Закрити пробу' }).first().click();

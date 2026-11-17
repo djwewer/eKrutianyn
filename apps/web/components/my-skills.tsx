@@ -74,7 +74,7 @@ function StartedSkill({ skill, onRemove }: { skill: JunakSkill; onRemove: (skill
   );
 }
 
-function removeErrorText(error: unknown): string {
+export function removeErrorText(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) {
     const message = (error.body as { message?: unknown } | null)?.message;
     if (typeof message === 'string' && message) return message;

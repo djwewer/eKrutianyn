@@ -24,6 +24,9 @@ import type { GuardianContact, GuardianRelation, ProbyCategory, UserDetail, Curr
 import { ResendInvite, ResendInviteResult } from '@/components/resend-invite';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
 import { JunakHistory } from '@/components/junak-history';
+import { JunakSkillsCard } from '@/components/junak-skills-card';
+import { AccordionContent, AccordionItem, AccordionRoot, AccordionTrigger } from '@/components/ui/accordion';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { ROLE_LABELS } from '@/lib/role-labels';
 import { accessErrorMessage } from '@/lib/error-message';
 import { ApiError } from '@/lib/api-client';
@@ -451,6 +454,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const closeStage = useCloseStage(id);
   const reopenStage = useReopenStage(id);
   const canConfirmProby = session?.role === 'VYKHOVNYK' || session?.role === 'ZVYAZKOVYI';
+  const probyPointIds = new Set(
+    (probyProgram?.stages ?? []).flatMap((stage) => stage.categories.flatMap((category) => category.points.map((p) => p.id))),
+  );
+  const probyTotal = probyPointIds.size;
+  const probyDone = (junakProgress?.points ?? []).filter((p) => p.status === 'DONE' && probyPointIds.has(p.pointId)).length;
 
   const canDirectlyMoveHurtok = session?.role === 'ZVYAZKOVYI' && isJunak && !user?.archivedAt;
   const canRequestMoveHurtok =
@@ -662,11 +670,22 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         )}
         {isJunak && <JunakHistory junakId={id} hurtokId={user.hurtokId} />}
         {isJunak && probyProgram && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Проба</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <AccordionRoot>
+          <AccordionItem value="proba" data-testid="junak-proba">
+            <AccordionTrigger>
+              <span className="min-w-0 flex-1 space-y-1.5">
+                <span className="block">Проба</span>
+                {!isJunakProgressError && (
+                  <span className="flex items-center gap-2 font-sans text-sm font-normal tracking-normal text-ink-2 normal-case">
+                    <ProgressBar value={probyTotal ? (probyDone / probyTotal) * 100 : 0} className="w-24" />
+                    <span data-testid="junak-proba-progress">
+                      {probyDone} з {probyTotal} точок
+                    </span>
+                  </span>
+                )}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
               {isJunakProgressError && (
                 <p className="text-sm text-destructive">
                   {accessErrorMessage(junakProgressError) ?? 'Помилка завантаження проби.'}
@@ -735,9 +754,11 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                       );
                     });
                 })()}
-            </CardContent>
-          </Card>
+            </AccordionContent>
+          </AccordionItem>
+          </AccordionRoot>
         )}
+        {isJunak && <JunakSkillsCard junakId={id} />}
         {session?.isKurinniy && user.role === 'JUNAK' && !user.archivedAt && (
           <Card>
             <CardHeader>

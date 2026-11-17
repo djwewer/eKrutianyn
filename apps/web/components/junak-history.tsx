@@ -3,14 +3,13 @@
 import { useJunakHistory } from '@/lib/queries/junak-history';
 import { accessErrorMessage } from '@/lib/error-message';
 import { AccordionRoot } from '@/components/ui/accordion';
-import { SkillsSection } from '@/components/junak-history/skills-section';
 import { VfvSection } from '@/components/junak-history/vfv-section';
 import { CampsSection } from '@/components/junak-history/camps-section';
 import { RemarksSection } from '@/components/junak-history/remarks-section';
 import { DilovodstvoSection } from '@/components/junak-history/dilovodstvo-section';
 import { DatesSection } from '@/components/junak-history/dates-section';
 
-const HISTORY_IDS = ['history-dates', 'history-skills', 'history-vfv', 'history-camps', 'history-remarks', 'history-dilovodstvo'];
+const HISTORY_IDS = ['history-dates', 'history-vfv', 'history-camps', 'history-remarks', 'history-dilovodstvo'];
 
 /**
  * «Історія» юнака. Хто може редагувати, вирішує бекенд (`canEdit`): звʼязковий
@@ -28,7 +27,6 @@ export function JunakHistory({ junakId, hurtokId = null, readOnly = false }: { j
       {data && (
         <AccordionRoot multiple defaultValue={HISTORY_IDS} className="gap-[.6rem]">
           <DatesSection junakId={junakId} upyJoinedAt={data.upyJoinedAt} plastOathAt={data.plastOathAt} canEdit={canEdit} />
-          <SkillsSection junakId={junakId} skills={data.skills} canEdit={canEdit} />
           <VfvSection junakId={junakId} entries={data.vfv} canEdit={canEdit} />
           <CampsSection junakId={junakId} entries={data.camps} canEdit={canEdit} />
           <RemarksSection junakId={junakId} entries={data.remarks} canEdit={canEdit} />

@@ -229,7 +229,7 @@ test('vykhovnyk sees history edit buttons only for junaks of own hurtok', async 
     body: JSON.stringify({ hurtokId: null }),
   });
   expect(detach.ok).toBe(true);
-  const editButtons = ['Додати вмілість', 'Додати ВФВ', 'Додати табір', 'Додати запис', 'Додати посаду', 'Змінити дати'];
+  const editButtons = ['Додати ВФВ', 'Додати табір', 'Додати запис', 'Додати посаду', 'Змінити дати'];
 
   await loginAs(page, vykhovnyk.email, vykhovnyk.password);
   await page.goto(`/users/${s.junak.user.id}`);

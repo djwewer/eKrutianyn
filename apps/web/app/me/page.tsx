@@ -6,6 +6,7 @@ import { useHurtky } from '@/lib/queries/hurtky';
 import { useVykhovnykAssignments } from '@/lib/queries/vykhovnyk-assignments';
 import { JunakDegreesCard } from '@/components/junak-degrees-card';
 import { JunakHistory } from '@/components/junak-history';
+import { JunakSkillsCard } from '@/components/junak-skills-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
@@ -57,6 +58,8 @@ export default function MePage() {
       </div>
 
       {session.role === 'JUNAK' && <JunakDegreesCard junakId={session.userId} canEdit={false} />}
+
+      {session.role === 'JUNAK' && <JunakSkillsCard junakId={session.userId} readOnly />}
 
       {session.role === 'JUNAK' && <JunakHistory junakId={session.userId} readOnly />}
 

@@ -20,10 +20,15 @@ test('lets zvyazkovyi expand a proba category and confirm a point from the junak
   await loginAs(page, zvyazkovyiEmail, zvyazkovyiPassword);
   await page.goto(`/users/${junak.id}`);
 
-  await expect(page.getByText('Проба', { exact: true })).toBeVisible();
+  const proba = page.getByTestId('junak-proba');
+  await expect(proba).toContainText('0 з 1 точок');
+  // Collapsed by default: neither stages nor points are rendered until expanded.
+  await expect(page.getByText('Категорія 1 (0/1)')).toHaveCount(0);
+  await proba.getByRole('button', { name: /^Проба/ }).click();
   await page.getByText('Категорія 1 (0/1)').click();
   await expect(page.getByRole('button', { name: 'Підтвердити' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Підтвердити' }).click();
   await expect(page.getByRole('button', { name: 'Зняти' })).toBeVisible();
+  await expect(proba).toContainText('1 з 1 точок');
 });
