@@ -79,13 +79,20 @@ export class JunakSkillsService {
 
   async unsign(junakId: string, id: string, index: string, actor: CurrentUserPayload): Promise<JunakSkillView> {
     const junak = await loadJunakForWrite(this.prisma, junakId, actor);
-    const row = await this.findOwnedOrThrow(junakId, id);
-    if (row.achievedAt) throw new ConflictException('Вмілість уже здобуто');
+    await this.findOwnedOrThrow(junakId, id);
     const idx = this.parseIndexFormat(index);
-    // Any existing sign may be removed, even if the level now has fewer requirements.
-    const res = await this.prisma.junakSkillRequirementSign.deleteMany({ where: { junakSkillId: id, requirementIndex: idx } });
+    const removed = await this.prisma.$transaction(async (tx) => {
+      // Same lock as sign(), so an unsign cannot interleave with a credit.
+      await tx.$queryRaw`SELECT id FROM "JunakSkill" WHERE id = ${id} FOR UPDATE`;
+      const fresh = await tx.junakSkill.findUnique({ where: { id }, select: { junakId: true, achievedAt: true } });
+      if (!fresh || fresh.junakId !== junakId) throw new NotFoundException('Запис не знайдено');
+      if (fresh.achievedAt) throw new ConflictException('Вмілість уже здобуто');
+      // Any existing sign may be removed, even if the level now has fewer requirements.
+      const res = await tx.junakSkillRequirementSign.deleteMany({ where: { junakSkillId: id, requirementIndex: idx } });
+      return res.count > 0;
+    });
     const view = toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
-    if (res.count > 0) await this.record(AuditAction.SKILL_REQUIREMENT_UNSIGNED, junak, view, actor, { requirementIndex: idx });
+    if (removed) await this.record(AuditAction.SKILL_REQUIREMENT_UNSIGNED, junak, view, actor, { requirementIndex: idx });
     return view;
   }
 
@@ -193,7 +200,8 @@ export class JunakSkillsService {
 
   /** Index must be a non-negative integer. */
   private parseIndexFormat(raw: string): number {
-    if (!/^\d+$/.test(raw)) throw new BadRequestException('Невірний номер вимоги');
+    // Cap the length so a huge number can't overflow the INT4 column (500 instead of 400).
+    if (!/^\d{1,4}$/.test(raw)) throw new BadRequestException('Невірний номер вимоги');
     return Number(raw);
   }
 

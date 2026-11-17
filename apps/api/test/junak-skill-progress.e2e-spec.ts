@@ -149,6 +149,8 @@ describe('Junak skills in progress — start, sign, credit, remove (e2e)', () =>
       await sign(w.junak.id, zv, id, 2).expect(400);
       await sign(w.junak.id, zv, id, -1).expect(400);
       await sign(w.junak.id, zv, id, 'abc').expect(400);
+      // a huge index must be a 400, not an INT4 overflow 500
+      await unsign(w.junak.id, zv, id, '99999999999').expect(400);
       await achieve(w.junak.id, zv, id, { achievedAt: '2025-05-01' }).expect(201);
       await sign(w.junak.id, zv, id, 0).expect(409);
       await unsign(w.junak.id, zv, id, 0).expect(409);
