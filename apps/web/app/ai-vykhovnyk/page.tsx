@@ -203,12 +203,13 @@ export default function AiVykhovnykPage() {
         </div>
 
         <Card className="min-w-0 gap-3 px-[1.1rem]">
-          <div className="grid gap-[.3rem]">
+          {/* min-w-0 + a minmax(0,1fr) track: a long point description must truncate, not widen the card. */}
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[.3rem]">
             <span className="font-display text-[.8rem] font-semibold tracking-[.1em] text-ink-2 uppercase">
               Точка проби
             </span>
             <Select value={selectedPointId} onValueChange={handlePointChange} items={pointLabelById}>
-              <SelectTrigger aria-label="Точка проби">
+              <SelectTrigger aria-label="Точка проби" className="min-w-0">
                 <SelectValue placeholder="Оберіть точку проби" />
               </SelectTrigger>
               <SelectContent>
@@ -363,43 +364,51 @@ function ConversationPanel({
     if (canSend) handleSend();
   }
 
+  const isEmpty = !conversationLoading && !conversationIsError && messages.length === 0;
+
   return (
     <>
-      {conversationLoading && <p className="text-sm text-ink-2">Завантаження розмови...</p>}
-      {conversationIsError && (
-        <p className="text-sm text-destructive">
-          {accessErrorMessage(conversationError) ?? 'Не вдалося завантажити розмову.'}
-        </p>
-      )}
-      {!conversationLoading && !conversationIsError && messages.length === 0 && (
-        <p className="text-sm text-ink-2">
-          Оберіть точку проби та опишіть, що хочете підготувати — AI-виховник допоможе скласти план.
-        </p>
-      )}
-      <div ref={messagesRef} className="grid max-h-[30rem] gap-[.8rem] overflow-auto p-[.2rem]">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={cn(
-              'max-w-[85%] rounded-[6px] px-[.9rem] py-[.7rem] leading-[1.5]',
-              message.role === 'USER'
-                ? 'justify-self-end rounded-br-none bg-navy whitespace-pre-wrap text-navy-ink'
-                : cn('ai-gradient-ring justify-self-start rounded-bl-none text-ink', MARKDOWN_CLASSES),
-            )}
-            style={message.role === 'USER' ? undefined : ({ '--ai-ring-fill': 'var(--paper)' } as React.CSSProperties)}
-          >
-            {message.role === 'USER' ? (
-              message.content
-            ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-            )}
-          </div>
-        ))}
-        {isAwaitingReply && <TypingIndicator />}
-      </div>
-
-      <div className="grid gap-2">
-        <div className="flex items-end gap-2">
+      {/* The chat window: a fixed-height message pane with the composer attached below it. */}
+      <div className="flex min-w-0 flex-col rounded-[6px] border border-line bg-background">
+        <div
+          ref={messagesRef}
+          className={cn(
+            'grid h-[min(30rem,60vh)] min-h-[16rem] gap-[.8rem] overflow-auto p-3',
+            isEmpty ? 'place-content-center' : 'content-start',
+          )}
+        >
+          {conversationLoading && <p className="text-sm text-ink-2">Завантаження розмови...</p>}
+          {conversationIsError && (
+            <p className="text-sm text-destructive">
+              {accessErrorMessage(conversationError) ?? 'Не вдалося завантажити розмову.'}
+            </p>
+          )}
+          {isEmpty && (
+            <p className="max-w-[24rem] text-center text-sm text-ink-2">
+              Оберіть точку проби та опишіть, що хочете підготувати — AI-виховник допоможе скласти план.
+            </p>
+          )}
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                'max-w-[85%] min-w-0 rounded-[6px] px-[.9rem] py-[.7rem] leading-[1.5] [overflow-wrap:anywhere]',
+                message.role === 'USER'
+                  ? 'justify-self-end rounded-br-none bg-navy whitespace-pre-wrap text-navy-ink'
+                  : cn('ai-gradient-ring justify-self-start rounded-bl-none text-ink', MARKDOWN_CLASSES),
+              )}
+              style={message.role === 'USER' ? undefined : ({ '--ai-ring-fill': 'var(--paper)' } as React.CSSProperties)}
+            >
+              {message.role === 'USER' ? (
+                message.content
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+              )}
+            </div>
+          ))}
+          {isAwaitingReply && <TypingIndicator />}
+        </div>
+        <div className="flex items-end gap-2 rounded-b-[5px] border-t border-line bg-paper p-2">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -413,6 +422,9 @@ function ConversationPanel({
             Надіслати
           </Button>
         </div>
+      </div>
+
+      <div className="grid gap-2">
         {!selectedPointId && <span className="text-xs text-ink-2">Спершу оберіть точку проби</span>}
         {sendError !== null && (
           <p className="text-sm text-destructive">
