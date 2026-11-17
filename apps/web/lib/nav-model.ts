@@ -39,7 +39,7 @@ export function buildNav(session: CurrentUserPayload, pendingRequests: number): 
       ? { href: '/my-hurtok', label: 'Мій гурток', icon: 'users' }
       : {
           href: '/plastuvannia',
-          label: session.role === 'ZVYAZKOVYI' ? 'Моя проба' : 'Моє пластування',
+          label: 'Моє пластування',
           icon: 'flag',
           alsoActiveOn: ['/proby', '/ai-vykhovnyk', '/my-activity', '/skills'],
         };

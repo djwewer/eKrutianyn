@@ -69,13 +69,13 @@ test.describe('phone', () => {
     await expect(page).toHaveURL(/\/my-hurtok$/);
   });
 
-  test('zvyazkovyi: «Моя проба» centre and діловодство sheet', async ({ page }) => {
+  test('zvyazkovyi: «Моє пластування» centre and діловодство sheet', async ({ page }) => {
     const { seeded } = await seed();
     await loginAs(page, seeded.zvyazkovyiEmail, seeded.zvyazkovyiPassword);
     await page.goto('/news');
 
     const nav = page.getByRole('navigation', { name: 'Основна навігація' });
-    await expect(nav.getByRole('link', { name: 'Моя проба', exact: true })).toHaveAttribute('href', '/plastuvannia');
+    await expect(nav.getByRole('link', { name: 'Моє пластування', exact: true })).toHaveAttribute('href', '/plastuvannia');
     await expect(nav.getByRole('link', { name: 'Налаштування' })).toHaveCount(0);
 
     const dilovody = nav.getByRole('button', { name: 'Діловодство' });
@@ -138,7 +138,7 @@ test.describe('desktop', () => {
     await expect(navs).toHaveCount(1);
     const nav = navs.first();
     await expect(nav).toBeVisible();
-    for (const name of ['Моя проба', 'Новини', 'Календар', 'Курінь']) {
+    for (const name of ['Моє пластування', 'Новини', 'Календар', 'Курінь']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
     }
     await expect(nav.getByRole('link', { name: 'Налаштування' })).toHaveCount(0);
