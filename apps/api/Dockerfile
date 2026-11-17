@@ -24,4 +24,4 @@ EXPOSE 3000
 # NODE_OPTIONS caps the heap below the container limit; tune with the VPS memory.
 ENV NODE_OPTIONS=--max-old-space-size=384
 ENTRYPOINT ["tini", "--"]
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && (node dist/scripts/seed-skills-catalog.js || echo 'skills catalog seed failed') && exec node dist/main"]

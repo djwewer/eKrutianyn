@@ -530,6 +530,13 @@ describe('Admin kurins (e2e)', () => {
       await prisma.junakSkill.create({
         data: { junakId: j1.id, levelId: skill.levels[0].id, achievedAt: new Date(), createdById: zv.id },
       });
+      const startedSkill = await createSkill(prisma, { name: 'Розпочата вмілість', kurinId });
+      const started = await prisma.junakSkill.create({
+        data: { junakId: j1.id, levelId: startedSkill.levels[0].id, startedAt: new Date(), startedById: j1.id, createdById: j1.id },
+      });
+      await prisma.junakSkillRequirementSign.create({
+        data: { junakSkillId: started.id, requirementIndex: 0, signedById: vyk.id },
+      });
       await prisma.junakProgress.create({
         data: { junakId: j1.id, pointId: points[0].id, status: ProgressStatus.DONE, confirmedById: vyk.id, confirmedAt: new Date() },
       });
@@ -618,6 +625,8 @@ describe('Admin kurins (e2e)', () => {
       expect(await prisma.user.count({ where: { kurinId: kurin.id } })).toBe(0);
       expect(await prisma.hurtok.count({ where: { kurinId: kurin.id } })).toBe(0);
       expect(await prisma.skill.count({ where: { kurinId: kurin.id } })).toBe(0);
+      expect(await prisma.junakSkill.count()).toBe(0);
+      expect(await prisma.junakSkillRequirementSign.count()).toBe(0);
       expect(await prisma.announcement.count({ where: { kurinId: kurin.id } })).toBe(0);
       expect(await prisma.auditLog.count({ where: { kurinId: kurin.id } })).toBe(0);
       expect(await prisma.aiConversation.count()).toBe(0);

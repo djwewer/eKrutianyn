@@ -101,7 +101,7 @@ export class SkillsService {
       if (removedIds.length > 0) {
         const achieved = await this.prisma.junakSkill.count({ where: { levelId: { in: removedIds } } });
         if (achieved > 0) {
-          throw new ConflictException('Цей рівень уже здобули юнаки — його не можна прибрати');
+          throw new ConflictException('Цей рівень юнаки вже розпочали або здобули — його не можна прибрати');
         }
       }
       await this.prisma.$transaction([
@@ -129,7 +129,7 @@ export class SkillsService {
     const skill = await this.findOwnCustomOrThrow(id, actor);
     const achieved = await this.prisma.junakSkill.count({ where: { level: { skillId: id } } });
     if (achieved > 0) {
-      throw new ConflictException('Цю вмілість уже здобули юнаки — видалити її не можна');
+      throw new ConflictException('Цю вмілість юнаки вже розпочали або здобули — видалити її не можна');
     }
     await this.prisma.skill.delete({ where: { id } });
     await this.record(AuditAction.CUSTOM_SKILL_DELETED, skill, actor);

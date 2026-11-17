@@ -172,40 +172,42 @@ model User {
   archivedUsers      User[]    @relation("UserArchivedBy")
   hurtokArchivedByMe Hurtok[]  @relation("HurtokArchivedBy")
 
-  vykhovnykAssignments       VykhovnykHurtok[]      @relation("VykhovnykAssignments")
-  progressEntries            JunakProgress[]        @relation("JunakProgressEntries")
-  confirmedProgress          JunakProgress[]        @relation("ConfirmedByUser")
-  auditLogEntries            AuditLog[]             @relation("ActorAuditLogs")
-  initiatedRequests          ApprovalRequest[]      @relation("InitiatedRequests")
-  decidedRequests            ApprovalRequest[]      @relation("DecidedRequests")
-  passwordResetTokens        PasswordResetToken[]
-  emailChangeRequests        EmailChangeRequest[]
-  profileChangeLogs          ProfileChangeLog[]
-  positionsHeld              KurinPosition[]        @relation("PositionHolder")
-  positionsAssigned          KurinPosition[]        @relation("PositionAssignedBy")
-  positionsRemoved           KurinPosition[]        @relation("PositionRemovedBy")
-  guardianContacts           GuardianContact[]      @relation("JunakGuardians")
-  createdInventoryItems      InventoryItem[]
-  stageProgressEntries       JunakStageProgress[]   @relation("JunakStageProgressEntries")
-  stageClosedLogs            JunakStageProgress[]   @relation("StageClosedByUser")
-  aiConversations            AiConversation[]
-  treasuryTransactions       TreasuryTransaction[]
-  calendarEvents             KurinCalendarEvent[]
-  activityEntries            JunakActivityEntry[]   @relation("JunakActivityEntries")
-  authoredAnnouncements      Announcement[]
-  uploadedAnnouncementImages AnnouncementImage[]
-  announcementReactions      AnnouncementReaction[]
-  pushSubscriptions          PushSubscription[]
-  junakSkills                JunakSkill[]           @relation("JunakSkills")
-  createdJunakSkills         JunakSkill[]           @relation("JunakSkillCreatedBy")
-  vfvEntries                 JunakVfv[]             @relation("JunakVfvEntries")
-  createdVfvEntries          JunakVfv[]             @relation("JunakVfvCreatedBy")
-  camps                      JunakCamp[]            @relation("JunakCamps")
-  createdCamps               JunakCamp[]            @relation("JunakCampCreatedBy")
-  remarks                    JunakRemark[]          @relation("JunakRemarks")
-  createdRemarks             JunakRemark[]          @relation("JunakRemarkCreatedBy")
-  pastPositions              JunakPastPosition[]    @relation("JunakPastPositions")
-  createdPastPositions       JunakPastPosition[]    @relation("JunakPastPositionCreatedBy")
+  vykhovnykAssignments         VykhovnykHurtok[]           @relation("VykhovnykAssignments")
+  progressEntries              JunakProgress[]             @relation("JunakProgressEntries")
+  confirmedProgress            JunakProgress[]             @relation("ConfirmedByUser")
+  auditLogEntries              AuditLog[]                  @relation("ActorAuditLogs")
+  initiatedRequests            ApprovalRequest[]           @relation("InitiatedRequests")
+  decidedRequests              ApprovalRequest[]           @relation("DecidedRequests")
+  passwordResetTokens          PasswordResetToken[]
+  emailChangeRequests          EmailChangeRequest[]
+  profileChangeLogs            ProfileChangeLog[]
+  positionsHeld                KurinPosition[]             @relation("PositionHolder")
+  positionsAssigned            KurinPosition[]             @relation("PositionAssignedBy")
+  positionsRemoved             KurinPosition[]             @relation("PositionRemovedBy")
+  guardianContacts             GuardianContact[]           @relation("JunakGuardians")
+  createdInventoryItems        InventoryItem[]
+  stageProgressEntries         JunakStageProgress[]        @relation("JunakStageProgressEntries")
+  stageClosedLogs              JunakStageProgress[]        @relation("StageClosedByUser")
+  aiConversations              AiConversation[]
+  treasuryTransactions         TreasuryTransaction[]
+  calendarEvents               KurinCalendarEvent[]
+  activityEntries              JunakActivityEntry[]        @relation("JunakActivityEntries")
+  authoredAnnouncements        Announcement[]
+  uploadedAnnouncementImages   AnnouncementImage[]
+  announcementReactions        AnnouncementReaction[]
+  pushSubscriptions            PushSubscription[]
+  junakSkills                  JunakSkill[]                @relation("JunakSkills")
+  createdJunakSkills           JunakSkill[]                @relation("JunakSkillCreatedBy")
+  startedJunakSkills           JunakSkill[]                @relation("JunakSkillStartedBy")
+  signedJunakSkillRequirements JunakSkillRequirementSign[] @relation("JunakSkillRequirementSignedBy")
+  vfvEntries                   JunakVfv[]                  @relation("JunakVfvEntries")
+  createdVfvEntries            JunakVfv[]                  @relation("JunakVfvCreatedBy")
+  camps                        JunakCamp[]                 @relation("JunakCamps")
+  createdCamps                 JunakCamp[]                 @relation("JunakCampCreatedBy")
+  remarks                      JunakRemark[]               @relation("JunakRemarks")
+  createdRemarks               JunakRemark[]               @relation("JunakRemarkCreatedBy")
+  pastPositions                JunakPastPosition[]         @relation("JunakPastPositions")
+  createdPastPositions         JunakPastPosition[]         @relation("JunakPastPositionCreatedBy")
 
   @@index([kurinId, role])
   @@index([hurtokId])
@@ -317,13 +319,13 @@ model JunakActivityEntry {
 enum SkillGroup {
   PRACTICAL // Вмілості практичного пластування
   FIRST_AID // Вмілості першої допомоги і рятівництва
-  NATURE    // Природничі вмілості
-  SPORT     // Спортивні вмілості
-  HOME      // Вмілості домашньої зарадності
-  SPECIAL   // Вмілості спеціального зацікавлення
-  ARTS      // Мистецькі вмілості
-  AVIATION  // Вмілості літунського пластування
-  SEA       // Вмілості морського пластування
+  NATURE // Природничі вмілості
+  SPORT // Спортивні вмілості
+  HOME // Вмілості домашньої зарадності
+  SPECIAL // Вмілості спеціального зацікавлення
+  ARTS // Мистецькі вмілості
+  AVIATION // Вмілості літунського пластування
+  SEA // Вмілості морського пластування
 }
 
 model Skill {
@@ -363,22 +365,42 @@ model SkillLevel {
 }
 
 model JunakSkill {
-  id                String     @id @default(uuid())
+  id                String                      @id @default(uuid())
   junakId           String
-  junak             User       @relation("JunakSkills", fields: [junakId], references: [id])
+  junak             User                        @relation("JunakSkills", fields: [junakId], references: [id])
   levelId           String
   // Restrict (типово для обовʼязкового звʼязку): рівень зі здобуттями не видаляється.
-  level             SkillLevel @relation(fields: [levelId], references: [id])
-  achievedAt        DateTime   @db.Date
+  level             SkillLevel                  @relation(fields: [levelId], references: [id])
+  // null = вмілість розпочата, але ще не здобута.
+  achievedAt        DateTime?                   @db.Date
+  // Заповнені лише для вмілостей, розпочатих через «Розпочати».
+  startedAt         DateTime?
+  startedById       String?
+  startedBy         User?                       @relation("JunakSkillStartedBy", fields: [startedById], references: [id])
+  signs             JunakSkillRequirementSign[]
   // Імʼя екзаменатора вільним текстом (може бути непластун).
   examiner          String?
   certificateNumber String?
   createdById       String
-  createdBy         User       @relation("JunakSkillCreatedBy", fields: [createdById], references: [id])
-  createdAt         DateTime   @default(now())
+  createdBy         User                        @relation("JunakSkillCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime                    @default(now())
 
   @@unique([junakId, levelId])
   @@index([junakId])
+}
+
+model JunakSkillRequirementSign {
+  id               String     @id @default(uuid())
+  junakSkillId     String
+  junakSkill       JunakSkill @relation(fields: [junakSkillId], references: [id], onDelete: Cascade)
+  // 0-based індекс у JSON-масиві requirements рівня вмілості.
+  requirementIndex Int
+  signedById       String
+  signedBy         User       @relation("JunakSkillRequirementSignedBy", fields: [signedById], references: [id])
+  signedAt         DateTime   @default(now())
+
+  @@unique([junakSkillId, requirementIndex])
+  @@index([junakSkillId])
 }
 
 model JunakVfv {
@@ -411,7 +433,7 @@ model JunakCamp {
 }
 
 enum JunakRemarkKind {
-  AWARD   // відзначення
+  AWARD // відзначення
   WARNING // пересторога
 }
 
@@ -455,9 +477,9 @@ enum GuardianRelation {
 }
 
 model GuardianContact {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   junakId   String
-  junak     User     @relation("JunakGuardians", fields: [junakId], references: [id])
+  junak     User             @relation("JunakGuardians", fields: [junakId], references: [id])
   name      String
   phone     String
   // Free-text clarification, meaningful for relation = GUARDIAN ("бабуся",
@@ -466,8 +488,8 @@ model GuardianContact {
   role      String?
   relation  GuardianRelation @default(GUARDIAN)
   email     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([junakId])
 }
@@ -480,7 +502,6 @@ model VykhovnykHurtok {
   hurtok      Hurtok @relation(fields: [hurtokId], references: [id])
 
   @@unique([vykhovnykId, hurtokId])
-
   @@index([hurtokId])
 }
 
@@ -619,14 +640,14 @@ enum TokenPurpose {
 }
 
 model PasswordResetToken {
-  id        String    @id @default(uuid())
+  id        String       @id @default(uuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  tokenHash String    @unique
+  user      User         @relation(fields: [userId], references: [id])
+  tokenHash String       @unique
   purpose   TokenPurpose @default(RESET)
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime     @default(now())
 
   @@index([userId])
 }
@@ -669,11 +690,11 @@ enum AiUsageKind {
 // Append-only quota ledger for JUNAK AI limits. Deliberately no foreign keys:
 // deleting a conversation (or its messages) must not reset the counters.
 model AiUsageEvent {
-  id             String        @id @default(uuid())
+  id             String      @id @default(uuid())
   userId         String
   kind           AiUsageKind
   conversationId String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime    @default(now())
 
   @@index([userId, kind, createdAt])
   @@index([conversationId, kind])
@@ -832,6 +853,9 @@ enum AuditAction {
   ANNOUNCEMENT_DELETED
   // Історія юнака
   SKILL_ACHIEVED
+  SKILL_STARTED
+  SKILL_REQUIREMENT_SIGNED
+  SKILL_REQUIREMENT_UNSIGNED
   SKILL_UPDATED
   SKILL_REMOVED
   CUSTOM_SKILL_CREATED
@@ -868,6 +892,5 @@ model AuditLog {
   @@index([kurinId, createdAt, id])
   @@index([kurinId, subjectUserId])
   @@index([kurinId, action])
-
   @@index([actorId])
 }

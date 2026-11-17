@@ -192,7 +192,10 @@ export class KurinsAdminService {
         await tx.junakRemark.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
         await tx.junakPastPosition.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
         await tx.guardianContact.deleteMany({ where: byJunak });
-        await tx.junakSkill.deleteMany({ where: { OR: [byJunak, { createdById: { in: userIds } }] } });
+        await tx.junakSkillRequirementSign.deleteMany({ where: { signedById: { in: userIds } } });
+        await tx.junakSkill.deleteMany({
+          where: { OR: [byJunak, { createdById: { in: userIds } }, { startedById: { in: userIds } }] },
+        });
         await tx.junakProgress.deleteMany({ where: { OR: [byJunak, { confirmedById: { in: userIds } }] } });
         await tx.junakStageProgress.deleteMany({ where: { OR: [byJunak, { closedById: { in: userIds } }] } });
         // Kurin-owned skills (levels cascade; global skills have kurinId null)

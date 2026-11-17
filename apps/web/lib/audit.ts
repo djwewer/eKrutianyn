@@ -202,6 +202,12 @@ export function describeAuditEvent(item: AuditLogItem): string {
       return `Видалив власну вмілість «${s(d, 'skillName')}»`;
     case 'SKILL_ACHIEVED':
       return `Зарахував вмілість «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'SKILL_STARTED':
+      return `Розпочав вмілість «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'SKILL_REQUIREMENT_SIGNED':
+      return `Підписав вимогу вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
+    case 'SKILL_REQUIREMENT_UNSIGNED':
+      return `Зняв підпис з вимоги вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
     case 'SKILL_UPDATED':
       return `Змінив дані вмілості «${s(d, 'skillName')}» (${lookup(SKILL_LEVEL_LABELS, s(d, 'level'))}) для ${s(d, 'subjectName')}`;
     case 'SKILL_REMOVED':

@@ -22,7 +22,7 @@ export class JunakSkillsService {
   async list(junakId: string, actor: CurrentUserPayload): Promise<JunakSkillsView> {
     const junak = await loadJunakForRead(this.usersService, junakId, actor);
     const rows = await this.prisma.junakSkill.findMany({
-      where: { junakId },
+      where: { junakId, achievedAt: { not: null } },
       include: JUNAK_SKILL_INCLUDE,
       orderBy: [{ achievedAt: 'desc' }, { createdAt: 'desc' }],
     });

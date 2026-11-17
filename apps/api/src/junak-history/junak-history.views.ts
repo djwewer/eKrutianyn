@@ -30,7 +30,7 @@ export interface JunakSkillView {
   group: SkillGroup;
   level: number;
   isCustom: boolean;
-  achievedAt: string;
+  achievedAt: string | null;
   examiner: string | null;
   certificateNumber: string | null;
 }

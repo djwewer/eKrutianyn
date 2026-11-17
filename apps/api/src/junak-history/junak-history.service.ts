@@ -33,7 +33,7 @@ export class JunakHistoryService {
     const [dates, skills, vfv, camps, remarks, pastPositions, positions] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: junakId }, select: { upyJoinedAt: true, plastOathAt: true } }),
       this.prisma.junakSkill.findMany({
-        where: { junakId },
+        where: { junakId, achievedAt: { not: null } },
         include: JUNAK_SKILL_INCLUDE,
         orderBy: [{ achievedAt: 'desc' }, { createdAt: 'desc' }],
       }),

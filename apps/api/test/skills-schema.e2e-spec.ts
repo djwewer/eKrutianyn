@@ -47,7 +47,7 @@ describe('Skill catalog — database constraints (e2e)', () => {
       createdById: junak.id,
     };
     const first = await prisma.junakSkill.create({ data });
-    expect(first.achievedAt.toISOString()).toBe('2025-05-01T00:00:00.000Z');
+    expect(first.achievedAt!.toISOString()).toBe('2025-05-01T00:00:00.000Z');
     await expect(prisma.junakSkill.create({ data })).rejects.toMatchObject({ code: 'P2002' });
 
     const unused = await createSkill(prisma, { name: 'Сигналізація', levels: [3] });
