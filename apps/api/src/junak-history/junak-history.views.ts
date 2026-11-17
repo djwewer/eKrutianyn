@@ -69,11 +69,14 @@ export function toJunakSkillView(row: JunakSkillRow): JunakSkillView {
     startedAt: row.startedAt ? row.startedAt.toISOString() : null,
     achievedAt: isoDate(row.achievedAt),
     requirements: row.level.requirements as unknown as SkillRequirement[],
-    signs: row.signs.map((s) => ({
-      index: s.requirementIndex,
-      signedAt: s.signedAt.toISOString(),
-      signedByName: `${s.signedBy.firstName} ${s.signedBy.lastName}`,
-    })),
+    // Signs whose index is beyond the level's current requirements are stale: hide them.
+    signs: row.signs
+      .filter((s) => s.requirementIndex < (row.level.requirements as unknown as SkillRequirement[]).length)
+      .map((s) => ({
+        index: s.requirementIndex,
+        signedAt: s.signedAt.toISOString(),
+        signedByName: `${s.signedBy.firstName} ${s.signedBy.lastName}`,
+      })),
     examiner: row.examiner,
     certificateNumber: row.certificateNumber,
   };

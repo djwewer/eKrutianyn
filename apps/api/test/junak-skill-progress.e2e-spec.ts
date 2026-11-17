@@ -76,9 +76,7 @@ describe('Junak skills in progress — start, sign, credit, remove (e2e)', () =>
     it('forbids an unassigned vykhovnyk; a junak cannot start for another junak', async () => {
       const w = await setup();
       await start(w.junak.id, w.token(w.vykhovnykB), w.level1.id).expect(403);
-      // junakNoHurtok is invisible to junak? either way not allowed
-      const code = (await start(w.junakNoHurtok.id, w.token(w.junak), w.level1.id)).status;
-      expect([403, 404]).toContain(code);
+      await start(w.junakNoHurtok.id, w.token(w.junak), w.level1.id).expect(403);
     });
 
     it('409 with the exact message on duplicate (started or achieved); 404 for unknown / foreign custom level', async () => {
@@ -116,8 +114,13 @@ describe('Junak skills in progress — start, sign, credit, remove (e2e)', () =>
       expect(own.items.map((i: { status: string }) => i.status).sort()).toEqual(['ACHIEVED', 'STARTED']);
       const asZv = (await list(w.junak.id, zv).expect(200)).body;
       expect(asZv).toMatchObject({ canEdit: true, canStart: true });
-      const asVB = await list(w.junak.id, w.token(w.vykhovnykA)).expect(200);
-      expect(asVB.body.canStart).toBe(true);
+      const asAssigned = await list(w.junak.id, w.token(w.vykhovnykA)).expect(200);
+      expect(asAssigned.body).toMatchObject({ canEdit: true, canStart: true });
+      // an unassigned vykhovnyk cannot see this junak at all; one who can see but not write gets canStart false
+      const noHurtok = await list(w.junakNoHurtok.id, w.token(w.vykhovnykA)).expect(200);
+      expect(noHurtok.body).toMatchObject({ canEdit: false, canStart: false });
+      expect(own.items[0].status).toBe('STARTED');
+      expect(asZv.items[0].status).toBe('STARTED');
     });
   });
 
@@ -199,8 +202,64 @@ describe('Junak skills in progress — start, sign, credit, remove (e2e)', () =>
       await remove(w.junak.id, w.token(w.junak), ach.body.id).expect(403);
       const st = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
       await remove(w.junak.id, w.token(w.vykhovnykB), st).expect(403);
-      expect([403, 404]).toContain((await remove(w.junakNoHurtok.id, w.token(w.junak), st)).status);
+      await remove(w.junakNoHurtok.id, w.token(w.junak), st).expect(403);
       await remove(w.junak.id, zv, ach.body.id).expect(200);
+      expect(await audit(w.kurin.id, AuditAction.SKILL_REMOVED)).toHaveLength(1);
+      await remove(w.junak.id, zv, st).expect(200);
+      expect(await audit(w.kurin.id, AuditAction.SKILL_REMOVED)).toHaveLength(2);
+    });
+  });
+
+  describe('cross-junak, archived, no-op and stale cases', () => {
+    it('another junak record id is 404 for self-remove, sign and achieve', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const other = (await start(w.junakNoHurtok.id, zv, w.level1.id).expect(201)).body.id;
+      await remove(w.junak.id, w.token(w.junak), other).expect(404);
+      await sign(w.junak.id, w.token(w.vykhovnykA), other, 0).expect(404);
+      await achieve(w.junak.id, w.token(w.vykhovnykA), other, { achievedAt: '2025-05-01' }).expect(404);
+      expect(await prisma.junakSkill.count()).toBe(1);
+    });
+
+    it('an archived junak: sign, achieve and writer remove are 400', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const id = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
+      await prisma.user.update({ where: { id: w.junak.id }, data: { archivedAt: new Date() } });
+      await sign(w.junak.id, zv, id, 0).expect(400);
+      await achieve(w.junak.id, zv, id, { achievedAt: '2025-05-01' }).expect(400);
+      await remove(w.junak.id, zv, id).expect(400);
+    });
+
+    it('unsigning an unsigned index is a no-op without audit', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const id = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
+      await unsign(w.junak.id, zv, id, 0).expect(200);
+      expect(await audit(w.kurin.id, AuditAction.SKILL_REQUIREMENT_UNSIGNED)).toHaveLength(0);
+    });
+
+    it('stale signs: hidden in the view, but still removable', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const id = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
+      await sign(w.junak.id, zv, id, 1).expect(200);
+      await prisma.skillLevel.update({ where: { id: w.level2.id }, data: { requirements: [{ text: '1. Перша' }] } });
+      const view = (await list(w.junak.id, zv).expect(200)).body.items[0];
+      expect(view.signs).toEqual([]);
+      await unsign(w.junak.id, zv, id, 1).expect(200);
+      expect(await prisma.junakSkillRequirementSign.count()).toBe(0);
+      await sign(w.junak.id, zv, id, 1).expect(400);
+    });
+
+    it('concurrent first signs do not 500 and audit once', async () => {
+      const w = await setup();
+      const zv = w.token(w.zvyazkovyi);
+      const id = (await start(w.junak.id, zv, w.level2.id).expect(201)).body.id;
+      const results = await Promise.all([sign(w.junak.id, zv, id, 0), sign(w.junak.id, zv, id, 0), sign(w.junak.id, zv, id, 0)]);
+      expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+      expect(await prisma.junakSkillRequirementSign.count()).toBe(1);
+      expect(await audit(w.kurin.id, AuditAction.SKILL_REQUIREMENT_SIGNED)).toHaveLength(1);
     });
   });
 });

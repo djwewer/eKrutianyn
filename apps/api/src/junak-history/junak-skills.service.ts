@@ -56,41 +56,49 @@ export class JunakSkillsService {
 
   async sign(junakId: string, id: string, index: string, actor: CurrentUserPayload): Promise<JunakSkillView> {
     const junak = await loadJunakForWrite(this.prisma, junakId, actor);
-    const row = await this.findOwnedOrThrow(junakId, id);
-    const idx = this.parseIndex(index, row);
-    if (!row.signs.some((s) => s.requirementIndex === idx)) {
-      await this.prisma.junakSkillRequirementSign.upsert({
-        where: { junakSkillId_requirementIndex: { junakSkillId: id, requirementIndex: idx } },
-        create: { junakSkillId: id, requirementIndex: idx, signedById: actor.userId },
-        update: {},
+    await this.findOwnedOrThrow(junakId, id);
+    const idx = this.parseIndexFormat(index);
+    const signed = await this.prisma.$transaction(async (tx) => {
+      // Lock the record so a concurrent credit cannot interleave with the sign.
+      await tx.$queryRaw`SELECT id FROM "JunakSkill" WHERE id = ${id} FOR UPDATE`;
+      const fresh = await tx.junakSkill.findUnique({ where: { id }, include: { level: true } });
+      if (!fresh || fresh.junakId !== junakId) throw new NotFoundException('Запис не знайдено');
+      if (fresh.achievedAt) throw new ConflictException('Вмілість уже здобуто');
+      const count = (fresh.level.requirements as unknown as SkillRequirement[]).length;
+      if (idx >= count) throw new BadRequestException('Невірний номер вимоги');
+      const res = await tx.junakSkillRequirementSign.createMany({
+        data: [{ junakSkillId: id, requirementIndex: idx, signedById: actor.userId }],
+        skipDuplicates: true,
       });
-      await this.record(AuditAction.SKILL_REQUIREMENT_SIGNED, junak, toJunakSkillView(row), actor, { requirementIndex: idx });
-    }
-    return toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
+      return res.count === 1;
+    });
+    const view = toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
+    if (signed) await this.record(AuditAction.SKILL_REQUIREMENT_SIGNED, junak, view, actor, { requirementIndex: idx });
+    return view;
   }
 
   async unsign(junakId: string, id: string, index: string, actor: CurrentUserPayload): Promise<JunakSkillView> {
     const junak = await loadJunakForWrite(this.prisma, junakId, actor);
     const row = await this.findOwnedOrThrow(junakId, id);
-    const idx = this.parseIndex(index, row);
-    if (row.signs.some((s) => s.requirementIndex === idx)) {
-      await this.prisma.junakSkillRequirementSign.deleteMany({ where: { junakSkillId: id, requirementIndex: idx } });
-      await this.record(AuditAction.SKILL_REQUIREMENT_UNSIGNED, junak, toJunakSkillView(row), actor, { requirementIndex: idx });
-    }
-    return toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
+    if (row.achievedAt) throw new ConflictException('Вмілість уже здобуто');
+    const idx = this.parseIndexFormat(index);
+    // Any existing sign may be removed, even if the level now has fewer requirements.
+    const res = await this.prisma.junakSkillRequirementSign.deleteMany({ where: { junakSkillId: id, requirementIndex: idx } });
+    const view = toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
+    if (res.count > 0) await this.record(AuditAction.SKILL_REQUIREMENT_UNSIGNED, junak, view, actor, { requirementIndex: idx });
+    return view;
   }
 
   async achieve(junakId: string, id: string, dto: AchieveJunakSkillDto, actor: CurrentUserPayload): Promise<JunakSkillView> {
     const junak = await loadJunakForWrite(this.prisma, junakId, actor);
-    const row = await this.findOwnedOrThrow(junakId, id);
-    if (row.achievedAt) throw new ConflictException('Вмілість уже здобуто');
+    await this.findOwnedOrThrow(junakId, id);
     const achievedAt = parseHistoryDate(dto.achievedAt);
-    const updated = await this.prisma.junakSkill.update({
-      where: { id },
+    const res = await this.prisma.junakSkill.updateMany({
+      where: { id, junakId, achievedAt: null },
       data: { achievedAt, examiner: blankToNull(dto.examiner) ?? null, certificateNumber: blankToNull(dto.certificateNumber) ?? null },
-      include: JUNAK_SKILL_INCLUDE,
     });
-    const view = toJunakSkillView(updated);
+    if (res.count === 0) throw new ConflictException('Вмілість уже здобуто');
+    const view = toJunakSkillView(await this.findOwnedOrThrow(junakId, id));
     await this.record(AuditAction.SKILL_ACHIEVED, junak, view, actor);
     return view;
   }
@@ -146,15 +154,24 @@ export class JunakSkillsService {
 
   async remove(junakId: string, id: string, actor: CurrentUserPayload): Promise<{ success: true }> {
     // Achieved: writers only. Started: writers any time; the junak only their own with zero signs.
-    const probe = await this.prisma.junakSkill.findUnique({ where: { id }, select: { junakId: true, achievedAt: true } });
-    const startedSelf = !!probe && probe.junakId === junakId && !probe.achievedAt && actor.userId === junakId;
-    const junak = startedSelf
-      ? (await loadJunakForSelfOrWrite(this.prisma, junakId, actor)).junak
-      : await loadJunakForWrite(this.prisma, junakId, actor);
-    const row = await this.findOwnedOrThrow(junakId, id);
-    if (startedSelf && row.signs.length > 0) {
-      throw new ForbiddenException('Розпочату вмілість з підписами може прибрати лише виховник');
+    if (actor.userId === junakId) {
+      const own = await this.findOwnedOrThrow(junakId, id);
+      if (!own.achievedAt) {
+        const { junak } = await loadJunakForSelfOrWrite(this.prisma, junakId, actor);
+        const res = await this.prisma.junakSkill.deleteMany({
+          where: { id, junakId, achievedAt: null, signs: { none: {} } },
+        });
+        if (res.count === 0) {
+          const again = await this.prisma.junakSkill.findUnique({ where: { id }, select: { id: true } });
+          if (!again) throw new NotFoundException('Запис не знайдено');
+          throw new ForbiddenException('Розпочату вмілість з підписами може прибрати лише виховник');
+        }
+        await this.record(AuditAction.SKILL_REMOVED, junak, toJunakSkillView(own), actor);
+        return { success: true };
+      }
     }
+    const junak = await loadJunakForWrite(this.prisma, junakId, actor);
+    const row = await this.findOwnedOrThrow(junakId, id);
     await this.prisma.junakSkill.delete({ where: { id } });
     await this.record(AuditAction.SKILL_REMOVED, junak, toJunakSkillView(row), actor);
     return { success: true };
@@ -168,13 +185,10 @@ export class JunakSkillsService {
     return level;
   }
 
-  /** Index must be a non-negative integer within the level's requirements; the record must be started. */
-  private parseIndex(raw: string, row: { achievedAt: Date | null; level: { requirements: unknown } }): number {
-    if (row.achievedAt) throw new ConflictException('Вмілість уже здобуто');
-    const count = (row.level.requirements as SkillRequirement[]).length;
-    const idx = /^\d+$/.test(raw) ? Number(raw) : -1;
-    if (idx < 0 || idx >= count) throw new BadRequestException('Невірний номер вимоги');
-    return idx;
+  /** Index must be a non-negative integer. */
+  private parseIndexFormat(raw: string): number {
+    if (!/^\d+$/.test(raw)) throw new BadRequestException('Невірний номер вимоги');
+    return Number(raw);
   }
 
   private async findOwnedOrThrow(junakId: string, id: string) {
