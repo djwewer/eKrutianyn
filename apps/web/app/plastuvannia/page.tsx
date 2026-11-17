@@ -78,7 +78,8 @@ export default function PlastuvanniaPage() {
               >
                 <b className="font-display text-[.95rem] font-semibold tracking-[.05em] uppercase">{label}</b>
                 <span className="font-mono text-[.72rem] text-ink-2">
-                  {date ? degreeMonthYear(date) : cur ? `${percent}%` : 'попереду'}
+                  {/* Скоб has no proba points (projects are tracked outside the app), so no percent for it. */}
+                  {date ? degreeMonthYear(date) : cur ? (key === 'SKOB' ? 'в процесі' : `${percent}%`) : 'попереду'}
                 </span>
               </div>
             );
