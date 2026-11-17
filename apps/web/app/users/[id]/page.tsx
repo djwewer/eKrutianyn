@@ -244,7 +244,7 @@ function CloseStageControl({ onClose, disabled }: { onClose: (date: string) => v
   const todayIso = localDateKey(new Date());
   const [date, setDate] = useState(todayIso);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Input
         type="date"
         aria-label="Дата здобуття ступеня"
@@ -730,7 +730,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                           </AccordionTrigger>
                           <AccordionContent>
                             {canConfirmProby && (
-                              <div className="mb-3 flex items-center justify-between">
+                              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 {status === 'CLOSED' ? (
                                   <Button size="sm" variant="outline" onClick={() => reopenStage.mutate(stage.id)}>
                                     🔓 Перевідкрити пробу

@@ -277,18 +277,15 @@ function StartedSkill({
                       disabled={busy}
                       id={`req-${skill.id}-${index}`}
                       aria-label={`Підпис вимоги ${index + 1}: ${levelName(skill)}`}
+                      aria-describedby={`req-text-${skill.id}-${index}`}
                       onChange={() => toggle(index, !!s)}
                     />
                   ) : (
                     s && <Badge variant="ok">підписано</Badge>
                   )}
-                  {canEdit ? (
-                    <label htmlFor={`req-${skill.id}-${index}`} className="min-w-0 [overflow-wrap:anywhere]">
-                      {requirement.text}
-                    </label>
-                  ) : (
-                    <p className="min-w-0 [overflow-wrap:anywhere]">{requirement.text}</p>
-                  )}
+                  <p id={`req-text-${skill.id}-${index}`} className="min-w-0 [overflow-wrap:anywhere]">
+                    {requirement.text}
+                  </p>
                 </div>
                 {requirement.items && requirement.items.length > 0 && (
                   <ul className="space-y-0.5 pl-6 text-ink-2">
