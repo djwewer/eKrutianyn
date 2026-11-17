@@ -79,3 +79,28 @@ export async function loadJunakForWrite(
   }
   return toHistoryJunak(user);
 }
+
+/**
+ * Start / remove-own access: the junak acting on their own record (not archived, same kurin),
+ * or anyone who can write the junak's history. `isSelf` is true for the junak's own path.
+ */
+export async function loadJunakForSelfOrWrite(
+  prisma: PrismaService,
+  junakId: string,
+  actor: CurrentUserPayload,
+): Promise<{ junak: HistoryJunak; isSelf: boolean }> {
+  if (actor.userId !== junakId) {
+    return { junak: await loadJunakForWrite(prisma, junakId, actor), isSelf: false };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: junakId },
+    select: { id: true, role: true, firstName: true, lastName: true, nickname: true, kurinId: true, hurtokId: true, archivedAt: true },
+  });
+  if (!user || user.role !== Role.JUNAK || user.kurinId !== actor.kurinId) {
+    throw new NotFoundException('Юнака не знайдено');
+  }
+  if (user.archivedAt) {
+    throw new BadRequestException('Юнак архівований');
+  }
+  return { junak: toHistoryJunak(user), isSelf: true };
+}

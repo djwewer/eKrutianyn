@@ -5,6 +5,7 @@ import {
   JunakRemark,
   JunakRemarkKind,
   JunakSkill,
+  JunakSkillRequirementSign,
   JunakVfv,
   PositionScope,
   PositionType,
@@ -12,6 +13,7 @@ import {
   SkillGroup,
   SkillLevel,
 } from '@prisma/client';
+import { SkillRequirement } from '../skills/skill.types';
 
 export function isoDate(date: Date): string;
 export function isoDate(date: Date | null): string | null;
@@ -19,8 +21,23 @@ export function isoDate(date: Date | null): string | null {
   return date ? date.toISOString().slice(0, 10) : null;
 }
 
-export const JUNAK_SKILL_INCLUDE = { level: { include: { skill: true } } } as const;
-type JunakSkillRow = JunakSkill & { level: SkillLevel & { skill: Skill } };
+export const JUNAK_SKILL_INCLUDE = {
+  level: { include: { skill: true } },
+  signs: {
+    orderBy: { requirementIndex: 'asc' },
+    include: { signedBy: { select: { firstName: true, lastName: true, nickname: true } } },
+  },
+} as const;
+type JunakSkillRow = JunakSkill & {
+  level: SkillLevel & { skill: Skill };
+  signs: (JunakSkillRequirementSign & { signedBy: { firstName: string; lastName: string; nickname: string | null } })[];
+};
+
+export interface JunakSkillSignView {
+  index: number;
+  signedAt: string;
+  signedByName: string;
+}
 
 export interface JunakSkillView {
   id: string;
@@ -30,7 +47,11 @@ export interface JunakSkillView {
   group: SkillGroup;
   level: number;
   isCustom: boolean;
+  status: 'STARTED' | 'ACHIEVED';
+  startedAt: string | null;
   achievedAt: string | null;
+  requirements: SkillRequirement[];
+  signs: JunakSkillSignView[];
   examiner: string | null;
   certificateNumber: string | null;
 }
@@ -44,7 +65,15 @@ export function toJunakSkillView(row: JunakSkillRow): JunakSkillView {
     group: row.level.skill.group,
     level: row.level.level,
     isCustom: row.level.skill.kurinId !== null,
+    status: row.achievedAt ? 'ACHIEVED' : 'STARTED',
+    startedAt: row.startedAt ? row.startedAt.toISOString() : null,
     achievedAt: isoDate(row.achievedAt),
+    requirements: row.level.requirements as unknown as SkillRequirement[],
+    signs: row.signs.map((s) => ({
+      index: s.requirementIndex,
+      signedAt: s.signedAt.toISOString(),
+      signedByName: `${s.signedBy.firstName} ${s.signedBy.lastName}`,
+    })),
     examiner: row.examiner,
     certificateNumber: row.certificateNumber,
   };
@@ -52,6 +81,7 @@ export function toJunakSkillView(row: JunakSkillRow): JunakSkillView {
 
 export interface JunakSkillsView {
   canEdit: boolean;
+  canStart: boolean;
   items: JunakSkillView[];
 }
 
