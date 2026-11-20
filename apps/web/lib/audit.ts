@@ -171,7 +171,9 @@ export function describeAuditEvent(item: AuditLogItem): string {
     case 'DRIVE_DISCONNECTED':
       return 'Відключив Google Drive';
     case 'DRIVE_FOLDER_SET':
-      return `Обрав головну папку куреня: «${s(d, 'folderName')}»`;
+      return `Обрав папку реманенту: «${s(d, 'folderName')}»`;
+    case 'PYSARSTVO_FOLDER_SET':
+      return `Обрав папку писарства: «${s(d, 'folderName')}»`;
     case 'JUDGE_BOOK_CONNECTED':
       return `Підключив Книгу судді: «${s(d, 'spreadsheetName')}»`;
     case 'JUDGE_BOOK_IMPORTED':

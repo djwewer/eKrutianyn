@@ -72,6 +72,8 @@ export class GoogleDriveService {
         driveConnectedAt: null,
         driveFolderId: null,
         driveFolderName: null,
+        pysarstvoFolderId: null,
+        pysarstvoFolderName: null,
       },
     });
   }

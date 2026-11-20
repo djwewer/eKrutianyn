@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { CreateApdDto } from './dto/create-apd.dto';
+import { SetPysarstvoFolderDto } from './dto/set-pysarstvo-folder.dto';
 import { buildApdHtml, cleanText } from './apd-html';
 
 @Injectable()
@@ -55,14 +56,16 @@ export class PysarstvoService {
     }
 
     const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId } });
-    if (!kurin?.driveRefreshToken || !kurin.driveFolderId) {
+    if (!kurin?.driveRefreshToken) {
       throw new ServiceUnavailableException(
-        'Курінь ще не підключив Google Drive або не обрав головну папку — це робить звʼязковий у налаштуваннях куреня',
+        'Курінь ще не підключив Google Drive — це робить звʼязковий у налаштуваннях куреня',
       );
     }
+    if (!kurin.pysarstvoFolderId) {
+      throw new ServiceUnavailableException('Звʼязковий ще не обрав папку писарства — це робиться на сторінці «Писарство»');
+    }
 
-    const pysarstvoFolderId = await this.googleDrive.ensureSubfolder(kurinId, kurin.driveFolderId, 'Писарство');
-    const apdFolderId = await this.googleDrive.ensureSubfolder(kurinId, pysarstvoFolderId, 'АПД');
+    const apdFolderId = await this.googleDrive.ensureSubfolder(kurinId, kurin.pysarstvoFolderId, 'АПД');
     const doc = await this.googleDrive.createDocFromHtml(kurinId, apdFolderId, title, buildApdHtml(title, pseudos));
     await this.audit.record({
       kurinId,
@@ -72,5 +75,44 @@ export class PysarstvoService {
       details: { title, pseudoCount: pseudos.length, url: doc.url },
     });
     return doc;
+  }
+
+  /** Whether Drive is connected and which folder Писарство writes into; readable by everyone who can create documents. */
+  async getFolder(kurinId: string, actor: CurrentUserPayload) {
+    this.assertKurinMatches(kurinId, actor);
+    this.assertCanWrite(actor);
+    const kurin = await this.prisma.kurin.findUnique({
+      where: { id: kurinId },
+      select: { driveRefreshToken: true, pysarstvoFolderId: true, pysarstvoFolderName: true },
+    });
+    return {
+      driveConnected: !!kurin?.driveRefreshToken,
+      folderId: kurin?.pysarstvoFolderId ?? undefined,
+      folderName: kurin?.pysarstvoFolderName ?? undefined,
+    };
+  }
+
+  /** Only the звʼязковий picks the folder: the Drive picker hands out an access token to the kurin's Drive. */
+  async setFolder(kurinId: string, dto: SetPysarstvoFolderDto, actor: CurrentUserPayload) {
+    this.assertKurinMatches(kurinId, actor);
+    if (actor.role !== Role.ZVYAZKOVYI) {
+      throw new ForbiddenException('Insufficient role');
+    }
+    const kurin = await this.prisma.kurin.findUnique({ where: { id: kurinId }, select: { driveRefreshToken: true } });
+    if (!kurin?.driveRefreshToken) {
+      throw new ServiceUnavailableException('Курінь ще не підключив Google Drive — це робить звʼязковий у налаштуваннях куреня');
+    }
+    const folderName = cleanText(dto.folderName);
+    await this.prisma.kurin.update({
+      where: { id: kurinId },
+      data: { pysarstvoFolderId: dto.folderId, pysarstvoFolderName: folderName },
+    });
+    await this.audit.record({
+      kurinId,
+      actorId: actor.userId,
+      action: AuditAction.PYSARSTVO_FOLDER_SET,
+      details: { folderName },
+    });
+    return this.getFolder(kurinId, actor);
   }
 }

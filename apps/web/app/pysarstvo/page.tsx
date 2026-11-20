@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useSession } from '@/lib/session-client';
-import { useCreateApd, usePseudoCandidates } from '@/lib/queries/pysarstvo';
+import { useCreateApd, usePseudoCandidates, usePysarstvoFolder, useSetPysarstvoFolder } from '@/lib/queries/pysarstvo';
+import { fetchGoogleDrivePickerToken } from '@/lib/queries/google-drive';
+import { openGoogleDriveFolderPicker } from '@/lib/google-picker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,61 @@ function errorText(error: unknown): string {
   return accessErrorMessage(error) ?? 'Не вдалося створити документ.';
 }
 
+function PysarstvoFolderCard({ kurinId, isZvyazkovyi }: { kurinId: string; isZvyazkovyi: boolean }) {
+  const { data: folder, isLoading, isError } = usePysarstvoFolder(kurinId, true);
+  const setFolder = useSetPysarstvoFolder(kurinId);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+
+  async function handlePickFolder() {
+    setPickerError(null);
+    try {
+      const accessToken = await fetchGoogleDrivePickerToken(kurinId);
+      await openGoogleDriveFolderPicker(accessToken, (folderId, folderName) => {
+        setFolder.mutate({ folderId, folderName });
+      });
+    } catch {
+      setPickerError('Не вдалося відкрити вибір папки. Спробуйте підключити Google Drive повторно.');
+    }
+  }
+
+  return (
+    <Card data-testid="pysarstvo-folder">
+      <CardHeader>
+        <CardTitle>Папка писарства</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {isLoading && <p className="text-sm text-ink-2">Завантаження...</p>}
+        {isError && <p className="text-sm text-late">Не вдалося перевірити папку писарства.</p>}
+        {folder && !folder.driveConnected && (
+          <p className="text-sm text-ink-2">
+            Google Drive не підключено.
+            {isZvyazkovyi ? ' Підключіть його в налаштуваннях куреня, на сторінці «Курінь».' : ' Зверніться до звʼязкового куреня.'}
+          </p>
+        )}
+        {folder?.driveConnected && (
+          <>
+            <p className="text-sm [overflow-wrap:anywhere]">
+              Папка:{' '}
+              {folder.folderName ? <b>{folder.folderName}</b> : <span className="text-ink-2">не обрана</span>}
+            </p>
+            <p className="text-sm text-ink-2">
+              У ній створюється папка «АПД», куди потрапляють документи писарства.
+              {!isZvyazkovyi && !folder.folderName && ' Папку обирає звʼязковий куреня.'}
+            </p>
+            {isZvyazkovyi && (
+              <Button size="sm" variant="outline" disabled={setFolder.isPending} onClick={handlePickFolder}>
+                {folder.folderName ? 'Змінити папку' : 'Обрати папку писарства'}
+              </Button>
+            )}
+            {setFolder.isError && <p className="text-sm text-late">Не вдалося зберегти папку. Спробуйте ще раз.</p>}
+            {pickerError && <p className="text-sm text-late">{pickerError}</p>}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function PysarstvoPage() {
   const { data: session } = useSession();
   const kurinId = session?.kurinId;
@@ -29,6 +86,8 @@ export default function PysarstvoPage() {
     session?.role === 'ZVYAZKOVYI' || !!session?.isKurinniy || !!session?.positions.includes('PYSAR');
   const { data: candidates = [] } = usePseudoCandidates(kurinId, canUse);
   const createApd = useCreateApd(kurinId ?? '');
+  const { data: folder } = usePysarstvoFolder(kurinId, canUse);
+  const folderReady = !!folder?.driveConnected && !!folder.folderId;
 
   const [title, setTitle] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -66,14 +125,15 @@ export default function PysarstvoPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Писарство" subtitle="АПД сходин і документи куреня в Google Drive" />
+      <PysarstvoFolderCard kurinId={kurinId} isZvyazkovyi={session.role === 'ZVYAZKOVYI'} />
       <Card>
         <CardHeader>
           <CardTitle>Створити АПД</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-ink-2">
-            Документ створюється у Google Drive куреня, у папці «Писарство» → «АПД». Для кожного псевдо додаються розділи
-            «Що було добре» та «Що можна покращити».
+            Документ створюється в папці писарства, у підпапці «АПД». Для кожного псевдо додаються розділи «Що було
+            добре» та «Що можна покращити».
           </p>
           <Input
             placeholder="Назва документа, напр. АПД сходини 27.10"
@@ -139,7 +199,19 @@ export default function PysarstvoPage() {
             )}
           </div>
           <p className="text-sm text-ink-2">Обрано псевдо: {pseudos.length}</p>
-          <Button disabled={createApd.isPending || !title.trim() || pseudos.length === 0} onClick={submit}>
+          {folder && !folderReady && (
+            <p className="text-sm text-late">
+              {session.role === 'ZVYAZKOVYI'
+                ? folder.driveConnected
+                  ? 'Щоб створювати документи, спершу оберіть папку писарства вище.'
+                  : 'Щоб створювати документи, спершу підключіть Google Drive і оберіть папку писарства.'
+                : 'Документи можна буде створювати, коли звʼязковий обере папку писарства.'}
+            </p>
+          )}
+          <Button
+            disabled={createApd.isPending || !folderReady || !title.trim() || pseudos.length === 0}
+            onClick={submit}
+          >
             {createApd.isPending ? 'Створюю…' : 'Створити АПД'}
           </Button>
           {createApd.isError && <p className="text-sm text-late">{errorText(createApd.error)}</p>}

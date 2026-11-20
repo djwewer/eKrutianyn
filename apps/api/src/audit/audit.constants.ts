@@ -66,6 +66,7 @@ export const AUDIT_GROUPS: Record<AuditGroup, AuditAction[]> = {
     AuditAction.DRIVE_CONNECTED,
     AuditAction.DRIVE_DISCONNECTED,
     AuditAction.DRIVE_FOLDER_SET,
+    AuditAction.PYSARSTVO_FOLDER_SET,
     AuditAction.JUDGE_BOOK_CONNECTED,
     AuditAction.JUDGE_BOOK_IMPORTED,
     AuditAction.JUDGE_BOOK_SYNCED,

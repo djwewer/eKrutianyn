@@ -56,7 +56,7 @@ describe('Audit events — Налаштування та інтеграції gr
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     await prisma.kurin.update({
       where: { id: kurin.id },
-      data: { driveRefreshToken: 'rt', driveFolderId: 'main-folder' },
+      data: { driveRefreshToken: 'rt', driveFolderId: 'main-folder', pysarstvoFolderId: 'pysar-folder' },
     });
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
     const token = issueTokenFor(jwtService, zvyazkovyi);

@@ -78,6 +78,10 @@ model Kurin {
   deactivatedAt                DateTime?
   driveFolderId                String?
   driveFolderName              String?
+  // Писарство's own Drive folder (same Google account as above): АПД and other
+  // pysar documents go here, not into the inventory folder.
+  pysarstvoFolderId            String?
+  pysarstvoFolderName          String?
   driveRefreshToken            String?
   driveConnectedEmail          String?
   driveConnectedAt             DateTime?
@@ -840,6 +844,7 @@ enum AuditAction {
   DRIVE_CONNECTED
   DRIVE_DISCONNECTED
   DRIVE_FOLDER_SET
+  PYSARSTVO_FOLDER_SET
   JUDGE_BOOK_CONNECTED
   JUDGE_BOOK_IMPORTED
   JUDGE_BOOK_SYNCED

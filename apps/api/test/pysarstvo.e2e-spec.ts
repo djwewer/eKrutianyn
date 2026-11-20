@@ -45,14 +45,16 @@ describe('Pysarstvo APD (e2e)', () => {
     const kurin = await createKurin(prisma, { probyProgramId: program.id });
     const updated = await prisma.kurin.update({
       where: { id: kurin.id },
-      data: connected ? { driveRefreshToken: 'rt', driveFolderId: 'main-folder' } : {},
+      data: connected
+        ? { driveRefreshToken: 'rt', driveFolderId: 'inventory-folder', pysarstvoFolderId: 'pysar-folder', pysarstvoFolderName: 'Писарство куреня' }
+        : {},
     });
     return { kurin: updated };
   }
 
   const body = { title: 'АПД сходини', pseudos: ['Орел', 'Вовк'] };
 
-  it('lets a pysar create an APD in Писарство/АПД of the kurin folder', async () => {
+  it('lets a pysar create an APD in АПД inside the chosen Писарство folder (not the inventory folder)', async () => {
     const { kurin } = await setup();
     const pysar = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
     await prisma.kurinPosition.create({
@@ -72,8 +74,8 @@ describe('Pysarstvo APD (e2e)', () => {
       .expect(201);
 
     expect(response.body).toEqual({ id: 'doc1', url: 'https://docs.google.com/document/d/doc1/edit' });
-    expect(fakeDrive.ensureSubfolder).toHaveBeenNthCalledWith(1, kurin.id, 'main-folder', 'Писарство');
-    expect(fakeDrive.ensureSubfolder).toHaveBeenNthCalledWith(2, kurin.id, 'Писарство-id', 'АПД');
+    expect(fakeDrive.ensureSubfolder).toHaveBeenCalledTimes(1);
+    expect(fakeDrive.ensureSubfolder).toHaveBeenCalledWith(kurin.id, 'pysar-folder', 'АПД');
     const [, folderId, title, html] = fakeDrive.createDocFromHtml.mock.calls[0];
     expect(folderId).toBe('АПД-id');
     expect(title).toBe('АПД сходини');
@@ -130,6 +132,88 @@ describe('Pysarstvo APD (e2e)', () => {
       .set('Authorization', `Bearer ${issueTokenFor(jwtService, zvyazkovyi)}`)
       .send(body)
       .expect(503);
+  });
+
+  it('returns 503 when Drive is connected but no Писарство folder is chosen, even with an inventory folder', async () => {
+    const { kurin } = await setup();
+    await prisma.kurin.update({ where: { id: kurin.id }, data: { pysarstvoFolderId: null, pysarstvoFolderName: null } });
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const response = await request(app.getHttpServer())
+      .post(`/kurins/${kurin.id}/pysarstvo/apd`)
+      .set('Authorization', `Bearer ${issueTokenFor(jwtService, zvyazkovyi)}`)
+      .send(body)
+      .expect(503);
+    expect(response.body.message).toContain('папку писарства');
+    expect(fakeDrive.createDocFromHtml).not.toHaveBeenCalled();
+  });
+
+  describe('Писарство folder', () => {
+    async function pysarIn(kurinId: string) {
+      const pysar = await createUser(prisma, { role: Role.JUNAK, kurinId });
+      await prisma.kurinPosition.create({
+        data: { kurinId, scope: PositionScope.KURIN, positionType: PositionType.PYSAR, userId: pysar.id, assignedById: pysar.id },
+      });
+      return pysar;
+    }
+    const folderBody = { folderId: 'new-folder', folderName: 'Документи куреня' };
+
+    it('shows the folder status to a pysar, but not to a plain junak', async () => {
+      const { kurin } = await setup();
+      const pysar = await pysarIn(kurin.id);
+      const res = await request(app.getHttpServer())
+        .get(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${issueTokenFor(jwtService, pysar)}`)
+        .expect(200);
+      expect(res.body).toEqual({ driveConnected: true, folderId: 'pysar-folder', folderName: 'Писарство куреня' });
+      const junak = await createUser(prisma, { role: Role.JUNAK, kurinId: kurin.id });
+      await request(app.getHttpServer())
+        .get(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${issueTokenFor(jwtService, junak)}`)
+        .expect(403);
+    });
+
+    it('lets only the zvyazkovyi set the folder, without touching the inventory folder, and audits it', async () => {
+      const { kurin } = await setup();
+      const pysar = await pysarIn(kurin.id);
+      await request(app.getHttpServer())
+        .patch(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${issueTokenFor(jwtService, pysar)}`)
+        .send(folderBody)
+        .expect(403);
+      const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+      const res = await request(app.getHttpServer())
+        .patch(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${issueTokenFor(jwtService, zvyazkovyi)}`)
+        .send(folderBody)
+        .expect(200);
+      expect(res.body).toEqual({ driveConnected: true, folderId: 'new-folder', folderName: 'Документи куреня' });
+      const after = await prisma.kurin.findUniqueOrThrow({ where: { id: kurin.id } });
+      expect(after.driveFolderId).toBe('inventory-folder');
+      expect(after.pysarstvoFolderId).toBe('new-folder');
+      const audit = await prisma.auditLog.findFirst({ where: { kurinId: kurin.id, action: 'PYSARSTVO_FOLDER_SET' } });
+      expect(audit?.details).toEqual({ folderName: 'Документи куреня' });
+    });
+
+    it('rejects setting the folder when Drive is not connected, and for another kurin', async () => {
+      const { kurin } = await setup(false);
+      const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+      const token = issueTokenFor(jwtService, zvyazkovyi);
+      await request(app.getHttpServer())
+        .patch(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(folderBody)
+        .expect(503);
+      await request(app.getHttpServer())
+        .patch(`/kurins/some-other-kurin/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(folderBody)
+        .expect(404);
+      await request(app.getHttpServer())
+        .patch(`/kurins/${kurin.id}/pysarstvo/folder`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ folderId: '', folderName: 'x' })
+        .expect(400);
+    });
   });
 
   it('lists active junaky as id + pseudo/name for a pysar, without other user fields', async () => {
