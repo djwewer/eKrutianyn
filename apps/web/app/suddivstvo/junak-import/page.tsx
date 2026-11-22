@@ -205,7 +205,13 @@ export default function JunakImportPage() {
       let idx = -1;
       if (saved) {
         const byLetter = columnIndexFromLetter(saved.column);
-        idx = byLetter !== undefined && (header[byLetter] ?? '') === saved.header ? byLetter : header.indexOf(saved.header);
+        // Letter first; fall back to the header text only when it is non-empty (a blank header could match any blank column).
+        idx =
+          byLetter !== undefined && (header[byLetter] ?? '') === saved.header
+            ? byLetter
+            : saved.header
+              ? header.indexOf(saved.header)
+              : -1;
       }
       if (idx >= 0) next[scope] = { enabled: true, column: idx };
     }
