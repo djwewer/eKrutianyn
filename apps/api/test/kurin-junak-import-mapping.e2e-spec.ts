@@ -164,6 +164,44 @@ describe('Kurin Junak Import mapping (e2e)', () => {
     expect(status.body.mapping.positionValueMapping).toEqual(positionValueMapping);
   });
 
+  it('round-trips scoped value-mapping entries unchanged', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+    const positionValueMapping = [
+      { rawValue: 'Скарбник', positionType: 'SKARBNYK', scope: 'HURTOK' },
+      { rawValue: 'Скарбник', positionType: 'SKARBNYK', scope: 'KURIN' },
+    ];
+
+    await request(app.getHttpServer())
+      .put(`/kurins/${kurin.id}/junak-import/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ columnMapping: [], positionValueMapping })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    const status = await request(app.getHttpServer())
+      .get(`/kurins/${kurin.id}/junak-import/status`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(status.body.mapping.positionValueMapping).toEqual(positionValueMapping);
+  });
+
+  it('rejects a value-mapping entry with an unknown scope', async () => {
+    const { kurin } = await setup();
+    const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });
+    const token = issueTokenFor(jwtService, zvyazkovyi);
+
+    await request(app.getHttpServer())
+      .put(`/kurins/${kurin.id}/junak-import/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        columnMapping: [],
+        positionValueMapping: [{ rawValue: 'Скарбник', positionType: 'SKARBNYK', scope: 'OTHER' }],
+      })
+      .expect(400);
+  });
+
   it('rejects a mapping with an invalid (oversized) column value', async () => {
     const { kurin } = await setup();
     const zvyazkovyi = await createUser(prisma, { role: Role.ZVYAZKOVYI, kurinId: kurin.id });

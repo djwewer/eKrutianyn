@@ -41,6 +41,7 @@ class ColumnMappingEntryDto {
 class PositionValueMappingEntryDto {
   @IsString() rawValue: string;
   @IsOptional() @IsEnum(PositionType) positionType: PositionType | null;
+  @IsOptional() @IsIn(['KURIN', 'HURTOK']) scope?: 'KURIN' | 'HURTOK';
 }
 
 export class SaveJunakImportMappingDto {
