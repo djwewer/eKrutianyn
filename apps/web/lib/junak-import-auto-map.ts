@@ -26,8 +26,6 @@ const COLUMN_FIELD_KEYWORDS: ColumnFieldRule[] = [
   { field: 'CURRENT_DEGREE', andGroups: [['ступінь'], ['ступень']] },
   { field: 'RESIDENCE', andGroups: [['проживан'], ['адрес']] },
   { field: 'STUDY_PLACE', andGroups: [['навчан'], ['школ'], ['заклад']] },
-  { field: 'HURTOK_POSITION', andGroups: [['посада', 'гурт'], ['діловодство', 'гурт']] },
-  { field: 'KURIN_POSITION', andGroups: [['посада', 'курен'], ['посада', 'курін'], ['діловодство', 'курен']] },
   { field: 'EMAIL', andGroups: [['email'], ['пошта'], ['e-mail'], ['мейл']] },
   { field: 'PHONE', andGroups: [['телефон'], ['тел.']] },
   { field: 'BIRTH_DATE', andGroups: [['дата народж'], ['днар']] },
@@ -46,6 +44,8 @@ export function autoMapColumns(
 ): Record<number, JunakImportField | ''> {
   const savedByHeader = new Map<string, JunakImportField>();
   for (const entry of savedMapping ?? []) {
+    // Position columns are chosen in the separate «Посади» block, never per column.
+    if (entry.field === 'KURIN_POSITION' || entry.field === 'HURTOK_POSITION') continue;
     savedByHeader.set(entry.header, entry.field as JunakImportField);
   }
 
@@ -90,22 +90,28 @@ const POSITION_VALUE_KEYWORDS: Record<string, string> = {
 
 export function autoMapPositionValues(
   rawValues: (string | null | undefined)[],
-  savedMapping?: { rawValue: string; positionType: string | null }[],
+  allowed: readonly string[],
+  scope: 'KURIN' | 'HURTOK',
+  savedMapping?: { rawValue: string; positionType: string | null; scope?: 'KURIN' | 'HURTOK' }[],
 ): Record<string, string> {
-  const savedByValue = new Map<string, string>();
+  const savedScoped = new Map<string, string>();
+  const savedLegacy = new Map<string, string>();
   for (const entry of savedMapping ?? []) {
-    if (entry.positionType) savedByValue.set(entry.rawValue, entry.positionType);
+    if (!entry.positionType) continue;
+    if (entry.scope === scope) savedScoped.set(entry.rawValue, entry.positionType);
+    else if (!entry.scope && allowed.includes(entry.positionType)) savedLegacy.set(entry.rawValue, entry.positionType);
   }
 
   const result: Record<string, string> = {};
   for (const rawValue of rawValues) {
     if (rawValue == null) continue;
-    const saved = savedByValue.get(rawValue);
+    const saved = savedScoped.get(rawValue) ?? savedLegacy.get(rawValue);
     if (saved) {
       result[rawValue] = saved;
       continue;
     }
-    result[rawValue] = POSITION_VALUE_KEYWORDS[normalize(rawValue)] ?? '';
+    const guess = POSITION_VALUE_KEYWORDS[normalize(rawValue)];
+    result[rawValue] = guess && allowed.includes(guess) ? guess : '';
   }
   return result;
 }

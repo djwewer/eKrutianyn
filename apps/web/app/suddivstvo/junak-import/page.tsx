@@ -22,7 +22,7 @@ import {
   type PositionType,
 } from '@/lib/types';
 import { autoMapColumns, autoMapPositionValues } from '@/lib/junak-import-auto-map';
-import { POSITION_LABELS } from '@/lib/role-labels';
+import { HURTOK_SCOPE_POSITIONS, KURIN_SCOPE_POSITIONS, POSITION_LABELS } from '@/lib/role-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +33,39 @@ import { cn } from '@/lib/utils';
 
 const MONO_HEAD = 'font-mono text-[.72rem] tracking-[.06em] text-ink-2 uppercase';
 
-const FIELD_OPTIONS = Object.keys(JUNAK_IMPORT_FIELD_LABELS) as JunakImportField[];
-const POSITION_TYPES: PositionType[] = ['SUDDIA', 'PYSAR', 'SKARBNYK', 'INTENDANT', 'KHORUNZHYI', 'SMM', 'HURTKOVYI'];
+const FIELD_OPTIONS = (Object.keys(JUNAK_IMPORT_FIELD_LABELS) as JunakImportField[]).filter(
+  (f) => f !== 'KURIN_POSITION' && f !== 'HURTOK_POSITION',
+);
+
+type Scope = 'KURIN' | 'HURTOK';
+// KURINNYI is not importable: the row processor rejects it.
+const SCOPE_POSITIONS: Record<Scope, PositionType[]> = {
+  KURIN: KURIN_SCOPE_POSITIONS.filter((p) => p !== 'KURINNYI'),
+  HURTOK: HURTOK_SCOPE_POSITIONS,
+};
+const SCOPE_FIELD: Record<Scope, 'KURIN_POSITION' | 'HURTOK_POSITION'> = {
+  KURIN: 'KURIN_POSITION',
+  HURTOK: 'HURTOK_POSITION',
+};
+const SCOPE_COPY: Record<Scope, { checkbox: string; select: string; section: string; inValue: string; missing: string }> = {
+  KURIN: {
+    checkbox: 'Імпортувати посади куреня',
+    select: 'Стовпчик з посадами куреня',
+    section: 'Посади куреня',
+    inValue: 'у посадах куреня',
+    missing: 'Оберіть стовпчик з посадами куреня',
+  },
+  HURTOK: {
+    checkbox: 'Імпортувати посади в гуртку',
+    select: 'Стовпчик з посадами в гуртку',
+    section: 'Посади в гуртку',
+    inValue: 'у посадах в гуртку',
+    missing: 'Оберіть стовпчик з посадами в гуртку',
+  },
+};
+const SCOPES: Scope[] = ['KURIN', 'HURTOK'];
+
+type PositionColumns = Record<Scope, { enabled: boolean; column: number | '' }>;
 
 function columnLetter(index: number): string {
   let n = index + 1;
@@ -122,7 +153,16 @@ export default function JunakImportPage() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [columnMapping, setColumnMapping] = useState<Record<number, JunakImportField | ''>>({});
-  const [positionValueMapping, setPositionValueMapping] = useState<Record<string, string>>({});
+  const [positionColumns, setPositionColumns] = useState<PositionColumns>({
+    KURIN: { enabled: false, column: '' },
+    HURTOK: { enabled: false, column: '' },
+  });
+  const [positionsRestored, setPositionsRestored] = useState(false);
+  const [positionError, setPositionError] = useState<string | null>(null);
+  const [positionValueMapping, setPositionValueMapping] = useState<Record<Scope, Record<string, string>>>({
+    KURIN: {},
+    HURTOK: {},
+  });
   const [rowOverrides, setRowOverrides] = useState<Record<number, { email?: string; matchChoice?: string }>>({});
   const [results, setResults] = useState<JunakImportRowResult[] | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -140,26 +180,82 @@ export default function JunakImportPage() {
 
   const isZvyazkovyi = session?.role === 'ZVYAZKOVYI';
 
-  const uniquePositionValues = useMemo(() => {
-    const positionColumnIndexes = Object.entries(columnMapping)
-      .filter(([, field]) => field === 'HURTOK_POSITION' || field === 'KURIN_POSITION')
-      .map(([idx]) => Number(idx));
+  // Restores the user's own previous choice (not a guess): a saved position column whose header still exists.
+  useEffect(() => {
+    if (header.length === 0 || status.isLoading || positionsRestored) return;
+    const next: PositionColumns = { KURIN: { enabled: false, column: '' }, HURTOK: { enabled: false, column: '' } };
+    for (const scope of SCOPES) {
+      const saved = status.data?.mapping?.columnMapping.find((e) => e.field === SCOPE_FIELD[scope]);
+      const idx = saved ? header.indexOf(saved.header) : -1;
+      if (idx >= 0) next[scope] = { enabled: true, column: idx };
+    }
+    setPositionColumns(next);
+    const restored = SCOPES.flatMap((scope) => (next[scope].enabled && next[scope].column !== '' ? [next[scope].column as number] : []));
+    if (restored.length > 0) {
+      setColumnMapping((prev) => ({ ...prev, ...Object.fromEntries(restored.map((i) => [i, ''])) }));
+    }
+    setPositionsRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [header, status.isLoading]);
+
+  function positionColumnIndexes(): number[] {
+    return SCOPES.map((s) => positionColumns[s]).flatMap((c) => (c.enabled && c.column !== '' ? [c.column] : []));
+  }
+
+  function uniqueValuesOf(column: number): string[] {
     const values = new Set<string>();
     for (const row of dataRows) {
-      for (const idx of positionColumnIndexes) {
-        const raw = (row[idx] ?? '').trim();
+      for (const part of (row[column] ?? '').split(',')) {
+        const raw = part.trim();
         if (raw) values.add(raw);
       }
     }
     return Array.from(values);
-  }, [columnMapping, dataRows]);
+  }
 
-  useEffect(() => {
-    if (uniquePositionValues.length > 0 && !status.isLoading && Object.keys(positionValueMapping).length === 0) {
-      setPositionValueMapping(autoMapPositionValues(uniquePositionValues, status.data?.mapping?.positionValueMapping));
+  const scopeValues: Record<Scope, string[]> = {
+    KURIN: positionColumns.KURIN.enabled && positionColumns.KURIN.column !== '' ? uniqueValuesOf(positionColumns.KURIN.column) : [],
+    HURTOK: positionColumns.HURTOK.enabled && positionColumns.HURTOK.column !== '' ? uniqueValuesOf(positionColumns.HURTOK.column) : [],
+  };
+  const hasPositionValues = scopeValues.KURIN.length > 0 || scopeValues.HURTOK.length > 0;
+
+  function setScopeEnabled(scope: Scope, enabled: boolean) {
+    setPositionError(null);
+    setPositionColumns((prev) => ({ ...prev, [scope]: { ...prev[scope], enabled } }));
+  }
+
+  function setScopeColumn(scope: Scope, value: string) {
+    setPositionError(null);
+    const column = value === '' ? '' : Number(value);
+    setPositionColumns((prev) => ({ ...prev, [scope]: { ...prev[scope], column } }));
+    // A position column is not also importable as another field.
+    if (column !== '') setColumnMapping((prev) => ({ ...prev, [column]: '' }));
+  }
+
+  function handleStep1Next() {
+    for (const scope of SCOPES) {
+      if (positionColumns[scope].enabled && positionColumns[scope].column === '') {
+        setPositionError(SCOPE_COPY[scope].missing);
+        return;
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniquePositionValues, status.isLoading]);
+    const { KURIN: k, HURTOK: h } = positionColumns;
+    if (k.enabled && h.enabled && k.column === h.column) {
+      setPositionError('Посади куреня й гуртка мають бути в різних стовпчиках');
+      return;
+    }
+    setPositionError(null);
+    if (!hasPositionValues) {
+      handleSaveMapping();
+      return;
+    }
+    const saved = status.data?.mapping?.positionValueMapping;
+    setPositionValueMapping({
+      KURIN: autoMapPositionValues(scopeValues.KURIN, SCOPE_POSITIONS.KURIN, 'KURIN', saved),
+      HURTOK: autoMapPositionValues(scopeValues.HURTOK, SCOPE_POSITIONS.HURTOK, 'HURTOK', saved),
+    });
+    setStep(2);
+  }
 
   const wizardRows: WizardRow[] = useMemo(() => {
     let lastHurtok = '';
@@ -187,9 +283,15 @@ export default function JunakImportPage() {
     const mapping: JunakImportColumnMapping[] = Object.entries(columnMapping)
       .filter(([, field]) => field !== '')
       .map(([idx, field]) => ({ column: columnLetter(Number(idx)), header: header[Number(idx)] ?? '', field: field as JunakImportField }));
-    const posMapping: JunakImportPositionValueMapping[] = Object.entries(positionValueMapping)
-      .filter(([, positionType]) => positionType !== '')
-      .map(([rawValue, positionType]) => ({ rawValue, positionType }));
+    const posMapping: JunakImportPositionValueMapping[] = [];
+    for (const scope of SCOPES) {
+      const { enabled, column } = positionColumns[scope];
+      if (!enabled || column === '') continue;
+      mapping.push({ column: columnLetter(column), header: header[column] ?? '', field: SCOPE_FIELD[scope] });
+      for (const [rawValue, positionType] of Object.entries(positionValueMapping[scope])) {
+        if (positionType !== '') posMapping.push({ rawValue, positionType, scope });
+      }
+    }
     saveMapping.mutate({ columnMapping: mapping, positionValueMapping: posMapping }, { onSuccess: () => setStep(3) });
   }
 
@@ -203,14 +305,16 @@ export default function JunakImportPage() {
     return idx !== undefined ? (cells[idx] ?? '').trim() : '';
   }
 
-  function resolvePositionTypes(cells: string[], field: 'HURTOK_POSITION' | 'KURIN_POSITION'): string[] {
-    const raw = cellFor(cells, field);
+  function resolvePositionTypes(cells: string[], scope: Scope): string[] {
+    const { enabled, column } = positionColumns[scope];
+    if (!enabled || column === '') return [];
+    const raw = (cells[column] ?? '').trim();
     if (!raw) return [];
     return raw
       .split(',')
       .map((part) => part.trim())
       .filter(Boolean)
-      .map((part) => positionValueMapping[part])
+      .map((part) => positionValueMapping[scope][part])
       .filter((mapped): mapped is string => !!mapped);
   }
 
@@ -263,8 +367,8 @@ export default function JunakImportPage() {
         studyPlace: cellFor(row.cells, 'STUDY_PLACE') || undefined,
         skobDate: skobDateRaw ? parseUkrainianDate(skobDateRaw) : undefined,
         hurtokName: row.hurtokName || undefined,
-        kurinPositionTypes: resolvePositionTypes(row.cells, 'KURIN_POSITION'),
-        hurtokPositionTypes: resolvePositionTypes(row.cells, 'HURTOK_POSITION'),
+        kurinPositionTypes: resolvePositionTypes(row.cells, 'KURIN'),
+        hurtokPositionTypes: resolvePositionTypes(row.cells, 'HURTOK'),
         guardians: guardians.length > 0 ? guardians : undefined,
         degreeDates: Object.keys(degreeDates).length > 0 ? degreeDates : undefined,
       };
@@ -337,27 +441,72 @@ export default function JunakImportPage() {
               <CardTitle>Крок 1: Мапінг стовпчиків</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {header.map((h, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-48 shrink-0 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
-                  <select
-                    className={cn(nativeSelectClass, 'w-auto max-w-full flex-1')}
-                    value={columnMapping[i] ?? ''}
-                    onChange={(e) => setColumnMapping((prev) => ({ ...prev, [i]: e.target.value as JunakImportField }))}
-                  >
-                    <option value="">Не імпортувати</option>
-                    {FIELD_OPTIONS.map((f) => (
-                      <option key={f} value={f}>
-                        {JUNAK_IMPORT_FIELD_LABELS[f]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-              <Button
-                variant="signal"
-                onClick={() => (uniquePositionValues.length > 0 ? setStep(2) : handleSaveMapping())}
-              >
+              {header.map((h, i) => {
+                const isPositionColumn = positionColumnIndexes().includes(i);
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-48 shrink-0 truncate text-sm">{h || `Стовпчик ${columnLetter(i)}`}</span>
+                    <div className="min-w-0 flex-1">
+                      <select
+                        className={cn(nativeSelectClass, 'w-auto max-w-full')}
+                        value={isPositionColumn ? '' : (columnMapping[i] ?? '')}
+                        disabled={isPositionColumn}
+                        onChange={(e) => setColumnMapping((prev) => ({ ...prev, [i]: e.target.value as JunakImportField }))}
+                      >
+                        <option value="">Не імпортувати</option>
+                        {FIELD_OPTIONS.map((f) => (
+                          <option key={f} value={f}>
+                            {JUNAK_IMPORT_FIELD_LABELS[f]}
+                          </option>
+                        ))}
+                      </select>
+                      {isPositionColumn && <span className="text-xs text-ink-2">використовується для посад</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="space-y-3 border-t-2 border-line pt-3">
+                <p className={MONO_HEAD}>Посади</p>
+                {SCOPES.map((scope) => {
+                  const copy = SCOPE_COPY[scope];
+                  const { enabled, column } = positionColumns[scope];
+                  const selectId = `position-column-${scope}`;
+                  return (
+                    <div key={scope} className="space-y-1">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={(e) => setScopeEnabled(scope, e.target.checked)}
+                        />
+                        {copy.checkbox}
+                      </label>
+                      {enabled && (
+                        <div className="space-y-1">
+                          <label htmlFor={selectId} className="text-xs text-ink-2">
+                            {copy.select}
+                          </label>
+                          <select
+                            id={selectId}
+                            className={cn(nativeSelectClass, 'w-full min-w-0 truncate')}
+                            value={column === '' ? '' : String(column)}
+                            onChange={(e) => setScopeColumn(scope, e.target.value)}
+                          >
+                            <option value="">Оберіть стовпчик</option>
+                            {header.map((h, i) => (
+                              <option key={i} value={i}>
+                                {`${columnLetter(i)} — ${h || 'без назви'}`}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {positionError && <p className="text-sm text-late">{positionError}</p>}
+              </div>
+              <Button variant="signal" onClick={handleStep1Next}>
                 Далі
               </Button>
             </CardContent>
@@ -370,23 +519,37 @@ export default function JunakImportPage() {
               <CardTitle>Крок 2: Мапінг значень посад</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {uniquePositionValues.map((value) => (
-                <div key={value} className="flex items-center gap-2">
-                  <span className="w-48 shrink-0 truncate text-sm">{value}</span>
-                  <select
-                    className={cn(nativeSelectClass, 'w-auto max-w-full flex-1')}
-                    value={positionValueMapping[value] ?? ''}
-                    onChange={(e) => setPositionValueMapping((prev) => ({ ...prev, [value]: e.target.value }))}
-                  >
-                    <option value="">Не імпортувати</option>
-                    {POSITION_TYPES.map((p) => (
-                      <option key={p} value={p}>
-                        {POSITION_LABELS[p]}
-                      </option>
+              {SCOPES.filter((scope) => scopeValues[scope].length > 0).map((scope) => {
+                const copy = SCOPE_COPY[scope];
+                const column = positionColumns[scope].column;
+                return (
+                  <div key={scope} className="space-y-2">
+                    <p className={MONO_HEAD}>
+                      {copy.section} — стовпчик {column === '' ? '' : columnLetter(column)}
+                    </p>
+                    {scopeValues[scope].map((value) => (
+                      <div key={value} className="flex items-center gap-2">
+                        <span className="w-48 shrink-0 truncate text-sm">{value}</span>
+                        <select
+                          aria-label={`${value} ${copy.inValue}`}
+                          className={cn(nativeSelectClass, 'w-auto max-w-full flex-1')}
+                          value={positionValueMapping[scope][value] ?? ''}
+                          onChange={(e) =>
+                            setPositionValueMapping((prev) => ({ ...prev, [scope]: { ...prev[scope], [value]: e.target.value } }))
+                          }
+                        >
+                          <option value="">Не імпортувати</option>
+                          {SCOPE_POSITIONS[scope].map((p) => (
+                            <option key={p} value={p}>
+                              {POSITION_LABELS[p]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     ))}
-                  </select>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               <Button variant="signal" onClick={handleSaveMapping} disabled={saveMapping.isPending}>
                 Далі
               </Button>

@@ -380,7 +380,7 @@ export interface JunakImportStatus {
   connectedSpreadsheetName?: string;
   mapping?: {
     columnMapping: { column: string; header: string; field: string }[];
-    positionValueMapping: { rawValue: string; positionType: string | null }[];
+    positionValueMapping: { rawValue: string; positionType: string | null; scope?: 'KURIN' | 'HURTOK' }[];
   };
 }
 
@@ -452,6 +452,8 @@ export interface JunakImportColumnMapping {
 export interface JunakImportPositionValueMapping {
   rawValue: string;
   positionType: string | null;
+  /** Absent on legacy entries saved before the per-scope tables. */
+  scope?: 'KURIN' | 'HURTOK';
 }
 
 export interface JudgeBookSyncReport {
