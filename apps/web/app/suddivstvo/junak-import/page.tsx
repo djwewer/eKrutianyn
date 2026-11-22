@@ -67,6 +67,15 @@ const SCOPES: Scope[] = ['KURIN', 'HURTOK'];
 
 type PositionColumns = Record<Scope, { enabled: boolean; column: number | '' }>;
 
+/** Column mapping without the columns taken by an enabled position scope: those are never importable as another field. */
+function withoutPositionColumns(
+  mapping: Record<number, JunakImportField | ''>,
+  columns: PositionColumns,
+): Record<number, JunakImportField | ''> {
+  const taken = SCOPES.flatMap((s) => (columns[s].enabled && columns[s].column !== '' ? [columns[s].column as number] : []));
+  return Object.fromEntries(Object.entries(mapping).filter(([i]) => !taken.includes(Number(i))));
+}
+
 function columnLetter(index: number): string {
   let n = index + 1;
   let letters = '';
@@ -76,6 +85,13 @@ function columnLetter(index: number): string {
     n = Math.floor((n - 1) / 26);
   }
   return letters;
+}
+
+function columnIndexFromLetter(letters: string): number | undefined {
+  if (!/^[A-Z]+$/.test(letters)) return undefined;
+  let n = 0;
+  for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
 }
 
 function parseUkrainianDate(raw: string): string | undefined {
@@ -186,7 +202,11 @@ export default function JunakImportPage() {
     const next: PositionColumns = { KURIN: { enabled: false, column: '' }, HURTOK: { enabled: false, column: '' } };
     for (const scope of SCOPES) {
       const saved = status.data?.mapping?.columnMapping.find((e) => e.field === SCOPE_FIELD[scope]);
-      const idx = saved ? header.indexOf(saved.header) : -1;
+      let idx = -1;
+      if (saved) {
+        const byLetter = columnIndexFromLetter(saved.column);
+        idx = byLetter !== undefined && (header[byLetter] ?? '') === saved.header ? byLetter : header.indexOf(saved.header);
+      }
       if (idx >= 0) next[scope] = { enabled: true, column: idx };
     }
     setPositionColumns(next);
@@ -222,6 +242,8 @@ export default function JunakImportPage() {
   function setScopeEnabled(scope: Scope, enabled: boolean) {
     setPositionError(null);
     setPositionColumns((prev) => ({ ...prev, [scope]: { ...prev[scope], enabled } }));
+    const column = positionColumns[scope].column;
+    if (enabled && column !== '') setColumnMapping((prev) => ({ ...prev, [column]: '' }));
   }
 
   function setScopeColumn(scope: Scope, value: string) {
@@ -244,6 +266,13 @@ export default function JunakImportPage() {
       setPositionError('Посади куреня й гуртка мають бути в різних стовпчиках');
       return;
     }
+    if (
+      h.enabled &&
+      !Object.values(withoutPositionColumns(columnMapping, positionColumns)).includes('HURTOK')
+    ) {
+      setPositionError('Щоб імпортувати посади в гуртку, позначте стовпчик «Гурток».');
+      return;
+    }
     setPositionError(null);
     if (!hasPositionValues) {
       handleSaveMapping();
@@ -259,8 +288,9 @@ export default function JunakImportPage() {
 
   const wizardRows: WizardRow[] = useMemo(() => {
     let lastHurtok = '';
-    const hurtokColIndex = Object.entries(columnMapping).find(([, f]) => f === 'HURTOK')?.[0];
-    const nameColIndex = Object.entries(columnMapping).find(([, f]) => f === 'FIRST_LAST_NAME')?.[0];
+    const effective = withoutPositionColumns(columnMapping, positionColumns);
+    const hurtokColIndex = Object.entries(effective).find(([, f]) => f === 'HURTOK')?.[0];
+    const nameColIndex = Object.entries(effective).find(([, f]) => f === 'FIRST_LAST_NAME')?.[0];
     return dataRows
       .map((cells, i) => {
         const hurtokRaw = hurtokColIndex ? (cells[Number(hurtokColIndex)] ?? '').trim() : '';
@@ -277,10 +307,10 @@ export default function JunakImportPage() {
         };
       })
       .filter((r) => r.firstName || r.lastName);
-  }, [dataRows, columnMapping, rowOverrides]);
+  }, [dataRows, columnMapping, positionColumns, rowOverrides]);
 
   function handleSaveMapping() {
-    const mapping: JunakImportColumnMapping[] = Object.entries(columnMapping)
+    const mapping: JunakImportColumnMapping[] = Object.entries(withoutPositionColumns(columnMapping, positionColumns))
       .filter(([, field]) => field !== '')
       .map(([idx, field]) => ({ column: columnLetter(Number(idx)), header: header[Number(idx)] ?? '', field: field as JunakImportField }));
     const posMapping: JunakImportPositionValueMapping[] = [];
@@ -289,14 +319,14 @@ export default function JunakImportPage() {
       if (!enabled || column === '') continue;
       mapping.push({ column: columnLetter(column), header: header[column] ?? '', field: SCOPE_FIELD[scope] });
       for (const [rawValue, positionType] of Object.entries(positionValueMapping[scope])) {
-        if (positionType !== '') posMapping.push({ rawValue, positionType, scope });
+        posMapping.push({ rawValue, positionType: positionType === '' ? null : positionType, scope });
       }
     }
     saveMapping.mutate({ columnMapping: mapping, positionValueMapping: posMapping }, { onSuccess: () => setStep(3) });
   }
 
   function colIndexFor(field: JunakImportField): number | undefined {
-    const entry = Object.entries(columnMapping).find(([, f]) => f === field);
+    const entry = Object.entries(withoutPositionColumns(columnMapping, positionColumns)).find(([, f]) => f === field);
     return entry ? Number(entry[0]) : undefined;
   }
 
@@ -627,6 +657,13 @@ export default function JunakImportPage() {
                       : 'оновлено'}
                 </p>
               ))}
+              {results.flatMap((r) =>
+                (r.warnings ?? []).map((w) => (
+                  <p key={`${r.row}-${w}`} className="text-ink-2">
+                    Рядок {r.row + 2}: {w}
+                  </p>
+                )),
+              )}
               {inviteFailures > 0 && (
                 <p className="text-late">
                   Запрошень не надіслано: {inviteFailures} — надішліть ще раз зі сторінки людини

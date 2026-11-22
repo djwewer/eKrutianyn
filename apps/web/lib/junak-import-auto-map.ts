@@ -94,20 +94,24 @@ export function autoMapPositionValues(
   scope: 'KURIN' | 'HURTOK',
   savedMapping?: { rawValue: string; positionType: string | null; scope?: 'KURIN' | 'HURTOK' }[],
 ): Record<string, string> {
-  const savedScoped = new Map<string, string>();
+  // A scoped null entry is an explicit «Не імпортувати»: no suggestion at all.
+  const savedScoped = new Map<string, string | null>();
   const savedLegacy = new Map<string, string>();
   for (const entry of savedMapping ?? []) {
-    if (!entry.positionType) continue;
     if (entry.scope === scope) savedScoped.set(entry.rawValue, entry.positionType);
-    else if (!entry.scope && allowed.includes(entry.positionType)) savedLegacy.set(entry.rawValue, entry.positionType);
+    else if (!entry.scope && entry.positionType && allowed.includes(entry.positionType)) savedLegacy.set(entry.rawValue, entry.positionType);
   }
 
   const result: Record<string, string> = {};
   for (const rawValue of rawValues) {
     if (rawValue == null) continue;
-    const saved = savedScoped.get(rawValue) ?? savedLegacy.get(rawValue);
-    if (saved) {
-      result[rawValue] = saved;
+    if (savedScoped.has(rawValue)) {
+      result[rawValue] = savedScoped.get(rawValue) ?? '';
+      continue;
+    }
+    const legacy = savedLegacy.get(rawValue);
+    if (legacy) {
+      result[rawValue] = legacy;
       continue;
     }
     const guess = POSITION_VALUE_KEYWORDS[normalize(rawValue)];

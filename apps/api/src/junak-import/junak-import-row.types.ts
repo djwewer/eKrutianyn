@@ -32,5 +32,7 @@ export interface JunakImportRowResult {
   created?: boolean;
   inviteSent?: boolean;
   succeededSteps: string[];
+  /** Non-fatal notes the user should see, e.g. a skipped hurtok position. */
+  warnings?: string[];
   error?: string;
 }

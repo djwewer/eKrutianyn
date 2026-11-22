@@ -471,6 +471,8 @@ export interface JunakImportRowResult {
   /** Set only for created rows: false when the invite mail could not be sent. */
   inviteSent?: boolean;
   succeededSteps: string[];
+  /** Non-fatal notes, e.g. hurtok positions skipped because the row has no hurtok. */
+  warnings?: string[];
   error?: string;
 }
 

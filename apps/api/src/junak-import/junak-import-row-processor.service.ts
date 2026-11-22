@@ -172,6 +172,7 @@ export class JunakImportRowProcessorService {
     actor: CurrentUserPayload,
     result: JunakImportRowResult,
   ): Promise<void> {
+    let assigned = 0;
     for (const positionType of row.kurinPositionTypes ?? []) {
       if (positionType === PositionType.KURINNYI) {
         throw new Error('Посаду "Курінний" не можна призначити через імпорт з Книги судді');
@@ -180,15 +181,21 @@ export class JunakImportRowProcessorService {
         { userId: junakId, scope: PositionScope.KURIN, positionType, hurtokId: undefined },
         actor,
       );
+      assigned++;
     }
-    for (const positionType of row.hurtokPositionTypes ?? []) {
-      if (!hurtokId) continue;
-      await this.kurinPositions.assign(
-        { userId: junakId, scope: PositionScope.HURTOK, positionType, hurtokId },
-        actor,
-      );
+    const hurtokPositions = row.hurtokPositionTypes ?? [];
+    if (hurtokPositions.length > 0 && !hurtokId) {
+      (result.warnings ??= []).push('Посади в гуртку не призначено: у рядку не вказано гурток');
+    } else if (hurtokId) {
+      for (const positionType of hurtokPositions) {
+        await this.kurinPositions.assign(
+          { userId: junakId, scope: PositionScope.HURTOK, positionType, hurtokId },
+          actor,
+        );
+        assigned++;
+      }
     }
-    if ((row.kurinPositionTypes ?? []).length > 0 || (row.hurtokPositionTypes ?? []).length > 0) {
+    if (assigned > 0) {
       result.succeededSteps.push('positions');
     }
     void kurinId;

@@ -313,6 +313,22 @@ describe('JunakImportRowProcessorService', () => {
     );
   });
 
+  it('warns instead of reporting a positions step when hurtok positions come without a hurtok', async () => {
+    prisma.user.create.mockResolvedValue({ id: 'user-1' });
+
+    const result = await service.processRow(
+      'kurin-1',
+      baseRow({ hurtokPositionTypes: ['HURTKOVYI' as any] }),
+      0,
+      ACTOR,
+    );
+
+    expect(kurinPositions.assign).not.toHaveBeenCalled();
+    expect(result.succeededSteps).not.toContain('positions');
+    expect(result.warnings).toEqual(['Посади в гуртку не призначено: у рядку не вказано гурток']);
+    expect(result.error).toBeUndefined();
+  });
+
   it('backfills proba progress for a degree stage that is not yet closed, in stage order', async () => {
     prisma.user.create.mockResolvedValue({ id: 'user-1' });
     prisma.kurin.findUnique.mockResolvedValue({ id: 'kurin-1', probyProgramId: 'program-1' });
